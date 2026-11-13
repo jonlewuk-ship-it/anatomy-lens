@@ -35,6 +35,13 @@ html,body{ margin:0; height:100%; background:var(--bg); color:var(--text); overf
 button,input{ font:inherit; color:inherit; }
 button:focus-visible,input:focus-visible{ outline:2px solid var(--film); outline-offset:2px; }
 #view{ position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; background:#000; }
+#gl{ position:fixed; inset:0; width:100%; height:100%; display:none; pointer-events:none; }
+body.v3d{ background:radial-gradient(120% 75% at 50% 35%, #12304a 0%, #061019 72%); }
+body.v3d #gl{ display:block; }
+body.v3d #view{ background:transparent; }
+body:not(.v3d) .only3d, body.v3d .onlyAR{ display:none; }
+.iconbtn.on{ background:var(--film); color:var(--film-ink); border-color:transparent; }
+.secondary{ width:100%; height:50px; margin-top:10px; border-radius:25px; border:1px solid rgba(159,216,255,.45); background:transparent; color:#cfe8fa; font-size:16px; font-weight:600; cursor:pointer; }
 #video{ position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
 .flash{ position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:20; transition:opacity .35s; }
 .flash.on{ opacity:.8; transition:none; }
@@ -98,6 +105,7 @@ button:focus-visible,input:focus-visible{ outline:2px solid var(--film); outline
 </head>
 <body>
 <video id="video" playsinline muted autoplay></video>
+<canvas id="gl"></canvas>
 <canvas id="view"></canvas>
 <div class="flash" id="flash"></div>
 
@@ -105,6 +113,7 @@ button:focus-visible,input:focus-visible{ outline:2px solid var(--film); outline
   <div class="brand"><b data-i="title">Anatomy Lens</b><span data-i="subtitle">Live anatomy overlay</span></div>
   <button class="iconbtn txt" id="lang" aria-label="Language">IT</button>
   <button class="iconbtn" id="flip" aria-label="Switch camera">⇄</button>
+  <button class="iconbtn txt" id="v3d" aria-label="3D view">3D</button>
   <button class="iconbtn" id="snap" aria-label="Take photo">📸</button>
 </header>
 
@@ -122,7 +131,19 @@ button:focus-visible,input:focus-visible{ outline:2px solid var(--film); outline
     <button class="iconbtn" id="more" aria-label="Settings" aria-expanded="false">⚙︎</button>
   </div>
   <div class="sheet-body">
-    <div class="group">
+    <div class="group only3d">
+      <h4 data-i="view3d">3D view</h4>
+      <div class="row2">
+        <div><h4 data-i="pose3d">Pose</h4><div class="seg" data-seg="pose3d"><button data-v="live" data-i="live">Live</button><button data-v="freeze" data-i="freeze">Freeze</button></div></div>
+        <div><h4 data-i="spin">Auto-spin</h4><div class="seg" data-seg="spin"><button data-v="off" data-i="off">Off</button><button data-v="on" data-i="on">On</button></div></div>
+      </div>
+      <div class="row2" style="margin-top:10px">
+        <div><h4 data-i="focus">Focus</h4><div class="seg" data-seg="focus"><button data-v="body" data-i="fBody">Body</button><button data-v="torso" data-i="fTorso">Torso</button><button data-v="head" data-i="fHead">Head</button></div></div>
+        <div><h4 data-i="inset">Camera inset</h4><div class="seg" data-seg="inset"><button data-v="off" data-i="off">Off</button><button data-v="on" data-i="on">On</button></div></div>
+      </div>
+      <p class="hint" data-i="hint3d"></p>
+    </div>
+    <div class="group onlyAR">
       <div class="row2">
         <div><h4 data-i="reveal">Reveal</h4>
           <div class="seg" data-seg="reveal"><button data-v="lens" data-i="lens">Lens</button><button data-v="all" data-i="whole">Whole body</button></div></div>
@@ -181,6 +202,7 @@ button:focus-visible,input:focus-visible{ outline:2px solid var(--film); outline
     <h1 data-i="title">Anatomy Lens</h1>
     <p data-i="intro"></p>
     <button class="primary" id="go" data-i="start">Start camera</button>
+    <button class="secondary" id="go3d" data-i="explore3d">Explore in 3D (no camera)</button>
     <p class="err" id="err"></p>
     <p class="note" data-i="disclaimer"></p>
   </div>
@@ -867,6 +889,461 @@ function draw(ctx,env){
 G.AnatomyLib={draw,skinCore,FACE_OVAL};
 })(typeof window!=="undefined"?window:globalThis);
 
+
+</script>
+<script>
+(function(G){
+"use strict";
+/* 3D anatomy: procedural model rigged to MediaPipe world landmarks, orbitable camera. */
+G.Anatomy3DFactory = function(THREE){
+const TAU=Math.PI*2, v3=(x,y,z)=>new THREE.Vector3(x,y,z);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const COLS={
+  bone:[[206,236,255],[232,223,203]], cart:[[150,205,235],[196,214,222]], muscle:[[232,92,98],[176,52,58]], tendon:[[220,236,248],[228,222,206]],
+  lung:[[246,150,184],[222,134,152]], heart:[[245,72,88],[170,40,50]], artery:[[250,84,94],[196,42,50]], vein:[[112,142,255],[70,96,186]],
+  liver:[[214,112,94],[124,52,42]], gall:[[150,212,112],[96,140,62]], stomach:[[248,180,142],[212,140,118]], spleen:[[204,112,196],[116,52,92]],
+  pancreas:[[248,214,140],[222,186,120]], kidney:[[234,114,126],[146,56,66]], gut:[[248,192,162],[224,164,142]], colon:[[242,172,142],[192,126,104]],
+  bladder:[[250,222,132],[226,196,112]], airway:[[190,228,246],[226,214,206]], brain:[[202,152,255],[230,184,186]], eye:[[250,242,190],[244,244,238]],
+  iris:[[150,220,255],[80,112,84]], pupil:[[40,60,80],[16,16,16]]
+};
+const XOP={ bone:0.75, cart:0.7, muscle:0.65, tendon:0.6, brain:0.8, eye:0.9 };
+
+/* ---------- materials ---------- */
+const XV="varying vec3 vN; varying vec3 vV; void main(){ vec4 mv=modelViewMatrix*vec4(position,1.0); vN=normalize(normalMatrix*normal); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }";
+const XF="uniform vec3 color; uniform float opacity; uniform float bright; varying vec3 vN; varying vec3 vV; void main(){ float f=1.0-abs(dot(normalize(vN),normalize(vV))); float a=(0.05+pow(f,2.0)*0.95)*opacity*bright; gl_FragColor=vec4(color,clamp(a,0.0,1.0)); }";
+let stripeTex=null;
+if(typeof document!=="undefined"){ try{ const cv=document.createElement("canvas"); cv.width=64; cv.height=8; const x=cv.getContext("2d");
+  for(let i=0;i<64;i++){ const k=200+Math.round(55*Math.abs(Math.sin(i*1.7))*((i%4===0)?0.4:1)); x.fillStyle="rgb("+k+","+k+","+k+")"; x.fillRect(i,0,1,8); }
+  stripeTex=new THREE.CanvasTexture(cv); stripeTex.wrapS=stripeTex.wrapT=THREE.RepeatWrapping; stripeTex.repeat.set(4,1); }catch(e){} }
+const MATS={};
+for(const k in COLS){
+  const cx=COLS[k][0], cs=COLS[k][1];
+  const xr=new THREE.ShaderMaterial({ uniforms:{ color:{value:new THREE.Color(cx[0]/255,cx[1]/255,cx[2]/255)}, opacity:{value:XOP[k]||0.85}, bright:{value:1} },
+    vertexShader:XV, fragmentShader:XF, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide });
+  const so=new THREE.MeshStandardMaterial({ color:new THREE.Color(cs[0]/255,cs[1]/255,cs[2]/255), roughness:k==="bone"||k==="cart"?0.7:0.5, metalness:0, side:THREE.DoubleSide,
+    map:(k==="muscle"&&stripeTex)?stripeTex:null });
+  MATS[k]={xray:xr, solid:so};
+}
+
+/* ---------- geometry builders ---------- */
+function fin(g){ g.computeVertexNormals(); g.computeBoundingSphere(); return g; }
+function bgeo(pos,uv,idx){ const g=new THREE.BufferGeometry(); g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3)); g.setAttribute("uv",new THREE.Float32BufferAttribute(uv,2)); g.setIndex(idx); return fin(g); }
+function P3(a){ return a.isVector3?a:v3(a[0],a[1],a[2]); }
+function curve(pts,n,closed){ return new THREE.CatmullRomCurve3(pts.map(P3),!!closed,"centripetal").getPoints(n||40); }
+function sweep(pts,rfn,o){
+  o=o||{}; const R=o.radial||12, n=pts.length, sx=o.sx||1, sy=o.sy||1, pos=[], uv=[], idx=[], T=[], N=[], B=[];
+  const rf=typeof rfn==="number"?(()=>rfn):rfn;
+  for(let i=0;i<n;i++){ const a=pts[Math.max(0,i-1)], b=pts[Math.min(n-1,i+1)]; const t=b.clone().sub(a); if(t.lengthSq()<1e-12) t.set(0,1,0); T.push(t.normalize()); }
+  let prev=null;
+  for(let i=0;i<n;i++){
+    let nn=null;
+    if(o.hint){ nn=o.hint.clone().addScaledVector(T[i],-o.hint.dot(T[i])); if(nn.lengthSq()<1e-6) nn=null; }
+    if(!nn && prev){ nn=prev.clone().addScaledVector(T[i],-prev.dot(T[i])); if(nn.lengthSq()<1e-8) nn=null; }
+    if(!nn){ const h=Math.abs(T[i].y)<0.9?v3(0,1,0):v3(1,0,0); nn=h.addScaledVector(T[i],-h.dot(T[i])); }
+    nn.normalize(); prev=nn; N.push(nn); B.push(T[i].clone().cross(nn).normalize());
+  }
+  for(let i=0;i<n;i++){ const t=n>1?i/(n-1):0;
+    for(let j=0;j<=R;j++){ const th=j/R*TAU, r=rf(t,th), c=Math.cos(th), s=Math.sin(th);
+      const p=pts[i].clone().addScaledVector(N[i],c*r*sx).addScaledVector(B[i],s*r*sy); pos.push(p.x,p.y,p.z); uv.push(j/R,t); } }
+  for(let i=0;i<n-1;i++) for(let j=0;j<R;j++){ const a=i*(R+1)+j, b=a+R+1; idx.push(a,b,a+1,b,b+1,a+1); }
+  if(o.caps!==false) for(const i of [0,n-1]){ const ci=pos.length/3, p=pts[i]; pos.push(p.x,p.y,p.z); uv.push(0.5,i?1:0); for(let j=0;j<R;j++){ const a=i*(R+1)+j; idx.push(ci,a,a+1); } }
+  return bgeo(pos,uv,idx);
+}
+function tube(pts,r,o){ return sweep(curve(pts,o&&o.n||Math.max(12,pts.length*8),o&&o.closed),r,o); }
+function blob(rx,ry,rz,deform,ws,hs){
+  const g=new THREE.SphereGeometry(1,ws||28,hs||20), p=g.attributes.position, v=v3(0,0,0);
+  for(let i=0;i<p.count;i++){ v.set(p.getX(i),p.getY(i),p.getZ(i)); if(deform) deform(v); p.setXYZ(i,v.x*rx,v.y*ry,v.z*rz); }
+  return fin(g);
+}
+function lathe(fn,n){ const pts=[]; for(let i=0;i<=n;i++){ const y=i/n; pts.push(new THREE.Vector2(Math.max(0,fn(y)),y)); } return fin(new THREE.LatheGeometry(pts,14)); }
+const GC={};
+function boneGeo(ra,rb,sh){ const k="b"+ra+"_"+rb+"_"+sh; return GC[k]||(GC[k]=lathe(y=>{ const e=Math.min(y,1-y); const cap=e<0.035?Math.sqrt(1-Math.pow(1-e/0.035,2)):1;
+  return cap*(sh+(ra-sh)*Math.exp(-((y/0.13)**2))+(rb-sh)*Math.exp(-(((1-y)/0.13)**2))); },36)); }
+function musGeo(tA,tB,bulge){ const k="m"+tA+"_"+tB+"_"+bulge; return GC[k]||(GC[k]=lathe(y=>{
+  if(y<=0||y>=1) return 0; if(y<tA) return 0.1; if(y>1-tB) return 0.09;
+  const s=(y-tA)/(1-tA-tB), w=s<bulge?s/bulge*0.5:0.5+(s-bulge)/(1-bulge)*0.5; return 0.1+0.9*Math.pow(Math.max(0,Math.sin(Math.PI*clamp(w,0,1))),0.75); },40)); }
+const OVO=fin(new THREE.SphereGeometry(1,18,14).scale(1,0.5,1).translate(0,0.5,0));
+const CYL=new THREE.CylinderGeometry(1,1,1,14).translate(0,0.5,0);
+function patch(map,nu,nv){
+  nu=nu||16; nv=nv||16; const pos=[],uv=[],idx=[];
+  for(let j=0;j<=nv;j++) for(let i=0;i<=nu;i++){ const u=i/nu, v=j/nv, q=map(u,v), b=Math.pow(Math.sin(Math.PI*u)*Math.sin(Math.PI*v),0.45);
+    const p=q.p.clone().addScaledVector(q.n,(q.t||0)*b); pos.push(p.x,p.y,p.z); uv.push(u,v); }
+  for(let j=0;j<nv;j++) for(let i=0;i<nu;i++){ const a=j*(nu+1)+i, b=a+nu+1; idx.push(a,b,a+1,b,b+1,a+1); }
+  return bgeo(pos,uv,idx);
+}
+/* torso surface: elliptic section, theta 0 = front centre, +x = subject's left, local z+ = back */
+const RX=(y)=>0.4+0.04*Math.exp(-(((y-0.02)/0.08)**2))-0.05*Math.exp(-(((y-0.68)/0.15)**2))+0.03*Math.exp(-(((y-1)/0.1)**2));
+const RZ=(y)=>0.3-0.03*Math.exp(-(((y-0.7)/0.2)**2));
+function surf(th,y,off){ off=off||0; return { p:v3(Math.sin(th)*(RX(y)+off),y,-Math.cos(th)*(RZ(y)+off)), n:v3(Math.sin(th)/RX(y),0,-Math.cos(th)/RZ(y)).normalize() }; }
+const HEAD={ c:v3(0,-0.25,0.06), r:v3(0.53,0.6,0.67) };
+function hsurf(lon,lat,off){ off=off||0; const c=HEAD.c, r=HEAD.r; const d=v3(Math.cos(lat)*Math.sin(lon),-Math.sin(lat),-Math.cos(lat)*Math.cos(lon));
+  const p=v3(c.x+d.x*(r.x+off),c.y+d.y*(r.y+off),c.z+d.z*(r.z+off)); return { p, n:v3(d.x/r.x,d.y/r.y,d.z/r.z).normalize() }; }
+
+/* ---------- scene ---------- */
+function create(canvas){
+  const renderer=new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, preserveDrawingBuffer:true });
+  renderer.setClearColor(0x000000,0);
+  const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(38,1,0.05,50);
+  scene.add(camera);
+  const hemi=new THREE.HemisphereLight(0xe6f2ff,0x3a2a24,1.1); scene.add(hemi);
+  const key=new THREE.DirectionalLight(0xffffff,1.6); key.position.set(1.5,2,3); camera.add(key);
+  const rim=new THREE.DirectionalLight(0x9fd8ff,0.7); rim.position.set(-2,1,-2); camera.add(rim);
+  const root=new THREE.Group(); scene.add(root);
+  const grid=new THREE.PolarGridHelper(0.9,16,5,64,0x9fd8ff,0x9fd8ff); grid.material.transparent=true; grid.material.opacity=0.22; grid.material.depthWrite=false; scene.add(grid);
+
+  const meshes=[], ups=[], anchors=[];
+  let look="xray";
+  function mk(geo,cat,layer,parent){ const m=new THREE.Mesh(geo,MATS[cat][look]); m.userData={cat,layer}; m.frustumCulled=false; (parent||root).add(m); meshes.push(m); return m; }
+  function grp(){ const g=new THREE.Group(); g.matrixAutoUpdate=false; root.add(g); return g; }
+  const torsoG=grp(), pelvG=grp(), headG=grp();
+  const Y=v3(0,1,0), qt=new THREE.Quaternion(), sc=v3(1,1,1), tmp=v3(0,0,0);
+  function setSeg(m,A,B,r){ tmp.copy(B).sub(A); const L=tmp.length(); if(!(L>1e-5)){ m.visible=false; return; }
+    qt.setFromUnitVectors(Y,tmp.divideScalar(L)); sc.set(r,L,r); m.matrix.compose(A,qt,sc); m.matrixWorldNeedsUpdate=true; }
+  function segM(geo,cat,layer,parent){ const m=mk(geo,cat,layer,parent); m.matrixAutoUpdate=false; return m; }
+  function label(key,layer,f){ anchors.push({key,layer,f}); }
+  function staticSeg(m,A,B,r){ setSeg(m,P3(A),P3(B),r); }
+
+  /* K: per-frame body frames */
+  const K={ P:[], sw:0.35 };
+  function W(F,x,y,z){ return F.o.clone().addScaledVector(F.x,x).addScaledVector(F.y,y).addScaledVector(F.z,z); }
+  const tw=(x,y,z)=>W(K.T,x,y,z), pw=(x,y,z)=>W(K.Pv,x,y,z), hw=(x,y,z)=>W(K.H,x,y,z);
+  function perpTo(v,u,fb){ const r=v.clone().addScaledVector(u,-v.dot(u)); if(r.lengthSq()<1e-6) return fb.clone(); return r.normalize(); }
+  function frames(P){
+    K.P=P;
+    const sh=P[11].clone().add(P[12]).multiplyScalar(0.5), hp=P[23].clone().add(P[24]).multiplyScalar(0.5);
+    const A=P[11].clone().sub(P[12]); const sw=clamp(A.length(),0.18,0.6); const ax=A.lengthSq()>1e-8?A.clone().normalize():v3(1,0,0);
+    const D=hp.clone().sub(sh), dn=perpTo(D,ax,v3(0,-1,0)); const tl=clamp(D.dot(dn),0.8*sw,2.2*sw);
+    const bk=ax.clone().cross(dn).normalize();
+    K.sw=sw; K.tl=tl; K.fwd=bk.clone().negate(); K.dn=dn; K.ax=ax;
+    K.T={o:sh,x:ax.clone().multiplyScalar(sw),y:dn.clone().multiplyScalar(tl),z:bk.clone().multiplyScalar(sw)};
+    const Hv=P[23].clone().sub(P[24]); const hwid=clamp(Hv.length(),0.35*sw,0.9*sw); const hax=perpTo(Hv,dn,ax);
+    const hbk=hax.clone().cross(dn).normalize(); K.fwdP=hbk.clone().negate(); K.hax=hax;
+    K.Pv={o:hp,x:hax.clone().multiplyScalar(hwid),y:dn.clone().multiplyScalar(hwid),z:hbk.clone().multiplyScalar(hwid)};
+    const ec=P[7].clone().add(P[8]).multiplyScalar(0.5), E=P[7].clone().sub(P[8]); const Wd=clamp(E.length(),0.35*sw,0.6*sw);
+    const ea=E.lengthSq()>1e-8?E.clone().normalize():ax.clone();
+    const fh=perpTo(P[0].clone().sub(ec),ea,K.fwd); const hbz=fh.clone().negate(); const hdn=hbz.clone().cross(ea).normalize();
+    K.H={o:ec,x:ea.clone().multiplyScalar(Wd),y:hdn.clone().multiplyScalar(Wd),z:hbz.clone().multiplyScalar(Wd)};
+    for(const [g,F] of [[torsoG,K.T],[pelvG,K.Pv],[headG,K.H]]){ g.matrix.makeBasis(F.x,F.y,F.z).setPosition(F.o); g.matrixWorldNeedsUpdate=true; }
+  }
+
+  /* ===== SPINE ===== */
+  const spineZ=(y)=>y<0.62?0.12+0.05*Math.sin(Math.PI*y/0.62):0.12-0.04*Math.sin(Math.PI*(y-0.62)/0.34);
+  for(let i=0;i<17;i++){
+    const lum=i>=12, y0=lum?0.62+(i-12)*0.066:0.02+i*0.05, h=lum?0.066:0.05, y=y0+h*0.45, r=lum?0.065:0.048, z=spineZ(y);
+    const b=mk(CYL,"bone","skeleton",torsoG); b.scale.set(r,h*0.72,r*0.8); b.position.set(0,y-h*0.36,z);
+    const d=mk(CYL,"cart","skeleton",torsoG); d.scale.set(r*0.92,h*0.2,r*0.75); d.position.set(0,y+h*0.36,z);
+    const sp=segM(OVO,"bone","skeleton",torsoG); staticSeg(sp,[0,y-h*0.2,z+r*0.7],[0,y+h*(lum?0.3:0.9),z+r*(lum?2.4:2.2)],r*0.3);
+    for(const s of [-1,1]){ const tp=segM(OVO,"bone","skeleton",torsoG); staticSeg(tp,[0,y-h*0.25,z+r*0.6],[s*r*(lum?2.2:1.8),y-h*0.1,z+r*(lum?0.9:1.4)],r*0.22); }
+  }
+  label("thoracic","skeleton",()=>tw(0,0.3,spineZ(0.3)+0.08)); label("spine","skeleton",()=>tw(0,0.8,spineZ(0.8)+0.08));
+  const cerv=[]; for(let i=0;i<7;i++){ cerv.push({b:segM(CYL,"bone","skeleton"),sp:segM(OVO,"bone","skeleton")}); }
+  ups.push(()=>{ const A=tw(0,-0.03,spineZ(0)), B=hw(0,0.42,0.1), mid=A.clone().lerp(B,0.5).addScaledVector(K.fwd,0.012);
+    const c=new THREE.QuadraticBezierCurve3(A,mid,B);
+    for(let i=0;i<7;i++){ const p0=c.getPoint((i+0.12)/7), p1=c.getPoint((i+0.82)/7); setSeg(cerv[i].b,p0,p1,0.04*K.sw);
+      const m=p0.clone().lerp(p1,0.5); setSeg(cerv[i].sp,m,m.clone().addScaledVector(K.fwd,-0.06*K.sw).addScaledVector(K.dn,0.02*K.sw),0.012*K.sw); } });
+  label("cervical","skeleton",()=>tw(0,-0.03,0.1).lerp(hw(0,0.42,0.1),0.5));
+
+  /* ===== RIBS, STERNUM, CLAVICLE, SCAPULA ===== */
+  const RR=(y)=>[RX(y)-0.04,RZ(y)-0.03];
+  for(let i=0;i<12;i++) for(const s of [-1,1]){
+    const yb=0.03+i*0.052, yf=yb+0.11+i*0.012, thE=i<10?0.16+i*0.03:1.25+(i-10)*0.25, pts=[];
+    for(let k=0;k<=24;k++){ const t=k/24, th=s*((1-t)*Math.PI*0.9+t*thE), y=yb+(yf-yb)*(t*t*(3-2*t)), r=RR(y);
+      const w=1-0.25*Math.exp(-(((i-0)/1.6)**2))*(1-t); pts.push(v3(Math.sin(th)*r[0]*w,y,-Math.cos(th)*r[1]*w+(t<0.15?(0.15-t)*0.3:0))); }
+    pts[0].x=s*0.05; pts[0].z=spineZ(yb)+0.02;
+    mk(sweep(pts,(t)=>0.016*(1-0.3*t),{sx:1.6,sy:0.7,radial:8}),"bone","skeleton",torsoG);
+    if(i<10){ const e=pts[24], sy=i<7?0.05+i*0.048:0.37+(i-7)*0.03; const tgt=i<7?v3(s*0.045,sy,-RZ(sy)+0.01):v3(s*(0.08+(i-7)*0.05),0.38+(i-7)*0.04,-RZ(0.4)+0.03);
+      mk(tube([e,e.clone().lerp(tgt,0.5).add(v3(0,0.01,-0.01)),tgt],0.012,{radial:7}),"cart","skeleton",torsoG); }
+  }
+  label("ribs","skeleton",()=>tw(-0.37,0.3,-0.1)); label("cartilage","skeleton",()=>tw(0.12,0.38,-0.27));
+  mk(blob(0.045,0.2,0.02,(v)=>{ if(v.y<-0.6){ v.x*=1.6; } v.x*=1-0.3*Math.max(0,v.y); }).translate(0,0.21,-RZ(0.2)+0.005),"bone","skeleton",torsoG);
+  label("sternum","skeleton",()=>tw(0,0.2,-0.3));
+  for(const s of [-1,1]){
+    mk(tube([[s*0.05,0.02,-0.28],[s*0.18,-0.01,-0.3],[s*0.33,0.0,-0.2],[s*0.47,-0.04,0.02]],0.022,{radial:9}),"bone","skeleton",torsoG);
+    mk(patch((u,v)=>{ const th=s*(Math.PI-0.3-u*(1.05-v*0.75)), y=-0.02+v*0.42; const q=surf(th,y,0.02); q.t=0.006; return q; },10,10),"bone","skeleton",torsoG);
+    mk(tube([[s*0.18,0.05,RZ(0.05)+0.04],[s*0.33,0.02,RZ(0.02)],[s*0.46,-0.04,0.06]],0.02,{radial:8}),"bone","skeleton",torsoG);
+  }
+  label("clavicle","skeleton",()=>tw(0.3,-0.01,-0.21)); label("scapula","skeleton",()=>tw(-0.3,0.15,0.3));
+
+  /* ===== PELVIS (units: hip width) ===== */
+  for(const s of [-1,1]){
+    mk(patch((u,v)=>{ const C=v3(s*(0.62+0.26*Math.sin(Math.PI*u)),-0.62-0.12*Math.sin(Math.PI*u),-0.42+0.8*u), Bt=v3(s*0.5,-0.06,-0.12+0.25*u);
+      const p=C.clone().lerp(Bt,v); p.x-=s*0.12*Math.sin(Math.PI*v)*Math.sin(Math.PI*u); return { p, n:v3(s,0,0), t:0.03 }; },14,12),"bone","skeleton",pelvG);
+    mk(tube([[s*0.46,0.06,-0.12],[s*0.28,0.24,-0.33],[s*0.06,0.28,-0.38],[s*0.1,0.42,-0.28],[s*0.3,0.52,-0.02],[s*0.44,0.32,0.06],[s*0.46,0.06,-0.12]],0.06,{radial:9,n:60}),"bone","skeleton",pelvG);
+    const ac=mk(new THREE.TorusGeometry(0.12,0.035,8,20),"bone","skeleton",pelvG); ac.position.set(s*0.47,0.02,0); ac.rotation.y=Math.PI/2;
+  }
+  mk(tube([[0,-0.45,0.32],[0,-0.2,0.4],[0,0.05,0.44],[0,0.2,0.38]],(t)=>0.2*(1-t)+0.03,{hint:v3(1,0,0),sx:1,sy:0.35,radial:12}),"bone","skeleton",pelvG);
+  label("pelvis","skeleton",()=>pw(-0.8,-0.6,-0.1)); label("sacrum","skeleton",()=>pw(0,-0.2,0.45));
+
+  /* ===== LIMB BONES ===== */
+  const SIDES=[{s:1,sh:11,el:13,wr:15,hp:23,kn:25,an:27,he:29,ft:31,pk:17,ix:19,th:21,main:true},{s:-1,sh:12,el:14,wr:16,hp:24,kn:26,an:28,he:30,ft:32,pk:18,ix:20,th:22,main:false}];
+  const P_=(i)=>K.P[i];
+  function limbFrames(S){
+    const P=K.P, s=S.s;
+    const ua=P[S.el].clone().sub(P[S.sh]).normalize(), fa=perpTo(K.fwd,ua,K.dn), la=fa.clone().cross(ua).multiplyScalar(s).normalize();
+    const uf=P[S.wr].clone().sub(P[S.el]).normalize(), ff=perpTo(fa,uf,K.dn), lf=ff.clone().cross(uf).multiplyScalar(s).normalize();
+    const ut=P[S.kn].clone().sub(P[S.hp]).normalize(), ft=perpTo(K.fwdP,ut,K.fwd), lt=ft.clone().cross(ut).multiplyScalar(s).normalize();
+    const us=P[S.an].clone().sub(P[S.kn]).normalize(), fs=perpTo(ft,us,K.fwd), ls=fs.clone().cross(us).multiplyScalar(s).normalize();
+    return {fa,la,ff,lf,ft,lt,fs,ls};
+  }
+  const off=(p,a,ka,b,kb)=>{ const r=p.clone(); if(a) r.addScaledVector(a,ka*K.sw); if(b) r.addScaledVector(b,kb*K.sw); return r; };
+  for(const S of SIDES){
+    const k=(x)=>S.main?x:null;
+    const hum=segM(boneGeo(1,0.85,0.38),"bone","skeleton"), hh=segM(OVO,"bone","skeleton");
+    const rad=segM(boneGeo(0.6,1,0.45),"bone","skeleton"), uln=segM(boneGeo(1,0.55,0.45),"bone","skeleton");
+    const fneck=segM(boneGeo(0.9,0.9,0.7),"bone","skeleton"), fem=segM(boneGeo(0.8,1,0.36),"bone","skeleton"), fh=segM(OVO,"bone","skeleton"), pat=segM(OVO,"bone","skeleton");
+    const tib=segM(boneGeo(1,0.7,0.38),"bone","skeleton"), fib=segM(boneGeo(0.9,1,0.5),"bone","skeleton");
+    const cal=segM(boneGeo(0.8,1,0.6),"bone","skeleton"), tal=segM(OVO,"bone","skeleton"), meta=[], toe=[];
+    for(let j=0;j<5;j++){ meta.push(segM(boneGeo(0.75,0.85,0.45),"bone","skeleton")); toe.push(segM(boneGeo(0.7,0.6,0.5),"bone","skeleton")); }
+    ups.push(()=>{
+      const P=K.P, F=limbFrames(S), sw=K.sw, sh=P[S.sh], el=P[S.el], wr=P[S.wr], hp=P[S.hp], kn=P[S.kn], an=P[S.an];
+      setSeg(hum,sh,el,0.075*sw); setSeg(hh,off(sh,F.la,-0.02,K.dn,-0.07),off(sh,F.la,-0.02,K.dn,0.07),0.075*sw);
+      setSeg(uln,off(el,F.lf,-0.03,F.ff,-0.02),off(wr,F.lf,-0.035),0.045*sw); setSeg(rad,off(el,F.lf,0.03),off(wr,F.lf,0.035),0.045*sw);
+      const tr=off(hp,K.hax,S.s*0.2,K.dn,0.05); setSeg(fneck,hp,tr,0.06*sw); setSeg(fem,off(tr,K.hax,-S.s*0.03),kn,0.1*sw);
+      setSeg(fh,off(hp,K.dn,-0.07),off(hp,K.dn,0.07),0.13*sw);
+      const pc=off(kn,F.ft,0.08); setSeg(pat,off(pc,K.dn,-0.08),off(pc,K.dn,0.06),0.08*sw);
+      setSeg(tib,off(kn,F.fs,0.01),an,0.09*sw); setSeg(fib,off(kn,F.ls,0.06,F.fs,-0.02),off(an,F.ls,0.055),0.035*sw);
+      const he=P[S.he], ft=P[S.ft], up=kn.clone().sub(an).normalize(), fd=ft.clone().sub(he); const fdl=fd.length()||1; fd.divideScalar(fdl);
+      const acr=perpTo(F.ls,fd,K.ax);
+      setSeg(cal,off(an,up,-0.03),he,0.07*sw); setSeg(tal,off(an,up,-0.06,fd,-0.02),off(an,up,-0.02,fd,0.1),0.075*sw);
+      for(let j=0;j<5;j++){ const o=(j-2)*0.055;
+        const b=off(an.clone().lerp(ft,0.35),acr,o*0.6,up,-0.08), m=off(an.clone().lerp(ft,0.8),acr,o,up,-0.12), t=off(an.clone().lerp(ft,1.0),acr,o*1.08,up,-0.14);
+        setSeg(meta[j],b,m,(j===2?0.03:0.024)*sw); setSeg(toe[j],m,t,0.022*sw); }
+    });
+    if(S.main){ label("humerus","skeleton",()=>P_(S.sh).clone().lerp(P_(S.el),0.5)); label("radius","skeleton",()=>P_(S.el).clone().lerp(P_(S.wr),0.5));
+      label("femur","skeleton",()=>P_(S.hp).clone().lerp(P_(S.kn),0.5)); label("patella","skeleton",()=>off(P_(S.kn),K.fwdP,0.09));
+      label("tibia","skeleton",()=>P_(S.kn).clone().lerp(P_(S.an),0.5)); label("metatarsals","skeleton",()=>P_(S.an).clone().lerp(P_(S.ft),0.7)); }
+  }
+
+  /* ===== HANDS ===== */
+  const CH=[[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16],[17,18,19,20]];
+  const handM={};
+  for(const S of SIDES){
+    const h={bones:[],carp:[]};
+    for(let c=0;c<5;c++) for(let j=0;j<4;j++) h.bones.push(segM(boneGeo(0.62,0.72,0.42),"bone","hands"));
+    for(let c=0;c<8;c++) h.carp.push(segM(OVO,"bone","hands"));
+    handM[S.s]=h;
+  }
+  function synthHand(S){
+    const P=K.P, w=P[S.wr], ix=P[S.ix], pk=P[S.pk], tb=P[S.th];
+    const mid=ix.clone().add(pk).multiplyScalar(0.5); let d=mid.clone().sub(w); const hs=clamp(d.length()*1.05,0.06,0.12); d.normalize();
+    const ac=perpTo(ix.clone().sub(pk),d,K.ax), nrm=d.clone().cross(ac).normalize(), J=[w.clone()];
+    const tdir=tb.clone().sub(w); const tl=tdir.length()>1e-4?tdir.normalize():d.clone();
+    let p=w.clone().addScaledVector(ac,0.18*hs).addScaledVector(d,0.15*hs);
+    for(const L of [0.32,0.3,0.22,0.2]){ p=p.clone().addScaledVector(tl,L*hs*0.9).addScaledVector(d,L*hs*0.25); J.push(p); }
+    const offs=[0.24,0.08,-0.08,-0.24], lens=[[0.95,0.45,0.27,0.2],[0.92,0.5,0.31,0.21],[0.88,0.47,0.3,0.2],[0.84,0.37,0.23,0.18]];
+    for(let f=0;f<4;f++){ let q=w.clone().addScaledVector(ac,offs[f]*hs*0.6); const L=lens[f];
+      q=q.clone().addScaledVector(d,L[0]*hs).addScaledVector(ac,offs[f]*hs*0.4); J.push(q);
+      let dir=d.clone().addScaledVector(nrm,-0.15).normalize();
+      for(let k=1;k<4;k++){ q=q.clone().addScaledVector(dir,L[k]*hs); J.push(q); dir=dir.clone().addScaledVector(nrm,-0.12).normalize(); } }
+    return J;
+  }
+  function updHand(S,J){
+    const h=handM[S.s], hs=clamp(J[0].distanceTo(J[9]),0.05,0.14); let n=0;
+    for(const ch of CH){ const base=J[0].clone().lerp(J[ch[0]],ch[0]===1?0.35:0.3);
+      setSeg(h.bones[n++],base,J[ch[0]],(ch[0]===1?0.06:0.055)*hs);
+      for(let j=0;j<3;j++) setSeg(h.bones[n++],J[ch[j]],J[ch[j+1]],(0.052-j*0.006)*hs); }
+    const ks=[5,9,13,17];
+    for(let c=0;c<8;c++){ const t=c<4?0.1:0.2, kk=ks[c%4]; const p=J[0].clone().lerp(J[kk],t); setSeg(h.carp[c],p.clone().addScaledVector(J[kk].clone().sub(J[0]).normalize(),-0.035*hs),p.clone().addScaledVector(J[kk].clone().sub(J[0]).normalize(),0.035*hs),0.06*hs); }
+    if(S.main){ K.handL=J; }
+  }
+  label("carpals","hands",()=>K.handL&&K.handL[0].clone().lerp(K.handL[9],0.15)); label("metacarpals","hands",()=>K.handL&&K.handL[0].clone().lerp(K.handL[9],0.65));
+  label("phalanges","hands",()=>K.handL&&K.handL[11]);
+
+  /* ===== SKULL (units: ear-to-ear) ===== */
+  mk(blob(HEAD.r.x,HEAD.r.y,HEAD.r.z,(v)=>{ if(v.y>0.42) v.y=0.42+(v.y-0.42)*0.15; v.x*=1-0.12*Math.max(0,-v.z); },40,30).translate(HEAD.c.x,HEAD.c.y,HEAD.c.z),"bone","skull",headG);
+  for(const s of [-1,1]){
+    const o=mk(new THREE.TorusGeometry(0.125,0.028,8,24),"bone","skull",headG); o.position.set(s*0.22,-0.05,-0.56); o.rotation.y=s*0.3; o.scale.set(1,0.9,1);
+    mk(blob(0.1,0.065,0.08).translate(s*0.31,0.13,-0.5),"bone","skull",headG);
+    mk(tube([[s*0.33,0.13,-0.44],[s*0.47,0.09,-0.25],[s*0.5,0.07,-0.04]],0.03,{radial:8}),"bone","skull",headG);
+  }
+  mk(tube([[0,0.07,-0.645],[0.06,0.2,-0.61],[0.045,0.3,-0.6],[0,0.31,-0.61],[-0.045,0.3,-0.6],[-0.06,0.2,-0.61],[0,0.07,-0.645]],0.018,{radial:7,n:48}),"bone","skull",headG);
+  mk(blob(0.27,0.1,0.15).translate(0,0.33,-0.48),"bone","skull",headG);
+  for(const [y,h] of [[0.42,0.085],[0.5,0.075]]) for(let i=0;i<14;i++){ const a=-1.25+i*2.5/13, t=mk(new THREE.BoxGeometry(0.05,h,0.045),"bone","skull",headG);
+    t.position.set(0.22*Math.sin(a),y,-0.61+0.3*(1-Math.cos(a))); t.rotation.y=-a; }
+  const mand=[]; for(const s of [-1,1]) for(const p of [[0.45,0.04,0.0],[0.44,0.3,0.02],[0.42,0.52,-0.04],[0.32,0.63,-0.28],[0.17,0.71,-0.5]]) mand.push(v3(s*p[0],p[1],p[2]));
+  const mpts=mand.slice(0,5).concat([v3(0,0.75,-0.6)],mand.slice(5).reverse());
+  mk(tube(mpts,0.045,{hint:v3(0,1,0),sx:1.5,sy:0.55,radial:10,n:70}),"bone","skull",headG);
+  label("cranium","skull",()=>hw(0.3,-0.72,0.1)); label("orbit","skull",()=>hw(0.33,-0.14,-0.55)); label("nasal","skull",()=>hw(0,0.22,-0.62));
+  label("zygomatic","skull",()=>hw(-0.42,0.1,-0.35)); label("maxilla","skull",()=>hw(0.15,0.35,-0.6)); label("teeth","skull",()=>hw(0,0.46,-0.64));
+  label("mandible","skull",()=>hw(-0.35,0.6,-0.2));
+
+  /* ===== BRAIN ===== */
+  for(const s of [-1,1]) mk(blob(0.22,0.4,0.54,(v)=>{ if(s*v.x<0) v.x*=0.25; if(v.y>0.5) v.y=0.5+(v.y-0.5)*0.4;
+      const g=1+0.045*Math.sin(17*v.x+3*s)*Math.sin(15*v.y+1)*Math.sin(13*v.z)+0.03*Math.sin(23*v.y+9*v.z); v.multiplyScalar(g); },64,48).translate(s*0.235,-0.3,0.07),"brain","brain",headG);
+  mk(blob(0.3,0.14,0.17,(v)=>{ v.multiplyScalar(1+0.04*Math.sin(40*v.y)); },40,30).translate(0,0.04,0.42),"brain","brain",headG);
+  const bs=segM(CYL,"brain","brain",headG); staticSeg(bs,[0,-0.05,0.18],[0,0.38,0.2],0.055);
+  label("frontal","brain",()=>hw(0.18,-0.5,-0.42)); label("parietal","brain",()=>hw(-0.22,-0.78,0.2)); label("temporal","brain",()=>hw(0.46,-0.08,-0.05));
+  label("occipital","brain",()=>hw(0,-0.35,0.64)); label("cerebellum","brain",()=>hw(-0.2,0.06,0.5));
+
+  /* ===== EYES ===== */
+  for(const s of [-1,1]){ mk(new THREE.SphereGeometry(0.1,20,14).translate(s*0.22,-0.05,-0.52),"eye","organs",headG);
+    const ir=mk(new THREE.CircleGeometry(0.045,20),"iris","organs",headG); ir.position.set(s*0.22,-0.05,-0.621); ir.rotation.y=Math.PI;
+    const pu=mk(new THREE.CircleGeometry(0.018,16),"pupil","organs",headG); pu.position.set(s*0.22,-0.05,-0.622); pu.rotation.y=Math.PI; }
+  label("eye","organs",()=>hw(0.22,-0.05,-0.62));
+
+  /* ===== ORGANS (torso units) ===== */
+  const lungs=[];
+  for(const s of [-1,1]){
+    const g=blob(0.17,0.27,0.22,(v)=>{ const t=(v.y+1)/2; v.x*=0.45+0.55*Math.sqrt(t); v.z*=0.55+0.45*Math.sqrt(t); if(s*v.x<0) v.x*=0.55; if(v.y>0.55) v.y=0.55+(v.y-0.55)*0.3;
+      if(s>0 && v.x<0 && v.z<0 && v.y>0) v.x*=0.55; },32,24).translate(s*0.2,0.27,0.02);
+    const m=mk(g,"lung","organs",torsoG); lungs.push(m);
+  }
+  label("lungR","organs",()=>tw(-0.32,0.3,-0.1)); label("lungL","organs",()=>tw(0.33,0.2,-0.1));
+  mk(tube([[0,-0.3,-0.14],[0,-0.05,-0.1],[0,0.14,-0.04]],0.03,{radial:12}),"airway","organs",torsoG);
+  for(let i=0;i<9;i++){ const r=mk(new THREE.TorusGeometry(0.031,0.006,5,14),"airway","organs",torsoG); r.rotation.x=Math.PI/2; r.position.set(0,-0.27+i*0.045,-0.135+i*0.01); }
+  (function(){ let seed=7; const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; };
+    function br(p,d,l,r,dep){ if(dep>4) return; const q=p.clone().addScaledVector(d,l); mk(tube([p,p.clone().lerp(q,0.5),q],r,{radial:6,n:6,caps:false}),"airway","organs",torsoG);
+      for(const sg of [-1,1]){ const nd=d.clone().add(v3((rnd()-0.5)*0.9,(rnd()-0.2)*0.5,sg*(0.3+rnd()*0.4))).normalize(); br(q,nd,l*0.72,r*0.72,dep+1); } }
+    for(const s of [-1,1]) br(v3(0,0.14,-0.04),v3(s*0.8,0.5,0.1).normalize(),0.09,0.017,1); })();
+  label("trachea","organs",()=>tw(0,-0.1,-0.1));
+  mk(tube([[0,-0.3,0.0],[0.01,0.1,0.04],[0.03,0.3,0.02],[0.07,0.4,-0.02]],0.018,{radial:8}),"stomach","organs",torsoG);
+  label("esophagus","organs",()=>tw(0.01,0.0,0.03));
+  const hd=v3(0.6,0.7,-0.4).normalize();
+  const heart=mk(blob(0.12,0.11,0.12,(v)=>{ const d=v.dot(hd), pp=v.clone().addScaledVector(hd,-d), k=Math.max(0,d); v.copy(hd).multiplyScalar(d*(1+0.4*k)).add(pp.multiplyScalar(1-0.35*k)); },32,24),"heart","organs",torsoG);
+  heart.position.set(0.05,0.34,-0.1);
+  mk(tube([[0.02,0.3,-0.12],[0.0,0.2,-0.14],[0.03,0.11,-0.08],[0.07,0.12,0.05],[0.06,0.25,0.1],[0.04,0.6,0.1],[0.02,0.97,0.07]],(t)=>t<0.3?0.034:0.028,{radial:12,n:70}),"artery","organs",torsoG);
+  for(const p of [[0.02,0.11,-0.08],[0.04,0.1,-0.04],[0.06,0.105,0.0]]) mk(tube([p,[p[0]*1.2+0.005,p[1]-0.08,p[2]],[p[0]*1.5+0.01,p[1]-0.2,p[2]]],0.012,{radial:7}),"artery","organs",torsoG);
+  for(const s of [-1,1]) mk(tube([[0.02,0.97,0.07],[s*0.08,1.06,0.02],[s*0.15,1.16,-0.04]],0.018,{radial:8}),"artery","organs",torsoG);
+  mk(tube([[0.04,0.3,-0.16],[0.06,0.23,-0.13],[0.05,0.2,-0.07]],0.026,{radial:10}),"vein","organs",torsoG);
+  for(const s of [-1,1]) mk(tube([[0.05,0.2,-0.07],[s*0.1,0.21,-0.04],[s*0.17,0.24,0.0]],0.016,{radial:8}),"vein","organs",torsoG);
+  mk(tube([[-0.05,0.33,-0.08],[-0.06,0.15,-0.06],[-0.05,-0.02,-0.04]],0.03,{radial:10}),"vein","organs",torsoG);
+  mk(tube([[-0.04,0.43,-0.02],[-0.04,0.7,0.06],[-0.03,0.98,0.06]],0.028,{radial:10}),"vein","organs",torsoG);
+  label("heart","organs",()=>tw(0.1,0.37,-0.2)); label("aorta","organs",()=>tw(0.05,0.11,-0.02)); label("vc","organs",()=>tw(-0.06,0.15,-0.06));
+  mk(blob(0.24,0.12,0.2,(v)=>{ v.y*=0.55+0.45*(1-v.x)/2; if(v.y>0.25) v.y=0.25+(v.y-0.25)*0.4; },32,24).translate(-0.13,0.53,-0.06),"liver","organs",torsoG);
+  mk(blob(0.03,0.06,0.03).translate(-0.1,0.61,-0.2),"gall","organs",torsoG);
+  label("liver","organs",()=>tw(-0.3,0.52,-0.15)); label("gall","organs",()=>tw(-0.1,0.65,-0.22));
+  mk(tube([[0.07,0.4,-0.02],[0.15,0.43,-0.06],[0.22,0.5,-0.09],[0.2,0.6,-0.13],[0.1,0.66,-0.15],[0.0,0.64,-0.13],[-0.06,0.6,-0.1]],(t)=>0.035+0.07*Math.pow(Math.sin(Math.PI*Math.min(1,t*1.25)),0.8),{radial:14,n:50}),"stomach","organs",torsoG);
+  mk(tube([[-0.06,0.6,-0.1],[-0.1,0.65,-0.05],[-0.06,0.72,-0.02],[0.02,0.7,0.0]],0.022,{radial:8}),"stomach","organs",torsoG);
+  label("stomach","organs",()=>tw(0.25,0.55,-0.14));
+  mk(blob(0.05,0.08,0.09).translate(0.31,0.52,0.12),"spleen","organs",torsoG); label("spleen","organs",()=>tw(0.36,0.52,0.12));
+  mk(tube([[-0.06,0.66,-0.02],[0.06,0.62,0.0],[0.18,0.58,0.04],[0.27,0.55,0.08]],(t)=>0.034-0.016*t,{radial:9}),"pancreas","organs",torsoG); label("pancreas","organs",()=>tw(0.12,0.62,-0.04));
+  for(const s of [-1,1]){ mk(blob(0.055,0.1,0.045,(v)=>{ if(s*v.x<0 && Math.abs(v.y)<0.45) v.x*=0.55; }).translate(s*0.15,0.66,0.15),"kidney","organs",torsoG);
+    mk(tube([[s*0.13,0.7,0.12],[s*0.11,0.85,0.08],[s*0.06,1.02,-0.08]],0.008,{radial:6}),"bladder","organs",torsoG); }
+  label("kidneys","organs",()=>tw(-0.2,0.66,0.16));
+  mk(tube([[-0.22,0.98,-0.05],[-0.24,0.85,-0.08],[-0.24,0.72,-0.1],[-0.19,0.68,-0.17],[0,0.72,-0.21],[0.2,0.67,-0.15],[0.25,0.73,-0.06],[0.25,0.86,-0.04],[0.21,0.98,-0.07],[0.1,1.03,-0.12],[0.02,1.0,0.0],[0,1.1,0.1]],
+    (t)=>(t>0.88?0.04:0.055)*(0.82+0.18*Math.abs(Math.sin(t*Math.PI*30))),{radial:12,n:160}),"colon","organs",torsoG);
+  { const pts=[]; for(let i=0;i<=260;i++){ const q=i/260*TAU; pts.push(v3(0.01+0.15*Math.sin(5*q+0.4)*Math.cos(q*0.5),0.86+0.1*Math.sin(7*q+1.1)*Math.cos(0.3*q),-0.12+0.06*Math.sin(3*q+0.3))); }
+    mk(sweep(pts,0.022,{radial:8}),"gut","organs",torsoG); }
+  label("colon","organs",()=>tw(-0.3,0.82,-0.1)); label("smallint","organs",()=>tw(0.08,0.86,-0.2));
+  mk(blob(0.08,0.06,0.07).translate(0,1.07,-0.12),"bladder","organs",torsoG); label("bladder","organs",()=>tw(0,1.08,-0.2));
+
+  /* ===== MUSCLES ===== */
+  const tpatch=(map,nu,nv)=>mk(patch(map,nu,nv),"muscle","muscles",torsoG);
+  for(const s of [-1,1]){
+    tpatch((u,v)=>{ const th=s*(0.1+u*1.15), y=(0.03+v*0.35)*(1-Math.pow(u,1.3))+(0.09+v*0.07)*Math.pow(u,1.3); const q=surf(th,y,0.01); q.t=0.05; return q; });
+    for(let k=0;k<4;k++){ const y0=0.42+k*0.115, y1=k<3?y0+0.105:1.0; tpatch((u,v)=>{ const q=surf(s*(0.015+u*(k<3?0.3:0.22)),y0+v*(y1-y0),0.005); q.t=0.035; return q; },8,8); }
+    tpatch((u,v)=>{ const q=surf(s*(0.5+u*0.95),0.38+v*0.58,0.004); q.t=0.025; return q; },12,12);
+    tpatch((u,v)=>{ const q=surf(s*(1.15+u*0.35),0.22+v*0.24,0.008+0.02*Math.abs(Math.sin(v*Math.PI*4))); q.t=0.02; return q; },8,12);
+    tpatch((u,v)=>{ const th=s*(Math.PI-0.06-u*1.5), y=(0.4+v*0.58)*(1-u)+(0.2+v*0.12)*u; const q=surf(th,y,0.012); q.t=0.03; return q; },14,14);
+    tpatch((u,v)=>{ const y=-0.05+v*0.68, w=1.25*(1-Math.abs(v-0.2)*1.1); const q=surf(s*(Math.PI-0.01-u*Math.max(0.15,w)),y,0.03); q.t=0.025; return q; },12,14);
+    tpatch((u,v)=>{ const q=surf(s*(Math.PI-0.05-u*0.25),0.05+v*0.98,0.0); q.t=0.05; return q; },6,16);
+    mk(blob(0.3,0.38,0.16,(v)=>{ if(v.z<0) v.z*=0.4; }).translate(s*0.4,-0.08,0.42),"muscle","muscles",pelvG);
+  }
+  label("pecs","muscles",()=>tw(0.25,0.18,-0.34)); label("abs","muscles",()=>tw(0.08,0.6,-0.3)); label("obliques","muscles",()=>tw(-0.33,0.7,-0.18));
+  label("serratus","muscles",()=>tw(0.4,0.32,-0.1)); label("latissimus","muscles",()=>tw(-0.35,0.55,0.22)); label("trapezius","muscles",()=>tw(0.15,0.1,0.33));
+  label("erector","muscles",()=>tw(-0.1,0.75,0.3)); label("gluteus","muscles",()=>pw(-0.45,-0.05,0.65));
+  /* head muscles */
+  for(const s of [-1,1]){
+    mk(patch((u,v)=>{ const q=hsurf(s*(1.0+u*1.25),(0.05+v*0.75)*(1-0.4*Math.abs(u-0.45)),0.01); q.t=0.05; return q; },12,10),"muscle","muscles",headG);
+    mk(patch((u,v)=>{ const q=hsurf(s*(0.05+u*0.75),0.25+v*0.55,0.01); q.t=0.03; return q; },8,8),"muscle","muscles",headG);
+    const ms=segM(musGeo(0.04,0.04,0.55),"muscle","muscles",headG); staticSeg(ms,[s*0.43,0.1,-0.28],[s*0.42,0.55,-0.06],0.09);
+    const zy=segM(musGeo(0.05,0.08,0.5),"muscle","muscles",headG); staticSeg(zy,[s*0.33,0.14,-0.52],[s*0.17,0.42,-0.63],0.04);
+    const oc=mk(new THREE.TorusGeometry(0.15,0.035,8,24),"muscle","muscles",headG); oc.position.set(s*0.22,-0.05,-0.6); oc.rotation.y=s*0.3; oc.scale.set(1,0.85,0.6);
+  }
+  { const oo=mk(new THREE.TorusGeometry(0.13,0.035,8,24),"muscle","muscles",headG); oo.position.set(0,0.46,-0.68); oo.scale.set(1,0.5,0.6); }
+  label("temporalis","muscles",()=>hw(0.5,-0.35,-0.05)); label("frontalis","muscles",()=>hw(-0.2,-0.55,-0.6)); label("masseter","muscles",()=>hw(-0.46,0.35,-0.18));
+  label("oculi","muscles",()=>hw(0.36,-0.05,-0.6)); label("oris","muscles",()=>hw(0.1,0.52,-0.72)); label("zygomaticus","muscles",()=>hw(-0.25,0.3,-0.62));
+  /* neck + limb muscles, rebuilt each frame from joints */
+  const MUS=[];
+  function mus(geoArgs,r,fn,key,main){ const m=segM(musGeo(...geoArgs),"muscle","muscles"); MUS.push({m,r,fn}); if(key&&main) label(key,"muscles",()=>{ const e=fn(); return e[0].clone().lerp(e[1],0.5); }); }
+  for(const S of SIDES){
+    const s=S.s, P=(i)=>K.P[i], LF=()=>limbFrames(S), M=S.main;
+    mus([0.04,0.12,0.5],0.05,()=>[hw(s*0.42,0.2,0.1),tw(s*0.05,0.0,-0.27)],"scm",M);
+    mus([0.05,0.05,0.4],0.08,()=>[hw(s*0.1,0.35,0.42),tw(s*0.43,-0.04,0.12)],null,M);
+    mus([0.02,0.06,0.42],0.15,()=>{ const F=LF(); return [off(P(S.sh),F.la,0.03,K.dn,-0.05),off(P(S.sh).clone().lerp(P(S.el),0.45),F.la,0.02)]; },"deltoid",M);
+    mus([0.12,0.16,0.55],0.1,()=>{ const F=LF(); return [off(P(S.sh).clone().lerp(P(S.el),0.12),F.fa,0.05),off(P(S.el).clone().lerp(P(S.wr),0.08),F.ff,0.03)]; },"biceps",M);
+    mus([0.05,0.2,0.45],0.11,()=>{ const F=LF(); return [off(P(S.sh).clone().lerp(P(S.el),0.08),F.fa,-0.06),off(P(S.el),F.fa,-0.05)]; },"triceps",M);
+    mus([0.03,0.45,0.3],0.07,()=>{ const F=LF(); return [off(P(S.sh).clone().lerp(P(S.el),0.72),F.la,0.045),off(P(S.el).clone().lerp(P(S.wr),0.95),F.lf,0.025)]; },"brachiorad",M);
+    mus([0.04,0.5,0.3],0.08,()=>{ const F=LF(); return [off(P(S.el),F.lf,-0.05),off(P(S.el).clone().lerp(P(S.wr),0.95),F.lf,-0.02)]; },"forearm",M);
+    mus([0.04,0.5,0.3],0.065,()=>{ const F=LF(); return [off(P(S.el),F.lf,0.03,F.ff,-0.03),off(P(S.wr),F.ff,-0.02)]; },null,M);
+    mus([0.08,0.2,0.45],0.12,()=>{ const F=LF(); return [off(P(S.hp),F.ft,0.08,K.dn,-0.03),off(P(S.kn),F.ft,0.06)]; },"quads",M);
+    mus([0.05,0.12,0.5],0.11,()=>{ const F=LF(); return [off(P(S.hp).clone().lerp(P(S.kn),0.15),F.lt,0.08),off(P(S.kn),F.lt,0.04)]; },null,M);
+    mus([0.05,0.1,0.7],0.1,()=>{ const F=LF(); return [off(P(S.hp).clone().lerp(P(S.kn),0.45),F.lt,-0.05,F.ft,0.02),off(P(S.kn),F.lt,-0.045)]; },null,M);
+    mus([0.05,0.15,0.4],0.12,()=>{ const F=LF(); return [off(P(S.hp),F.ft,-0.09),off(P(S.kn).clone().lerp(P(S.an),0.06),F.fs,-0.06)]; },"hamstrings",M);
+    mus([0.03,0.08,0.4],0.11,()=>{ const F=LF(); return [pw(s*0.1,0.3,-0.3),off(P(S.hp).clone().lerp(P(S.kn),0.6),F.lt,-0.05)]; },"adductors",M);
+    mus([0.03,0.05,0.5],0.035,()=>{ const F=LF(); return [pw(s*0.85,-0.45,-0.4),off(P(S.kn),F.lt,-0.06,F.ft,-0.02)]; },"sartorius",M);
+    mus([0.03,0.3,0.35],0.09,()=>{ const F=LF(); return [off(P(S.kn),F.fs,-0.06,F.ls,0.03),off(P(S.kn).clone().lerp(P(S.an),0.85),F.fs,-0.05)]; },"calf",M);
+    mus([0.03,0.3,0.35],0.09,()=>{ const F=LF(); return [off(P(S.kn),F.fs,-0.06,F.ls,-0.03),off(P(S.kn).clone().lerp(P(S.an),0.8),F.fs,-0.05)]; },null,M);
+    mus([0.03,0.45,0.35],0.06,()=>{ const F=LF(); return [off(P(S.kn).clone().lerp(P(S.an),0.08),F.fs,0.04,F.ls,0.03),off(P(S.an),F.fs,0.04)]; },"tibialis",M);
+  }
+  ups.push(()=>{ for(const e of MUS){ const ab=e.fn(); setSeg(e.m,ab[0],ab[1],e.r*K.sw); } });
+
+  /* ===== default pose (metres, y up, origin hips, facing +z) ===== */
+  function defaultPose(){
+    const P=[]; for(let i=0;i<33;i++) P.push(v3(0,0,0));
+    const set=(i,x,y,z)=>P[i].set(x,y,z), both=(l,r,x,y,z)=>{ set(l,x,y,z); set(r,-x,y,z); };
+    set(0,0,0.63,0.1); both(2,5,0.032,0.665,0.075); both(1,4,0.015,0.665,0.08); both(3,6,0.05,0.665,0.07); both(7,8,0.075,0.645,-0.01); both(9,10,0.025,0.585,0.085);
+    both(11,12,0.18,0.46,0); both(13,14,0.24,0.18,-0.03); both(15,16,0.28,-0.07,0.02); both(17,18,0.3,-0.15,0.01); both(19,20,0.285,-0.165,0.04); both(21,22,0.26,-0.12,0.06);
+    both(23,24,0.1,0,0); both(25,26,0.11,-0.43,0.02); both(27,28,0.11,-0.84,-0.02); both(29,30,0.11,-0.88,-0.07); both(31,32,0.125,-0.9,0.13);
+    return P;
+  }
+
+  /* ===== camera control ===== */
+  const cam={ yaw:0, pitch:0.08, dist:2.7, ty:0.1, focus:"body", spin:false, idle:0, tgt:v3(0,0.1,0) };
+  const ptr=new Map(); let lastTap=0, span0=0, dist0=0;
+  function pointerDown(e){ ptr.set(e.pointerId,{x:e.clientX,y:e.clientY}); cam.idle=0;
+    if(ptr.size===2){ const a=[...ptr.values()]; span0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); dist0=cam.dist; }
+    const now=performance.now(); if(ptr.size===1){ if(now-lastTap<300) resetView(); lastTap=now; } }
+  function pointerMove(e){ const p=ptr.get(e.pointerId); if(!p) return; cam.idle=0;
+    if(ptr.size===1){ cam.yaw-=(e.clientX-p.x)*0.009; cam.pitch=clamp(cam.pitch+(e.clientY-p.y)*0.007,-1.35,1.35); }
+    p.x=e.clientX; p.y=e.clientY;
+    if(ptr.size===2){ const a=[...ptr.values()]; const sp=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); if(span0>10) cam.dist=clamp(dist0*span0/sp,0.35,6); } }
+  function pointerUp(e){ ptr.delete(e.pointerId); }
+  function wheel(e){ cam.dist=clamp(cam.dist*Math.exp(e.deltaY*0.001),0.35,6); }
+  function resetView(){ cam.yaw=0; cam.pitch=0.08; cam.dist=cam.focus==="head"?0.95:cam.focus==="torso"?1.5:2.7; }
+  function setFocus(f){ cam.focus=f; resetView(); }
+  function setSpin(b){ cam.spin=!!b; }
+
+  /* ===== per frame ===== */
+  let W_=1,H_=1;
+  function resize(w,h,pr){ W_=w; H_=h; renderer.setPixelRatio(pr); renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+  function setLook(l){ if(l===look) return; look=l; for(const m of meshes) m.material=MATS[m.userData.cat][look]; }
+  const pv=v3(0,0,0);
+  function update(st){
+    setLook(st.look);
+    for(const k in MATS){ MATS[k].xray.uniforms.bright.value=st.brightness; }
+    hemi.intensity=1.1*st.brightness; key.intensity=1.6*st.brightness;
+    root.scale.x=st.mirror?-1:1;
+    frames(st.pose);
+    for(const f of ups) f();
+    for(const S of SIDES){ const J=(st.hands&&st.hands[S.s>0?"L":"R"])||synthHand(S); updHand(S,J); }
+    for(const m of meshes) m.visible=!!st.layers[m.userData.layer];
+    const beat=Math.pow(Math.max(0,Math.sin(st.t*0.0072)),6); heart.scale.setScalar(1+0.07*beat);
+    const br=1+0.025*Math.sin(st.t*0.0016); for(const l of lungs) l.scale.set(br,1+0.01*Math.sin(st.t*0.0016),br);
+    let fy=1e9; for(const i of [27,28,29,30,31,32]) fy=Math.min(fy,st.pose[i].y); grid.position.set(0,fy-0.02,0);
+    const t=cam.focus==="head"?K.H.o.clone().addScaledVector(K.H.y,-0.15):cam.focus==="torso"?tw(0,0.45,0):st.pose[23].clone().add(st.pose[24]).multiplyScalar(0.5).add(v3(0,0.1,0));
+    if(st.mirror) t.x=-t.x;
+    cam.tgt.lerp(t,0.15);
+    cam.idle+=st.dt||16; if(cam.spin && cam.idle>1500 && ptr.size===0) cam.yaw+=(st.dt||16)*0.00045;
+    camera.position.set(cam.tgt.x+Math.sin(cam.yaw)*Math.cos(cam.pitch)*cam.dist, cam.tgt.y+Math.sin(cam.pitch)*cam.dist, cam.tgt.z+Math.cos(cam.yaw)*Math.cos(cam.pitch)*cam.dist);
+    camera.lookAt(cam.tgt);
+    scene.updateMatrixWorld();
+    camera.updateMatrixWorld();
+  }
+  function labels(out,layers){
+    out.length=0;
+    for(const a of anchors){ if(!layers[a.layer]) continue; let p; try{ p=a.f(); }catch(e){ p=null; } if(!p) continue;
+      pv.copy(p).applyMatrix4(root.matrixWorld).project(camera); if(pv.z>1||pv.z<-1) continue;
+      out.push({ key:a.key, x:(pv.x+1)/2*W_, y:(1-pv.y)/2*H_ }); }
+    return out;
+  }
+  function render(){ renderer.render(scene,camera); }
+  return { resize, update, render, labels, defaultPose, pointerDown, pointerMove, pointerUp, wheel, resetView, setFocus, setSpin, scene, camera, root, renderer, meshCount:()=>meshes.length };
+}
+return { create };
+};
+})(typeof window!=="undefined"?window:globalThis);
+
 </script>
 <script type="module">
 import { FilesetResolver, PoseLandmarker, HandLandmarker, FaceLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
@@ -877,6 +1354,7 @@ const POSE_URL = { high: MODEL+"pose_landmarker/pose_landmarker_full/float16/1/p
 const HAND_URL = MODEL+"hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 const FACE_URL = MODEL+"face_landmarker/face_landmarker/float16/1/face_landmarker.task";
 const LIB = window.AnatomyLib;
+const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 
 /* ---------- text ---------- */
 const T = {
@@ -891,7 +1369,10 @@ const T = {
     hint:"In Lens mode, point your index finger and the lens follows it. No hand in view? Drag on the screen.",
     skinNote:"The skin check only compares colour and texture across the face. It works best in even, frontal light, and it’s not a diagnosis.",
     loading:"Loading AI models…", looking:"Looking for a person…", tracking:"Tracking", faceOnly:"Face only",
-    camErr:"Camera not available. Allow camera access for this site, then reload.", modelErr:"AI models didn’t load. Check your connection, then reload." },
+    camErr:"Camera not available. Allow camera access for this site, then reload.", modelErr:"AI models didn’t load. Check your connection, then reload.",
+    view3d:"3D view", pose3d:"Pose", live:"Live", freeze:"Freeze", focus:"Focus", fBody:"Body", fTorso:"Torso", fHead:"Head", spin:"Auto-spin", on:"On", off:"Off", inset:"Camera inset",
+    hint3d:"Drag to rotate, pinch to zoom, double-tap to reset. “Freeze” keeps the last pose so you can walk around it.",
+    explore3d:"Explore in 3D (no camera)", load3d:"Loading 3D…", s3dLive:"3D · live pose", s3dFrozen:"3D · pose frozen", s3dDemo:"3D · sample pose", err3d:"3D view didn’t load. Check your connection." },
   it:{ title:"Lente Anatomica", subtitle:"Anatomia dal vivo", all:"Tutto", bones:"Ossa", muscles:"Muscoli", organs:"Organi", skinChip:"Pelle",
     reveal:"Mostra", lens:"Lente", whole:"Corpo intero", follow:"La lente segue", finger:"Dito", touch:"Tocco",
     layers:"Livelli", skeleton:"Scheletro", skull:"Cranio", hands:"Ossa della mano", muscleL:"Muscoli", organL:"Organi", brain:"Cervello", labels:"Etichette", skin:"Controllo pelle del viso",
@@ -903,7 +1384,10 @@ const T = {
     hint:"In modalità Lente punta l’indice e la lente lo segue. Nessuna mano inquadrata? Trascina sullo schermo.",
     skinNote:"Il controllo della pelle confronta solo colore e grana sul viso. Funziona meglio con luce uniforme e frontale, e non è una diagnosi.",
     loading:"Caricamento modelli AI…", looking:"Cerco una persona…", tracking:"Tracciamento", faceOnly:"Solo viso",
-    camErr:"Fotocamera non disponibile. Consenti l’accesso alla fotocamera per questo sito, poi ricarica.", modelErr:"I modelli AI non si sono caricati. Controlla la connessione, poi ricarica." }
+    camErr:"Fotocamera non disponibile. Consenti l’accesso alla fotocamera per questo sito, poi ricarica.", modelErr:"I modelli AI non si sono caricati. Controlla la connessione, poi ricarica.",
+    view3d:"Vista 3D", pose3d:"Posa", live:"Dal vivo", freeze:"Blocca", focus:"Inquadra", fBody:"Corpo", fTorso:"Busto", fHead:"Testa", spin:"Rotazione auto", on:"Sì", off:"No", inset:"Riquadro camera",
+    hint3d:"Trascina per ruotare, pizzica per lo zoom, doppio tocco per ripristinare. “Blocca” mantiene l’ultima posa così puoi girarci intorno.",
+    explore3d:"Esplora in 3D (senza fotocamera)", load3d:"Caricamento 3D…", s3dLive:"3D · posa dal vivo", s3dFrozen:"3D · posa bloccata", s3dDemo:"3D · posa di esempio", err3d:"La vista 3D non si è caricata. Controlla la connessione." }
 };
 const N = {
   cranium:["Cranium","Cranio"], orbit:["Orbit","Orbita"], nasal:["Nasal cavity","Cavità nasale"], zygomatic:["Zygomatic bone","Osso zigomatico"],
@@ -923,16 +1407,18 @@ const N = {
   sartorius:["Sartorius","Sartorio"], adductors:["Adductors","Adduttori"], calf:["Gastrocnemius","Gastrocnemio"], tibialis:["Tibialis anterior","Tibiale anteriore"],
   scm:["Sternocleidomastoid","Sternocleidomastoideo"], trapezius:["Trapezius","Trapezio"], masseter:["Masseter","Massetere"], temporalis:["Temporalis","Muscolo temporale"],
   frontalis:["Frontalis","Muscolo frontale"], oculi:["Orbicularis oculi","Orbicolare dell’occhio"], oris:["Orbicularis oris","Orbicolare della bocca"], zygomaticus:["Zygomaticus major","Grande zigomatico"],
+  occipital:["Occipital lobe","Lobo occipitale"], cerebellum:["Cerebellum","Cervelletto"], esophagus:["Esophagus","Esofago"], hamstrings:["Hamstrings","Ischiocrurali"],
+  gluteus:["Gluteus maximus","Grande gluteo"], latissimus:["Latissimus dorsi","Gran dorsale"], erector:["Erector spinae","Erettori della colonna"],
   skinRed:["Redness","Zona arrossata"], skinBump:["Raised spot","Rilievo / protuberanza"], skinSpot:["Dark spot","Macchia scura"], skinAbr:["Possible abrasion","Possibile abrasione"]
 };
 const ESSENTIAL = new Set(["cranium","mandible","teeth","frontal","eye","cervical","clavicle","sternum","ribs","spine","pelvis","humerus","radius","femur","tibia","phalanges",
-  "heart","lungR","lungL","liver","stomach","colon","smallint","kidneys","bladder","pecs","deltoid","biceps","abs","quads","masseter","skinRed","skinBump","skinSpot","skinAbr"]);
+  "heart","lungR","cerebellum","gluteus","latissimus","hamstrings","lungL","liver","stomach","colon","smallint","kidneys","bladder","pecs","deltoid","biceps","abs","quads","masseter","skinRed","skinBump","skinSpot","skinAbr"]);
 
 /* ---------- state ---------- */
 const S = {
   layers:{ skeleton:true, skull:true, hands:true, muscles:true, organs:true, brain:true, skin:true, labels:true },
   look:"xray", brightness:1, real:0.55, reveal:"lens", follow:"finger", lensSize:0.3, zoom:1.5,
-  quality:"high", density:"key",
+  quality:"high", density:"key", view:"ar", pose3d:"live", focus:"body", spin:"off", inset:"on",
   facing:"environment", lang:(navigator.language||"en").toLowerCase().startsWith("it") ? "it" : "en", touch:null
 };
 const PRESETS = {
@@ -949,12 +1435,14 @@ const scene = document.createElement("canvas"), sctx = scene.getContext("2d");
 const acv = document.createElement("canvas"); acv.width = acv.height = 160;
 const actx = acv.getContext("2d", { willReadFrequently:true });
 
+let E3=null, E3load=null, P3cur=null, H3={L:null,R:null}, lastNow=0;
 let W=0, H=0, dpr=1, sdpr=1, drawMs=16, perfT=0;
 function sizeScene(){ scene.width=Math.round(W*sdpr); scene.height=Math.round(H*sdpr); }
 function resize(){
   dpr = Math.min(window.devicePixelRatio || 1, 2); W = window.innerWidth; H = window.innerHeight;
   canvas.width = Math.round(W*dpr); canvas.height = Math.round(H*dpr);
   sdpr = Math.min(dpr,1.5); sizeScene();
+  if (E3) E3.resize(W,H,Math.min(dpr,1.5));
   if (!S.touch) S.touch = { x:W/2, y:H*0.4 };
 }
 window.addEventListener("resize", resize); resize();
@@ -1041,10 +1529,16 @@ function confirmed(lm,t){
   }
   return !onHand(lm);
 }
+const WF = Array.from({length:33},()=>[new OneEuro(0.9,3),new OneEuro(0.9,3),new OneEuro(0.9,3)]);
 function onPose(r,t){
   const lm = r && r.landmarks && r.landmarks[0];
   const ok = !!lm && plausiblePose(lm) && confirmed(lm,t);
   hit(TR.pose, ok, t, lm);
+  const wl = r && r.worldLandmarks && r.worldLandmarks[0];
+  if (ok && wl){
+    if (TR.pose.good===1) WF.forEach(f=>f.forEach(e=>e.reset()));
+    TR.pose.world = wl.map((p,i)=>({ x:WF[i][0].f(p.x,t), y:WF[i][1].f(p.y,t), z:WF[i][2].f(p.z,t) }));
+  }
   if (ok){ const P=TR.pose; P.lm.forEach((p,i)=>{ P.on[i] = P.on[i] ? p.v>0.3 : p.v>0.6; }); }
 }
 function onFace(r,t){
@@ -1061,12 +1555,13 @@ function onFace(r,t){
 function onHands(r,t){
   const found=[];
   const L=(r && r.landmarks) || [], Hd=(r && (r.handedness || r.handednesses)) || [];
-  L.forEach((lm,i)=>{ const sc=(Hd[i] && Hd[i][0] && Hd[i][0].score) ?? 1; if (sc>0.75 && dist(px(lm[0]),px(lm[9]))>18) found.push(lm); });
+  const WLh=(r && r.worldLandmarks) || [];
+  L.forEach((lm,i)=>{ const sc=(Hd[i] && Hd[i][0] && Hd[i][0].score) ?? 1; if (sc>0.75 && dist(px(lm[0]),px(lm[9]))>18){ lm.__w=WLh[i]||null; found.push(lm); } });
   const used=[false,false];
   for (const slot of TR.hands){
     let best=-1, bd=1e9;
     found.forEach((lm,i)=>{ if (used[i]) return; const d = slot.lm ? Math.hypot(lm[0].x-slot.lm[0].x, lm[0].y-slot.lm[0].y) : 0; if (d<bd){ bd=d; best=i; } });
-    if (best>=0 && (!slot.lm || !slot.tracked || bd<0.25)){ used[best]=true; hit(slot,true,t,found[best]); }
+    if (best>=0 && (!slot.lm || !slot.tracked || bd<0.25)){ used[best]=true; hit(slot,true,t,found[best]); const w=found[best].__w; if (w) slot.world = slot.world && slot.world.length===w.length ? slot.world.map((p,j)=>({ x:p.x+(w[j].x-p.x)*0.5, y:p.y+(w[j].y-p.y)*0.5, z:p.z+(w[j].z-p.z)*0.5 })) : w.map(p=>({x:p.x,y:p.y,z:p.z})); }
     else hit(slot,false,t,null);
   }
 }
@@ -1189,6 +1684,59 @@ function render(now){
   updateLabels(labelsOut, lens, now); drawLabels(ctx, lens);
 }
 
+/* ---------- 3D view ---------- */
+async function ensure3D(){
+  if (E3) return E3;
+  if (!E3load) E3load = (async ()=>{
+    const THREE = await import(THREE_URL);
+    E3 = window.Anatomy3DFactory(THREE).create($("#gl"));
+    E3.resize(W,H,Math.min(dpr,1.5)); E3.setFocus(S.focus); E3.setSpin(S.spin==="on");
+    return E3;
+  })();
+  return E3load;
+}
+async function setView(v){
+  if (v==="3d"){
+    S.view="3d"; document.body.classList.add("v3d"); LST.clear(); syncUI(); $("#stext").textContent=T[S.lang].load3d; $("#status").hidden=false;
+    try { await ensure3D(); } catch(e){ console.error(e); $("#stext").textContent=T[S.lang].err3d; S.view="ar"; document.body.classList.remove("v3d"); syncUI(); return; }
+    updateStatus();
+  } else {
+    S.view="ar"; document.body.classList.remove("v3d"); LST.clear(); syncUI();
+    if (!stream){ $("#start").hidden=false; return; }
+    updateStatus();
+  }
+}
+const toV = (p)=>({ x:p.x, y:-p.y, z:-p.z });
+function render3d(now){
+  if (!E3) return;
+  const live = S.pose3d==="live", V3 = (o)=>{ const v=Object.create(null); v.x=o.x; v.y=o.y; v.z=o.z; return v; };
+  if (!P3cur) P3cur = E3.defaultPose();
+  if (live && TR.pose.tracked && TR.pose.world){
+    const THREEV = P3cur[0].constructor;
+    P3cur = TR.pose.world.map(p=>{ const q=toV(p); return new THREEV(q.x,q.y,q.z); });
+    H3 = { L:null, R:null };
+    const pl = TR.pose.lm;
+    for (const h of TR.hands){
+      if (!h.tracked || !h.world || !h.lm || !pl) continue;
+      const dL=Math.hypot(h.lm[0].x-pl[15].x,h.lm[0].y-pl[15].y), dR=Math.hypot(h.lm[0].x-pl[16].x,h.lm[0].y-pl[16].y);
+      const side = dL<dR ? "L" : "R", wr = P3cur[side==="L"?15:16], w0 = toV(h.world[0]);
+      H3[side] = h.world.map(p=>{ const q=toV(p); return new THREEV(wr.x+q.x-w0.x, wr.y+q.y-w0.y, wr.z+q.z-w0.z); });
+    }
+  }
+  const dt = lastNow ? Math.min(100, now-lastNow) : 16; lastNow = now;
+  E3.update({ pose:P3cur, hands:H3, mirror:mirror(), layers:S.layers, look:S.look, brightness:S.brightness, t:now, dt });
+  E3.render();
+  base(ctx); ctx.clearRect(0,0,W,H);
+  if (S.inset==="on" && stream && video.videoWidth){
+    const iw = Math.min(W*0.3, 150), ih = iw*video.videoHeight/video.videoWidth, x = W-iw-14, y = 116;
+    ctx.save(); ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,iw,ih,12) : ctx.rect(x,y,iw,ih); ctx.clip();
+    if (mirror()){ ctx.translate(x+iw,y); ctx.scale(-1,1); ctx.drawImage(video,0,0,iw,ih); } else ctx.drawImage(video,x,y,iw,ih);
+    ctx.restore(); ctx.strokeStyle="rgba(159,216,255,.6)"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,iw,ih,12) : ctx.rect(x,y,iw,ih); ctx.stroke();
+  }
+  E3.labels(labelsOut, S.layers);
+  updateLabels(labelsOut, null, now); drawLabels(ctx, null);
+}
+
 /* ---------- detection loop ---------- */
 let models={ pose:null, hands:null, face:null }, lastVT=-1, frameN=0, otherN=0, detN=0, fpsT=performance.now(), fps=0;
 function loop(){
@@ -1214,7 +1762,7 @@ function loop(){
     if (!L.skin || !TR.face.tracked) SK.blobs=[];
   }
   if (now-fpsT>1000){ fps=Math.round(detN*1000/(now-fpsT)); detN=0; fpsT=now; updateStatus(); }
-  render(now);
+  if (S.view==="3d") render3d(now); else render(now);
 }
 
 /* ---------- camera + models ---------- */
@@ -1245,6 +1793,13 @@ async function loadModels(){
 }
 function updateStatus(){
   const tx=T[S.lang]; let msg, ok=false;
+  if (S.view==="3d"){
+    if (!E3) msg=tx.load3d;
+    else if (S.pose3d==="freeze"){ msg=tx.s3dFrozen; ok=true; }
+    else if (TR.pose.tracked){ msg=`${tx.s3dLive} · ${fps} fps`; ok=true; }
+    else msg = stream ? tx.looking : tx.s3dDemo;
+    $("#stext").textContent=msg; $("#sdot").classList.toggle("ok",ok); return;
+  }
   if (!models.pose) msg=tx.loading;
   else if (TR.pose.tracked){ msg=`${tx.tracking} · ${fps} fps`; ok=true; }
   else if (TR.face.tracked){ msg=`${tx.faceOnly} · ${fps} fps`; ok=true; }
@@ -1257,9 +1812,13 @@ $("#go").addEventListener("click", async ()=>{
   const cam=startCamera(), mdl=loadModels();
   try { await cam; } catch(e){ btn.disabled=false; applyLang(); $("#err").textContent=T[S.lang].camErr; return; }
   $("#start").hidden=true; $("#status").hidden=false; updateStatus();
-  requestAnimationFrame(loop);
+  startLoop();
   try { await mdl; updateStatus(); } catch(e){ console.error(e); $("#stext").textContent=T[S.lang].modelErr; }
 });
+let looping=false;
+function startLoop(){ if (!looping){ looping=true; requestAnimationFrame(loop); } }
+$("#go3d").addEventListener("click", async ()=>{ $("#start").hidden=true; $("#status").hidden=false; await setView("3d"); startLoop(); });
+$("#v3d").addEventListener("click", ()=>{ setView(S.view==="3d" ? "ar" : "3d"); });
 
 /* ---------- UI ---------- */
 function applyLang(){
@@ -1272,6 +1831,7 @@ function syncUI(){
   document.querySelectorAll("[data-layer]").forEach(el=>{ el.checked=!!S.layers[el.dataset.layer]; });
   document.querySelectorAll("[data-seg]").forEach(seg=>{ seg.querySelectorAll("button").forEach(b=>b.classList.toggle("on", S[seg.dataset.seg]===b.dataset.v)); });
   document.querySelectorAll("[data-preset]").forEach(b=>{ const p=PRESETS[b.dataset.preset]; b.classList.toggle("on", Object.keys(p).every(k=>!!p[k]===!!S.layers[k])); });
+  $("#v3d").textContent = S.view==="3d" ? "AR" : "3D"; $("#v3d").classList.toggle("on", S.view==="3d");
   $("#real").value=Math.round(S.real*100); $("#brightness").value=Math.round(S.brightness*100);
   $("#lensSize").value=Math.round(S.lensSize*100); $("#zoom").value=Math.round(S.zoom*10);
 }
@@ -1281,6 +1841,9 @@ document.querySelectorAll("[data-seg]").forEach(seg=>seg.addEventListener("click
   const b=e.target.closest("button"); if (!b) return;
   const key=seg.dataset.seg, prev=S[key]; S[key]=b.dataset.v; syncUI();
   if (key==="reveal" || key==="density") LST.clear();
+  if (E3 && key==="focus") E3.setFocus(S.focus);
+  if (E3 && key==="spin") E3.setSpin(S.spin==="on");
+  if (key==="pose3d") updateStatus();
   if (key==="quality" && prev!==S.quality && fileset){ updateStatus(); loadPose().then(updateStatus).catch(console.error); }
 }));
 $("#real").addEventListener("input",e=>S.real=e.target.value/100);
@@ -1297,7 +1860,10 @@ $("#flip").addEventListener("click", async ()=>{
 });
 $("#snap").addEventListener("click",()=>{
   const f=$("#flash"); f.classList.add("on"); setTimeout(()=>f.classList.remove("on"),60);
-  canvas.toBlob(async (blob)=>{
+  let src = canvas;
+  if (S.view==="3d" && E3){ src=document.createElement("canvas"); src.width=canvas.width; src.height=canvas.height; const x=src.getContext("2d");
+    x.fillStyle="#061019"; x.fillRect(0,0,src.width,src.height); x.drawImage($("#gl"),0,0,src.width,src.height); x.drawImage(canvas,0,0); }
+  src.toBlob(async (blob)=>{
     if (!blob) return;
     const file=new File([blob],"anatomy-lens.png",{ type:"image/png" });
     if (navigator.canShare && navigator.canShare({ files:[file] })){ try { await navigator.share({ files:[file], title:T[S.lang].title }); return; } catch(e){} }
@@ -1306,12 +1872,14 @@ $("#snap").addEventListener("click",()=>{
   },"image/png");
 });
 let dragging=false;
-canvas.addEventListener("pointerdown",e=>{ dragging=true; S.touch={ x:e.clientX, y:e.clientY }; });
-canvas.addEventListener("pointermove",e=>{ if (dragging) S.touch={ x:e.clientX, y:e.clientY }; });
-window.addEventListener("pointerup",()=>dragging=false);
-window.addEventListener("pointercancel",()=>dragging=false);
+canvas.addEventListener("pointerdown",e=>{ if (S.view==="3d" && E3){ canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId); E3.pointerDown(e); return; } dragging=true; S.touch={ x:e.clientX, y:e.clientY }; });
+canvas.addEventListener("pointermove",e=>{ if (S.view==="3d" && E3){ E3.pointerMove(e); return; } if (dragging) S.touch={ x:e.clientX, y:e.clientY }; });
+window.addEventListener("pointerup",e=>{ dragging=false; if (E3) E3.pointerUp(e); });
+window.addEventListener("pointercancel",e=>{ dragging=false; if (E3) E3.pointerUp(e); });
+canvas.addEventListener("wheel",e=>{ if (S.view==="3d" && E3){ e.preventDefault(); E3.wheel(e); } },{ passive:false });
 
 applyLang(); syncUI();
+
 
 </script>
 </body>
