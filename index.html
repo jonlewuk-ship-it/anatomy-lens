@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#061019">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Anatomy Lens</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦴</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#061019;
+  --panel:rgba(8,20,32,.86);
+  --line:rgba(159,216,255,.16);
+  --text:#e3f2fc;
+  --muted:#84a2b8;
+  --film:#9fd8ff;
+  --film-ink:#04121d;
+  --chip:#0f2234;
+  --bone:#efe6d2;
+  --font:"IBM Plex Sans Condensed", ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --panel:rgba(241,246,250,.92); --line:rgba(16,48,78,.16); --text:#0b1c2b;
+    --muted:#4c6578; --chip:#dfe9f2; --film:#1d6fa8; --film-ink:#ffffff; color-scheme:light;
+  }
+}
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body{ margin:0; height:100%; background:var(--bg); color:var(--text); overflow:hidden; overscroll-behavior:none; font-family:var(--font); }
+button,input{ font:inherit; color:inherit; }
+button:focus-visible,input:focus-visible{ outline:2px solid var(--film); outline-offset:2px; }
+#view{ position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; background:#000; }
+#video{ position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+.flash{ position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:20; transition:opacity .35s; }
+.flash.on{ opacity:.8; transition:none; }
+
+.top{ position:fixed; top:0; left:0; right:0; z-index:5; display:flex; align-items:center; gap:8px;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 14px;
+  background:linear-gradient(to bottom, rgba(6,16,25,.8), rgba(6,16,25,0)); pointer-events:none; }
+.top > *{ pointer-events:auto; }
+.brand{ flex:1; min-width:0; color:#e3f2fc; }
+.brand b{ display:block; font-size:19px; font-weight:600; letter-spacing:.01em; }
+.brand span{ font-size:12px; color:#9fb9cc; }
+.iconbtn{ min-width:42px; height:42px; border-radius:21px; border:1px solid var(--line); background:var(--panel);
+  color:var(--text); font-size:18px; display:grid; place-items:center; cursor:pointer; padding:0 12px; }
+.iconbtn.txt{ font-size:13px; font-weight:600; }
+
+.status{ position:fixed; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top,0px) + 68px); z-index:5;
+  padding:6px 12px; border-radius:999px; background:var(--panel); border:1px solid var(--line);
+  font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.status[hidden]{ display:none; }
+.dot{ width:7px; height:7px; border-radius:50%; background:#f0c36a; }
+.dot.ok{ background:#73e2ab; box-shadow:0 0 8px #73e2ab; }
+
+.sheet{ position:fixed; left:0; right:0; bottom:0; z-index:6; background:var(--panel);
+  -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); border-top:1px solid var(--line);
+  border-radius:22px 22px 0 0; padding:6px 14px calc(env(safe-area-inset-bottom,0px) + 10px);
+  max-height:64vh; display:flex; flex-direction:column; }
+.sheet-head{ display:flex; align-items:center; gap:8px; padding:6px 0 4px; }
+.quick{ flex:1; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
+.quick::-webkit-scrollbar{ display:none; }
+.chip{ flex:none; height:36px; padding:0 14px; border-radius:18px; border:1px solid var(--line); background:var(--chip); cursor:pointer; font-size:14px; }
+.chip.on{ background:var(--film); color:var(--film-ink); border-color:transparent; font-weight:600; }
+.sheet-body{ display:none; overflow:auto; padding:6px 0 4px; }
+.sheet.open .sheet-body{ display:block; }
+.group{ padding:10px 0; border-top:1px solid var(--line); }
+.group h4{ margin:0 0 8px; font-size:13px; font-weight:500; color:var(--muted); }
+.seg{ display:flex; background:var(--chip); border-radius:12px; padding:3px; gap:3px; }
+.seg button{ flex:1; height:34px; border:0; border-radius:9px; background:transparent; cursor:pointer; font-size:14px; }
+.seg button.on{ background:var(--film); color:var(--film-ink); font-weight:600; }
+.row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.toggles{ display:grid; grid-template-columns:1fr 1fr; gap:4px 10px; }
+.tog{ display:flex; align-items:center; gap:9px; min-height:36px; font-size:14.5px; cursor:pointer; }
+.tog input{ width:20px; height:20px; accent-color:var(--film); }
+.range{ display:grid; grid-template-columns:1fr 1.2fr; align-items:center; gap:10px; min-height:38px; font-size:14px; }
+.range input{ width:100%; accent-color:var(--film); }
+.hint{ font-size:12.5px; color:var(--muted); line-height:1.45; margin:8px 0 2px; }
+
+.start{ position:fixed; inset:0; z-index:10; display:grid; place-items:center; padding:24px;
+  background:radial-gradient(120% 80% at 50% 30%, #0c2236 0%, #061019 70%); }
+.start[hidden]{ display:none; }
+.card{ max-width:420px; width:100%; color:#e3f2fc; }
+.card .mark{ width:120px; height:120px; margin:0 0 20px; }
+.card h1{ margin:0 0 10px; font-size:38px; line-height:1.05; font-weight:600; letter-spacing:-.01em; }
+.card p{ margin:0 0 18px; font-size:16px; line-height:1.5; color:#b5cddd; }
+.primary{ width:100%; height:54px; border:0; border-radius:27px; background:#9fd8ff; color:#04121d; font-size:17px; font-weight:600; cursor:pointer; }
+.primary:disabled{ opacity:.6; }
+.note{ font-size:12.5px !important; color:#7e9aae !important; margin-top:16px !important; }
+.err{ color:#ff9a9a !important; font-size:14px !important; }
+.langsw{ position:absolute; top:calc(env(safe-area-inset-top,0px) + 14px); right:16px; }
+@media (prefers-reduced-motion: reduce){ .flash{ transition:none; } }
+</style>
+</head>
+<body>
+<video id="video" playsinline muted autoplay></video>
+<canvas id="view"></canvas>
+<div class="flash" id="flash"></div>
+
+<header class="top">
+  <div class="brand"><b data-i="title">Anatomy Lens</b><span data-i="subtitle">Live anatomy overlay</span></div>
+  <button class="iconbtn txt" id="lang" aria-label="Language">IT</button>
+  <button class="iconbtn" id="flip" aria-label="Switch camera">⇄</button>
+  <button class="iconbtn" id="snap" aria-label="Take photo">📸</button>
+</header>
+
+<div class="status" id="status" hidden><span class="dot" id="sdot"></span><span id="stext"></span></div>
+
+<section class="sheet" id="sheet">
+  <div class="sheet-head">
+    <div class="quick">
+      <button class="chip" data-preset="all" data-i="all">Everything</button>
+      <button class="chip" data-preset="bones" data-i="bones">Bones</button>
+      <button class="chip" data-preset="muscles" data-i="muscles">Muscles</button>
+      <button class="chip" data-preset="organs" data-i="organs">Organs</button>
+    </div>
+    <button class="iconbtn" id="more" aria-label="Settings" aria-expanded="false">⚙︎</button>
+  </div>
+  <div class="sheet-body">
+    <div class="group">
+      <div class="row2">
+        <div><h4 data-i="reveal">Reveal</h4>
+          <div class="seg" data-seg="reveal"><button data-v="lens" data-i="lens">Lens</button><button data-v="all" data-i="whole">Whole body</button></div></div>
+        <div><h4 data-i="follow">Lens follows</h4>
+          <div class="seg" data-seg="follow"><button data-v="finger" data-i="finger">Fingertip</button><button data-v="touch" data-i="touch">Touch</button></div></div>
+      </div>
+      <p class="hint" data-i="hint"></p>
+    </div>
+    <div class="group">
+      <h4 data-i="layers">Layers</h4>
+      <div class="toggles">
+        <label class="tog"><input type="checkbox" data-layer="skeleton"><span data-i="skeleton">Skeleton</span></label>
+        <label class="tog"><input type="checkbox" data-layer="skull"><span data-i="skull">Skull</span></label>
+        <label class="tog"><input type="checkbox" data-layer="hands"><span data-i="hands">Hand bones</span></label>
+        <label class="tog"><input type="checkbox" data-layer="muscles"><span data-i="muscleL">Muscles</span></label>
+        <label class="tog"><input type="checkbox" data-layer="organs"><span data-i="organL">Organs</span></label>
+        <label class="tog"><input type="checkbox" data-layer="brain"><span data-i="brain">Brain</span></label>
+        <label class="tog"><input type="checkbox" data-layer="labels"><span data-i="labels">Labels</span></label>
+      </div>
+    </div>
+    <div class="group">
+      <h4 data-i="look">Look</h4>
+      <div class="seg" data-seg="look"><button data-v="xray" data-i="xray">X-ray</button><button data-v="solid" data-i="solid">Solid</button></div>
+      <label class="range"><span data-i="real">Real me showing through</span><input type="range" id="real" min="0" max="100"></label>
+      <label class="range"><span data-i="brightness">Brightness</span><input type="range" id="brightness" min="40" max="200"></label>
+      <label class="range"><span data-i="lensSize">Lens size</span><input type="range" id="lensSize" min="15" max="48"></label>
+      <label class="range"><span data-i="zoom">Zoom</span><input type="range" id="zoom" min="10" max="25"></label>
+    </div>
+    <p class="hint" data-i="disclaimer"></p>
+  </div>
+</section>
+
+<div class="start" id="start">
+  <button class="iconbtn txt langsw" id="lang2" aria-label="Language">IT</button>
+  <div class="card">
+    <svg class="mark" viewBox="0 0 120 120" aria-hidden="true">
+      <circle cx="60" cy="60" r="54" fill="none" stroke="#9fd8ff" stroke-width="1.5"/>
+      <circle cx="60" cy="60" r="58" fill="none" stroke="#9fd8ff" stroke-opacity=".25" stroke-width="5"/>
+      <ellipse cx="60" cy="50" rx="24" ry="26" fill="none" stroke="#efe6d2" stroke-width="2"/>
+      <ellipse cx="51" cy="56" rx="6" ry="5" fill="#061019" stroke="#efe6d2" stroke-width="1.5"/>
+      <ellipse cx="69" cy="56" rx="6" ry="5" fill="#061019" stroke="#efe6d2" stroke-width="1.5"/>
+      <path d="M40 58 Q42 80 60 88 Q78 80 80 58" fill="none" stroke="#efe6d2" stroke-width="2"/>
+      <path d="M50 76 h20 M50 80 h20" stroke="#efe6d2" stroke-width="1.2"/>
+      <path d="M44 38 Q60 28 76 38" fill="none" stroke="#c492ff" stroke-width="1.5"/>
+    </svg>
+    <h1 data-i="title">Anatomy Lens</h1>
+    <p data-i="intro"></p>
+    <button class="primary" id="go" data-i="start">Start camera</button>
+    <p class="err" id="err"></p>
+    <p class="note" data-i="disclaimer"></p>
+  </div>
+</div>
+
+<script type="module">
+import { FilesetResolver, PoseLandmarker, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+
+const MP_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
+const POSE_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+const HAND_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+
+/* ---------- text ---------- */
+const T = {
+  en:{ title:"Anatomy Lens", subtitle:"Live anatomy overlay", all:"Everything", bones:"Bones", muscles:"Muscles", organs:"Organs",
+    reveal:"Reveal", lens:"Lens", whole:"Whole body", follow:"Lens follows", finger:"Fingertip", touch:"Touch",
+    layers:"Layers", skeleton:"Skeleton", skull:"Skull", hands:"Hand bones", muscleL:"Muscles", organL:"Organs", brain:"Brain", labels:"Labels",
+    look:"Look", xray:"X-ray", solid:"Solid", real:"Real person showing through", brightness:"Brightness", lensSize:"Lens size", zoom:"Zoom",
+    start:"Start camera", starting:"Starting…",
+    intro:"Point the camera at a person, or at yourself. Bones, muscles and organs are pinned to the body and follow every move.",
+    disclaimer:"Illustrative anatomy placed on body landmarks. It’s not an X-ray and not a medical tool. Video is processed on this device and never uploaded.",
+    hint:"In Lens mode, point your index finger and the lens follows it. No hand in view? Drag on the screen.",
+    loading:"Loading AI models…", looking:"Looking for a body…", tracking:"Tracking",
+    camErr:"Camera not available. Allow camera access for this site, then reload.", modelErr:"AI models didn’t load. Check your connection, then reload." },
+  it:{ title:"Lente Anatomica", subtitle:"Anatomia dal vivo", all:"Tutto", bones:"Ossa", muscles:"Muscoli", organs:"Organi",
+    reveal:"Mostra", lens:"Lente", whole:"Corpo intero", follow:"La lente segue", finger:"Dito", touch:"Tocco",
+    layers:"Livelli", skeleton:"Scheletro", skull:"Cranio", hands:"Ossa della mano", muscleL:"Muscoli", organL:"Organi", brain:"Cervello", labels:"Etichette",
+    look:"Aspetto", xray:"Raggi X", solid:"Solido", real:"Quanto si vede la persona", brightness:"Luminosità", lensSize:"Dimensione lente", zoom:"Zoom",
+    start:"Avvia fotocamera", starting:"Avvio…",
+    intro:"Inquadra una persona, o te stesso. Ossa, muscoli e organi vengono agganciati al corpo e seguono ogni movimento.",
+    disclaimer:"Anatomia illustrativa posizionata sui punti del corpo. Non è una radiografia né uno strumento medico. Il video viene elaborato su questo dispositivo e non viene mai caricato.",
+    hint:"In modalità Lente punta l’indice e la lente lo segue. Nessuna mano inquadrata? Trascina sullo schermo.",
+    loading:"Caricamento modelli AI…", looking:"Cerco un corpo…", tracking:"Tracciamento",
+    camErr:"Fotocamera non disponibile. Consenti l’accesso alla fotocamera per questo sito, poi ricarica.", modelErr:"I modelli AI non si sono caricati. Controlla la connessione, poi ricarica." }
+};
+const N = {
+  cranium:["Cranium","Cranio"], orbit:["Orbit","Orbita"], nasal:["Nasal cavity","Cavità nasale"], zygomatic:["Zygomatic bone","Osso zigomatico"],
+  maxilla:["Maxilla","Mascella"], mandible:["Mandible","Mandibola"], frontal:["Frontal lobe","Lobo frontale"], parietal:["Parietal lobe","Lobo parietale"],
+  temporal:["Temporal lobe","Lobo temporale"], eye:["Eye","Occhio"], cervical:["Cervical spine","Colonna cervicale"], spine:["Lumbar spine","Colonna lombare"],
+  clavicle:["Clavicle","Clavicola"], sternum:["Sternum","Sterno"], ribs:["Ribs","Costole"], pelvis:["Pelvis","Bacino"], humerus:["Humerus","Omero"],
+  radius:["Radius & ulna","Radio e ulna"], femur:["Femur","Femore"], patella:["Patella","Rotula"], tibia:["Tibia & fibula","Tibia e perone"],
+  foot:["Foot bones","Ossa del piede"], carpals:["Carpals","Carpo"], metacarpals:["Metacarpals","Metacarpi"], phalanges:["Phalanges","Falangi"],
+  lungR:["Right lung","Polmone destro"], lungL:["Left lung","Polmone sinistro"], heart:["Heart","Cuore"], trachea:["Trachea","Trachea"],
+  liver:["Liver","Fegato"], stomach:["Stomach","Stomaco"], kidneys:["Kidneys","Reni"], intestines:["Intestines","Intestino"], bladder:["Bladder","Vescica"],
+  deltoid:["Deltoid","Deltoide"], biceps:["Biceps","Bicipite"], forearm:["Forearm flexors","Flessori avambraccio"], pecs:["Pectoralis major","Grande pettorale"],
+  abs:["Rectus abdominis","Retto dell’addome"], quads:["Quadriceps","Quadricipite"], calf:["Gastrocnemius","Gastrocnemio"],
+  scm:["Sternocleidomastoid","Sternocleidomastoideo"], trapezius:["Trapezius","Trapezio"], masseter:["Masseter","Massetere"]
+};
+
+/* ---------- state ---------- */
+const S = {
+  layers:{ skeleton:true, skull:true, hands:true, muscles:true, organs:true, brain:true, labels:true },
+  look:"xray", brightness:1, real:0.55, reveal:"lens", follow:"finger", lensSize:0.3, zoom:1.5,
+  facing:"environment", lang:(navigator.language||"en").toLowerCase().startsWith("it") ? "it" : "en",
+  touch:null
+};
+const PRESETS = {
+  all:{ skeleton:1, skull:1, hands:1, muscles:1, organs:1, brain:1 },
+  bones:{ skeleton:1, skull:1, hands:1, muscles:0, organs:0, brain:0 },
+  muscles:{ skeleton:0, skull:0, hands:0, muscles:1, organs:0, brain:0 },
+  organs:{ skeleton:0, skull:0, hands:0, muscles:0, organs:1, brain:1 }
+};
+
+const $ = (s) => document.querySelector(s);
+const video = $("#video"), canvas = $("#view"), ctx = canvas.getContext("2d");
+const scene = document.createElement("canvas"), sctx = scene.getContext("2d");
+
+let W = 0, H = 0, dpr = 1;
+function resize(){
+  dpr = Math.min(window.devicePixelRatio || 1, 2); W = window.innerWidth; H = window.innerHeight;
+  for (const c of [canvas, scene]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+  if (!S.touch) S.touch = { x: W / 2, y: H * 0.4 };
+}
+window.addEventListener("resize", resize); resize();
+
+/* ---------- math ---------- */
+const add=(a,b)=>({x:a.x+b.x,y:a.y+b.y}), sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y}), mul=(a,k)=>({x:a.x*k,y:a.y*k});
+const len=(a)=>Math.hypot(a.x,a.y), lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+const norm=(a)=>{ const l=len(a)||1; return {x:a.x/l,y:a.y/l}; }, perp=(a)=>({x:-a.y,y:a.x}), dot=(a,b)=>a.x*b.x+a.y*b.y;
+const TAU = Math.PI * 2;
+
+/* ---------- video → screen mapping ---------- */
+let cover = { ox:0, oy:0, dw:1, dh:1 };
+const mirror = () => S.facing === "user";
+function updCover(){
+  const vw = video.videoWidth, vh = video.videoHeight; if (!vw) return;
+  const sc = Math.max(W / vw, H / vh); cover = { dw:vw*sc, dh:vh*sc, ox:(W-vw*sc)/2, oy:(H-vh*sc)/2 };
+}
+function mp(p){ return { x: cover.ox + (mirror() ? 1 - p.x : p.x) * cover.dw, y: cover.oy + p.y * cover.dh, v: p.v }; }
+function base(c){ c.setTransform(dpr,0,0,dpr,0,0); }
+function drawVideo(c){
+  base(c); c.save(); if (mirror()) { c.translate(W,0); c.scale(-1,1); }
+  c.drawImage(video, cover.ox, cover.oy, cover.dw, cover.dh); c.restore();
+}
+
+/* ---------- local frames: build paths in body units, stroke in screen units ---------- */
+function fp(F,u,v){ return { x:F.o.x+F.a.x*u+F.d.x*v, y:F.o.y+F.a.y*u+F.d.y*v }; }
+function inFrame(c,F){ c.setTransform(dpr*F.a.x, dpr*F.a.y, dpr*F.d.x, dpr*F.d.y, dpr*F.o.x, dpr*F.o.y); }
+function shape(c,F,pts,closed=true){
+  inFrame(c,F); c.beginPath(); c.moveTo(pts[0][0],pts[0][1]);
+  for (let i=1;i<pts.length;i++){ const p=pts[i];
+    if (p.length===4) c.quadraticCurveTo(p[0],p[1],p[2],p[3]);
+    else if (p.length===6) c.bezierCurveTo(p[0],p[1],p[2],p[3],p[4],p[5]);
+    else c.lineTo(p[0],p[1]); }
+  if (closed) c.closePath();
+}
+
+/* ---------- paint ---------- */
+const C = { bone:[205,236,255], muscle:[236,92,96], lung:[246,144,178], heart:[240,58,74], liver:[186,84,66], stomach:[246,172,122],
+  kidney:[214,96,106], gut:[246,188,152], bladder:[246,214,122], brain:[196,146,255], eye:[250,238,170], airway:[190,225,240] };
+const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${Math.max(0,Math.min(1,a))})`;
+const darken=(c)=>c.map(v=>Math.round(v*0.45));
+let LW = 1.5;
+function paint(c,col,opt={}){
+  const fill = opt.fill !== false, lw = opt.lw || LW, br = S.brightness; base(c);
+  if (S.look === "xray") {
+    if (fill) { c.fillStyle = rgba(col,(col===C.bone?0.10:0.22)*br); c.fill(); }
+    c.lineWidth = lw*3.2; c.strokeStyle = rgba(col,0.16*br); c.stroke();
+    c.lineWidth = lw; c.strokeStyle = rgba(col,0.92*br); c.stroke();
+  } else {
+    const solid = col===C.bone ? [236,228,210] : col;
+    if (fill) { c.fillStyle = rgba(solid,0.92); c.fill(); c.lineWidth = lw*0.8; c.strokeStyle = rgba(darken(solid),0.95); c.stroke(); }
+    else { c.lineWidth = lw*2.4; c.strokeStyle = rgba(darken(solid),0.9); c.stroke(); c.lineWidth = lw*1.5; c.strokeStyle = rgba(solid,1); c.stroke(); }
+  }
+}
+function ell(c,F,x,y,rx,ry,rot,col,opt){ inFrame(c,F); c.beginPath(); c.ellipse(x,y,rx,ry,rot,0,TAU); paint(c,col,opt); }
+
+/* ---------- labels ---------- */
+const labels = [];
+function tag(key,p){ if (S.layers.labels && p) labels.push({ key, x:p.x, y:p.y }); }
+
+/* ---------- primitives ---------- */
+function bone(c,A,B,w,key){
+  const d=sub(B,A), L=len(d); if (L<2) return;
+  const u=mul(d,1/L), n=perp(u), r=w/2, m=lerp(A,B,.5), ang=Math.atan2(u.y,u.x);
+  base(c); c.beginPath();
+  const pA=add(A,mul(n,r)), pB=add(B,mul(n,r)), q1=add(m,mul(n,w*0.1)), qA=sub(A,mul(n,r)), q2=sub(m,mul(n,w*0.1));
+  c.moveTo(pA.x,pA.y); c.quadraticCurveTo(q1.x,q1.y,pB.x,pB.y);
+  c.arc(B.x,B.y,r,ang+Math.PI/2,ang-Math.PI/2,true);
+  c.quadraticCurveTo(q2.x,q2.y,qA.x,qA.y);
+  c.arc(A.x,A.y,r,ang-Math.PI/2,ang+Math.PI/2,true);
+  c.closePath(); paint(c,C.bone);
+  if (key) tag(key,m);
+}
+function vertebrae(c,A,B,n,w,key){
+  const d=sub(B,A), L=len(d); if (L<3) return;
+  const rot=Math.atan2(d.y,d.x)+Math.PI/2, seg=L/n; base(c); c.beginPath();
+  for (let i=0;i<n;i++){ const p=lerp(A,B,(i+.5)/n), rx=w/2, ry=seg*0.38;
+    c.moveTo(p.x+rx*Math.cos(rot), p.y+rx*Math.sin(rot)); c.ellipse(p.x,p.y,rx,ry,rot,0,TAU); }
+  paint(c,C.bone); if (key) tag(key,lerp(A,B,.5));
+}
+function muscle(c,A,B,w,key){
+  const d=sub(B,A); if (len(d)<3) return;
+  const m=lerp(A,B,.5), n=perp(norm(d)), p1=add(m,mul(n,w)), p2=sub(m,mul(n,w));
+  base(c); c.beginPath(); c.moveTo(A.x,A.y); c.quadraticCurveTo(p1.x,p1.y,B.x,B.y); c.quadraticCurveTo(p2.x,p2.y,A.x,A.y); c.closePath();
+  paint(c,C.muscle);
+  base(c); c.beginPath();
+  for (const k of [-0.45,0,0.45]){ const q=add(m,mul(n,w*k)); c.moveTo(A.x,A.y); c.quadraticCurveTo(q.x,q.y,B.x,B.y); }
+  paint(c,C.muscle,{ fill:false, lw:LW*0.45 });
+  if (key) tag(key,m);
+}
+
+/* ---------- tracking data ---------- */
+let models = null, poseLM = null, handsLM = [], poseMiss = 0, handMiss = 0;
+const vis = (p) => p && (p.v === undefined || p.v > 0.5);
+function smooth(prev,next,a){
+  if (!prev || prev.length !== next.length) return next.map(p=>({ x:p.x, y:p.y, v:p.visibility ?? 1 }));
+  return next.map((p,i)=>({ x:prev[i].x+(p.x-prev[i].x)*a, y:prev[i].y+(p.y-prev[i].y)*a, v:p.visibility ?? 1 }));
+}
+function onPose(r){
+  if (r && r.landmarks && r.landmarks.length){ poseLM = smooth(poseLM, r.landmarks[0], 0.55); poseMiss = 0; }
+  else if (++poseMiss > 8) poseLM = null;
+}
+function onHands(r){
+  let L = (r && r.landmarks) ? r.landmarks.slice() : [];
+  if (L.length){
+    if (handsLM.length===2 && L.length===2){
+      const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+      if (d(handsLM[0][0],L[0][0])+d(handsLM[1][0],L[1][0]) > d(handsLM[0][0],L[1][0])+d(handsLM[1][0],L[0][0])) L = [L[1],L[0]];
+    }
+    handsLM = L.map((h,i)=>smooth(handsLM[i], h, 0.6)); handMiss = 0;
+  } else if (++handMiss > 6) handsLM = [];
+}
+
+/* ---------- anatomy ---------- */
+const SIDES = [ {sh:11,el:13,wr:15,hip:23,kn:25,an:27,he:29,ft:31,main:true}, {sh:12,el:14,wr:16,hip:24,kn:26,an:28,he:30,ft:32,main:false} ];
+const CHAINS = [[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16],[17,18,19,20]];
+
+function drawAnatomy(c,t){
+  labels.length = 0;
+  if (S.look === "xray") c.globalCompositeOperation = "lighter";
+  let SW = 140;
+
+  if (poseLM){
+    const P = poseLM.map(mp);
+    const haveSh = vis(P[11]) && vis(P[12]);
+    const head = vis(P[0]) && vis(P[2]) && vis(P[5]);
+    const hipsVis = vis(P[23]) && vis(P[24]);
+    SW = haveSh ? len(sub(P[11],P[12])) : head ? len(sub(P[2],P[5]))*5 : 140;
+    LW = Math.max(1.1, SW*0.006);
+
+    let Tf = null, Pv = null, Hf = null;
+    if (haveSh){
+      const o = lerp(P[11],P[12],.5), a = sub(P[11],P[12]); let d;
+      if (hipsVis) d = sub(lerp(P[23],P[24],.5), o);
+      else { d = mul(perp(a),1.4); if ((head && dot(d,sub(o,P[0]))<0) || (!head && d.y<0)) d = mul(d,-1); }
+      Tf = { o, a, d };
+      if (hipsVis){ const ha = sub(P[23],P[24]); Pv = { o:lerp(P[23],P[24],.5), a:ha, d:mul(norm(d),len(ha)) }; }
+    }
+    if (head){
+      const em = lerp(P[2],P[5],.5), across = sub(P[2],P[5]), ed = len(across);
+      if (ed > 5){
+        const mouth = (vis(P[9]) && vis(P[10])) ? lerp(P[9],P[10],.5) : null;
+        let down = mouth ? sub(mouth,em) : perp(across);
+        if (!mouth && Tf && dot(down,sub(Tf.o,em))<0) down = mul(down,-1);
+        const Wd = ed/0.42, Hd = mouth ? len(down)/0.5 : Wd;
+        Hf = { o:em, a:mul(norm(across),Wd), d:mul(norm(down),Hd) };
+      }
+    }
+
+    if (S.layers.organs && Tf) drawOrgans(c,Tf,t);
+    if (S.layers.skeleton){ if (Tf) drawTorsoSkeleton(c,Tf,Hf,SW); drawLimbBones(c,P,SW); if (Pv) drawPelvis(c,Pv); }
+    if (Hf && S.layers.skull) drawSkull(c,Hf);
+    if (Hf && S.layers.brain) drawBrain(c,Hf);
+    if (S.layers.muscles) drawMuscles(c,P,Tf,Hf,SW);
+    if (Hf && S.layers.organs){ for (const s of [-1,1]) ell(c,Hf,s*0.21,0,0.075,0.075,0,C.eye); tag("eye",fp(Hf,0.21,0)); }
+  }
+  if (S.layers.hands) drawHands(c);
+  c.globalCompositeOperation = "source-over"; base(c);
+}
+
+function drawOrgans(c,T,t){
+  for (const s of [-1,1]) ell(c,T,s*0.16,0.64,0.042,0.068,s*0.25,C.kidney);
+  tag("kidneys",fp(T,-0.16,0.66));
+  shape(c,T,[[0,-0.12],[0,0.13]],false); inFrame(c,T);
+  c.moveTo(0,0.13); c.quadraticCurveTo(-0.05,0.15,-0.12,0.22); c.moveTo(0,0.13); c.quadraticCurveTo(0.05,0.15,0.12,0.22);
+  paint(c,C.airway,{ fill:false, lw:LW*1.8 }); tag("trachea",fp(T,0,-0.06));
+  shape(c,T,[[-0.08,0.02],[-0.3,0.08,-0.34,0.3],[-0.36,0.46,-0.3,0.52],[-0.18,0.5,-0.06,0.47],[-0.04,0.3,-0.08,0.02]]); paint(c,C.lung);
+  shape(c,T,[[0.08,0.02],[0.3,0.08,0.34,0.3],[0.36,0.46,0.3,0.52],[0.22,0.5,0.16,0.48],[0.06,0.42,0.09,0.32],[0.05,0.2,0.08,0.02]]); paint(c,C.lung);
+  tag("lungR",fp(T,-0.22,0.26)); tag("lungL",fp(T,0.25,0.22));
+  const beat = Math.pow(Math.max(0,Math.sin(t*0.0072)),6), k = 1 + 0.07*beat;
+  ell(c,T,0.07,0.34,0.1*k,0.08*k,0.6,C.heart); tag("heart",fp(T,0.08,0.35));
+  shape(c,T,[[-0.36,0.5],[-0.1,0.42,0.14,0.49],[0.04,0.58,-0.3,0.64],[-0.38,0.6,-0.36,0.5]]); paint(c,C.liver); tag("liver",fp(T,-0.2,0.54));
+  ell(c,T,0.17,0.56,0.1,0.065,-0.5,C.stomach); tag("stomach",fp(T,0.18,0.56));
+  shape(c,T,[[-0.2,0.94],[-0.25,0.8,-0.22,0.69],[0,0.65,0.22,0.69],[0.25,0.8,0.2,0.95]],false); paint(c,C.gut,{ fill:false, lw:LW*3 });
+  inFrame(c,T); c.beginPath();
+  for (let r=0;r<5;r++){ const y=0.73+r*0.045; for (let i=0;i<=24;i++){ const x=-0.16+i*(0.32/24), yy=y+0.012*Math.sin(i*1.3+r); if (i) c.lineTo(x,yy); else c.moveTo(x,yy); } }
+  paint(c,C.gut,{ fill:false, lw:LW*1.4 }); tag("intestines",fp(T,0.05,0.8));
+  ell(c,T,0,0.99,0.07,0.045,0,C.bladder); tag("bladder",fp(T,0,0.99));
+}
+
+function drawTorsoSkeleton(c,T,Hf,SW){
+  if (Hf) vertebrae(c,fp(Hf,0,0.75),fp(T,0,-0.02),7,SW*0.07,"cervical");
+  vertebrae(c,fp(T,0,0),fp(T,0,0.62),12,SW*0.075);
+  vertebrae(c,fp(T,0,0.62),fp(T,0,0.96),5,SW*0.095,"spine");
+  for (const s of [-1,1]) bone(c,fp(T,s*0.05,0.03),fp(T,s*0.45,-0.01),SW*0.045, s>0?"clavicle":null);
+  shape(c,T,[[-0.035,0.03],[0.035,0.03],[0.03,0.36],[0,0.42],[-0.03,0.36]]); paint(c,C.bone); tag("sternum",fp(T,0,0.2));
+  inFrame(c,T); c.beginPath();
+  for (let i=0;i<10;i++){ const vS=0.07+i*0.036, hw=0.27+0.07*Math.sin(Math.PI*(i+1)/11);
+    for (const s of [-1,1]){ c.moveTo(s*0.04,vS); c.bezierCurveTo(s*hw*0.55,vS-0.05,s*hw,vS-0.02,s*hw,vS+0.08); c.quadraticCurveTo(s*hw,vS+0.14,s*(hw-0.05),vS+0.17); } }
+  paint(c,C.bone,{ fill:false, lw:LW*1.4 }); tag("ribs",fp(T,-0.3,0.32));
+}
+
+function drawPelvis(c,Pv){
+  shape(c,Pv,[[0,-0.62],[-0.25,-0.75,-0.55,-0.85],[-0.85,-0.85,-0.8,-0.45],[-0.72,-0.1,-0.62,0.02],[-0.62,0.25,-0.35,0.36],[-0.15,0.38,-0.04,0.3],
+    [0.04,0.3],[0.15,0.38,0.35,0.36],[0.62,0.25,0.62,0.02],[0.72,-0.1,0.8,-0.45],[0.85,-0.85,0.55,-0.85],[0.25,-0.75,0,-0.62]]);
+  paint(c,C.bone);
+  for (const s of [-1,1]) ell(c,Pv,s*0.3,0.2,0.1,0.08,0,C.bone,{ fill:false, lw:LW });
+  shape(c,Pv,[[-0.15,-0.6],[0.15,-0.6],[0,-0.05]]); paint(c,C.bone,{ fill:false, lw:LW });
+  tag("pelvis",fp(Pv,-0.55,-0.45));
+}
+
+function drawLimbBones(c,P,SW){
+  for (const s of SIDES){
+    const k = (key) => s.main ? key : null;
+    const sh=P[s.sh], el=P[s.el], wr=P[s.wr];
+    if (vis(sh) && vis(el)) bone(c,sh,el,SW*0.085,k("humerus"));
+    if (vis(el) && vis(wr)){ const n=perp(norm(sub(wr,el))), o=SW*0.024;
+      bone(c,add(el,mul(n,o)),add(wr,mul(n,o*1.3)),SW*0.045,k("radius")); bone(c,sub(el,mul(n,o)),sub(wr,mul(n,o*1.3)),SW*0.038); }
+    const hp=P[s.hip], kn=P[s.kn], an=P[s.an];
+    if (vis(hp) && vis(kn)){ bone(c,hp,kn,SW*0.11,k("femur")); base(c); c.beginPath(); c.arc(kn.x,kn.y,SW*0.045,0,TAU); paint(c,C.bone); if (s.main) tag("patella",kn); }
+    if (vis(kn) && vis(an)){ const n=perp(norm(sub(an,kn))), o=SW*0.035;
+      bone(c,kn,an,SW*0.08,k("tibia")); bone(c,add(lerp(kn,an,.06),mul(n,o)),add(an,mul(n,o)),SW*0.032); }
+    if (vis(an) && vis(P[s.ft])){ bone(c,an,P[s.ft],SW*0.05,k("foot")); if (vis(P[s.he])) bone(c,an,P[s.he],SW*0.055); }
+  }
+}
+
+function drawHands(c){
+  handsLM.forEach((h,hi)=>{
+    const p = h.map(mp), hs = len(sub(p[9],p[0])); if (hs < 8) return;
+    base(c); c.beginPath();
+    for (const kk of [1,5,9,13,17]) for (const tt of [0.07,0.16]){ const q=lerp(p[0],p[kk],tt); c.moveTo(q.x+hs*0.055,q.y); c.arc(q.x,q.y,hs*0.055,0,TAU); }
+    paint(c,C.bone);
+    for (const ch of CHAINS){
+      bone(c,lerp(p[0],p[ch[0]],ch[0]===1?0.2:0.24),p[ch[0]],hs*0.13);
+      for (let j=0;j<3;j++) bone(c,p[ch[j]],p[ch[j+1]],hs*(0.12-j*0.02));
+    }
+    if (hi===0){ tag("carpals",p[0]); tag("metacarpals",lerp(p[0],p[9],.62)); tag("phalanges",p[11]); }
+  });
+}
+
+function drawSkull(c,Hf){
+  ell(c,Hf,0,-0.27,0.56,0.62,0,C.bone);
+  shape(c,Hf,[[-0.5,0.02],[-0.52,0.22,-0.42,0.34],[-0.4,0.62,-0.18,0.8],[0,0.9,0.18,0.8],[0.4,0.62,0.42,0.34],[0.52,0.22,0.5,0.02]],false);
+  paint(c,C.bone,{ fill:false });
+  for (const s of [-1,1]){
+    inFrame(c,Hf); c.beginPath(); c.ellipse(s*0.21,0,0.13,0.11,0,0,TAU);
+    if (S.look==="solid"){ base(c); c.fillStyle="rgba(28,22,18,.9)"; c.fill(); }
+    paint(c,C.bone,{ fill:false });
+    shape(c,Hf,[[s*0.32,0.12],[s*0.45,0.08,s*0.53,0.12]],false); paint(c,C.bone,{ fill:false });
+  }
+  shape(c,Hf,[[0,0.1],[-0.08,0.3,-0.04,0.34],[0,0.31],[0.04,0.34],[0.08,0.3,0,0.1]]);
+  if (S.look==="solid"){ base(c); c.fillStyle="rgba(28,22,18,.9)"; c.fill(); }
+  paint(c,C.bone,{ fill:false });
+  inFrame(c,Hf); c.beginPath();
+  for (let i=-4;i<4;i++){ c.rect(i*0.05+0.005,0.41,0.04,0.085); c.rect(i*0.05+0.005,0.505,0.04,0.075); }
+  paint(c,C.bone,{ lw:LW*0.7 });
+  shape(c,Hf,[[-0.45,-0.55],[0,-0.78,0.45,-0.55]],false); paint(c,C.bone,{ fill:false, lw:LW*0.6 });
+  tag("cranium",fp(Hf,0.32,-0.66)); tag("orbit",fp(Hf,0.21,-0.09)); tag("nasal",fp(Hf,0,0.24));
+  tag("zygomatic",fp(Hf,-0.45,0.11)); tag("maxilla",fp(Hf,0.16,0.4)); tag("mandible",fp(Hf,-0.3,0.7));
+}
+
+function drawBrain(c,Hf){
+  ell(c,Hf,0,-0.36,0.47,0.46,0,C.brain);
+  inFrame(c,Hf); c.beginPath();
+  for (let k=0;k<7;k++){ const y0=-0.76+k*0.1; let pen=false;
+    for (let x=-0.46;x<=0.46;x+=0.025){ const y=y0+0.028*Math.sin(x*38+k*1.9)+0.012*Math.sin(x*91+k);
+      if ((x/0.45)**2+((y+0.36)/0.44)**2<1){ if (pen) c.lineTo(x,y); else c.moveTo(x,y); pen=true; } else pen=false; } }
+  c.moveTo(0,-0.8); c.lineTo(0,-0.1);
+  paint(c,C.brain,{ fill:false, lw:LW*0.7 });
+  tag("frontal",fp(Hf,0.12,-0.52)); tag("parietal",fp(Hf,-0.25,-0.72)); tag("temporal",fp(Hf,0.4,-0.16));
+}
+
+function drawMuscles(c,P,T,Hf,SW){
+  const sm = T ? T.o : null;
+  for (const s of SIDES){
+    const k = (key) => s.main ? key : null;
+    const sh=P[s.sh], el=P[s.el], wr=P[s.wr], hp=P[s.hip], kn=P[s.kn], an=P[s.an];
+    if (vis(sh) && vis(el)){
+      const A = sm ? add(sh,mul(sub(sh,sm),0.12)) : sh;
+      muscle(c,A,lerp(sh,el,.42),SW*0.16,k("deltoid"));
+      muscle(c,lerp(sh,el,.22),lerp(sh,el,.9),SW*0.11,k("biceps"));
+    }
+    if (vis(el) && vis(wr)) muscle(c,el,lerp(el,wr,.8),SW*0.12,k("forearm"));
+    if (vis(hp) && vis(kn)) muscle(c,lerp(hp,kn,.08),lerp(hp,kn,.92),SW*0.17,k("quads"));
+    if (vis(kn) && vis(an)) muscle(c,lerp(kn,an,.08),lerp(kn,an,.6),SW*0.12,k("calf"));
+  }
+  if (T){
+    for (const s of [-1,1]){ shape(c,T,[[s*0.03,0.04],[s*0.25,0,s*0.44,0.06],[s*0.42,0.14],[s*0.26,0.34,s*0.03,0.3]]); paint(c,C.muscle); }
+    tag("pecs",fp(T,0.25,0.15));
+    inFrame(c,T); c.beginPath();
+    for (const s of [-1,1]) for (let i=0;i<4;i++) c.rect(s>0?0.015:-0.11,0.42+i*0.12,0.095,0.105);
+    paint(c,C.muscle); tag("abs",fp(T,0.06,0.55));
+    for (const s of [-1,1]) muscle(c,Hf?fp(Hf,s*0.3,0.85):fp(T,s*0.1,-0.2),fp(T,s*0.42,0),SW*0.06,s>0?"trapezius":null);
+    if (Hf) for (const s of [-1,1]) muscle(c,fp(Hf,s*0.42,0.38),fp(T,s*0.04,0.03),SW*0.05,s>0?"scm":null);
+  }
+  if (Hf){ for (const s of [-1,1]) ell(c,Hf,s*0.4,0.45,0.075,0.15,0,C.muscle); tag("masseter",fp(Hf,-0.4,0.45)); }
+}
+
+/* ---------- lens + labels ---------- */
+let lensCur = null;
+function lensState(){
+  let target = S.touch;
+  if (S.follow==="finger" && handsLM.length) target = mp(handsLM[0][8]);
+  if (!lensCur) lensCur = { x:target.x, y:target.y };
+  lensCur.x += (target.x-lensCur.x)*0.35; lensCur.y += (target.y-lensCur.y)*0.35;
+  return { x:lensCur.x, y:lensCur.y, r:Math.min(W,H)*S.lensSize };
+}
+function drawRing(c,L){
+  base(c); c.save();
+  c.beginPath(); c.arc(L.x,L.y,L.r,0,TAU);
+  c.lineWidth=7; c.strokeStyle="rgba(120,190,240,.18)"; c.stroke();
+  c.lineWidth=1.5; c.strokeStyle="rgba(200,235,255,.9)"; c.stroke();
+  c.beginPath();
+  for (let i=0;i<72;i++){ const a=i/72*TAU, k=i%6===0?10:5;
+    c.moveTo(L.x+Math.cos(a)*(L.r+4),L.y+Math.sin(a)*(L.r+4)); c.lineTo(L.x+Math.cos(a)*(L.r+4+k),L.y+Math.sin(a)*(L.r+4+k)); }
+  c.lineWidth=1; c.strokeStyle="rgba(200,235,255,.45)"; c.stroke();
+  c.font="600 12px 'IBM Plex Sans Condensed', system-ui, sans-serif"; c.textAlign="center"; c.textBaseline="middle";
+  c.fillStyle="rgba(225,242,255,.95)"; c.fillText("×"+S.zoom.toFixed(1), L.x, L.y-L.r-24);
+  c.restore();
+}
+function renderLabels(c,lens){
+  if (!S.layers.labels || !labels.length) return;
+  const seen = new Set(), items = [], li = S.lang==="it" ? 1 : 0;
+  for (const l of labels){
+    if (seen.has(l.key)) continue;
+    let x=l.x, y=l.y;
+    if (lens){ const dx=x-lens.x, dy=y-lens.y; if (Math.hypot(dx,dy) > lens.r/S.zoom*0.95) continue; x=lens.x+dx*S.zoom; y=lens.y+dy*S.zoom; }
+    else if (x<0 || x>W || y<0 || y>H) continue;
+    seen.add(l.key); items.push({ x, y, text:N[l.key][li] });
+  }
+  base(c); c.font="500 12px 'IBM Plex Sans Condensed', system-ui, sans-serif"; c.textBaseline="middle";
+  const cx = lens ? lens.x : W/2, top = 100, lh = 19;
+  for (const side of ["L","R"]){
+    const arr = items.filter(it => side==="L" ? it.x<cx : it.x>=cx).sort((a,b)=>a.y-b.y);
+    let last = -1e9;
+    for (const it of arr){
+      const tw = c.measureText(it.text).width;
+      let tx = lens ? (side==="L" ? lens.x-lens.r-22 : lens.x+lens.r+22) : (side==="L" ? it.x-44 : it.x+44);
+      tx = side==="L" ? Math.max(tx, tw+16) : Math.min(tx, W-tw-16);
+      let ty = Math.max(it.y, last+lh, top); last = ty;
+      c.strokeStyle="rgba(215,238,255,.7)"; c.lineWidth=1; c.beginPath(); c.moveTo(it.x,it.y); c.lineTo(tx,ty); c.stroke();
+      c.fillStyle="rgba(235,248,255,.95)"; c.beginPath(); c.arc(it.x,it.y,2.4,0,TAU); c.fill();
+      const bx = side==="L" ? tx-tw-10 : tx+2;
+      c.fillStyle="rgba(4,14,24,.62)"; c.fillRect(bx,ty-9,tw+8,18);
+      c.fillStyle="#eaf6ff"; c.textAlign = side==="L" ? "right" : "left";
+      c.fillText(it.text, side==="L" ? tx-6 : tx+6, ty);
+    }
+  }
+}
+
+/* ---------- render loop ---------- */
+function render(t){
+  if (!video.videoWidth) return;
+  updCover();
+  drawVideo(sctx);
+  base(sctx); sctx.fillStyle=`rgba(2,8,18,${(1-S.real)*0.93})`; sctx.fillRect(0,0,W,H);
+  drawAnatomy(sctx,t);
+  base(ctx); ctx.clearRect(0,0,W,H);
+  if (S.reveal==="all"){ ctx.drawImage(scene,0,0,W,H); renderLabels(ctx,null); }
+  else {
+    drawVideo(ctx);
+    const L = lensState(); base(ctx); ctx.save();
+    ctx.beginPath(); ctx.arc(L.x,L.y,L.r,0,TAU); ctx.clip();
+    ctx.translate(L.x,L.y); ctx.scale(S.zoom,S.zoom); ctx.translate(-L.x,-L.y);
+    ctx.drawImage(scene,0,0,W,H); ctx.restore();
+    drawRing(ctx,L); renderLabels(ctx,L);
+  }
+}
+let lastVT=-1, frameN=0, detN=0, fpsT=performance.now(), fps=0;
+function loop(){
+  requestAnimationFrame(loop);
+  const now = performance.now();
+  if (models && video.readyState>=2 && video.currentTime!==lastVT){
+    lastVT = video.currentTime;
+    const wantHands = S.layers.hands || (S.reveal==="lens" && S.follow==="finger");
+    try {
+      if (!wantHands || frameN%2===0) onPose(models.pose.detectForVideo(video,now));
+      else onHands(models.hands.detectForVideo(video,now));
+    } catch(e){ console.warn(e); }
+    frameN++; detN++;
+  }
+  if (now-fpsT > 1000){ fps = Math.round(detN*1000/(now-fpsT)); detN=0; fpsT=now; updateStatus(); }
+  render(now);
+}
+
+/* ---------- camera + models ---------- */
+let stream = null, statusKey = "loading";
+async function startCamera(){
+  if (stream) stream.getTracks().forEach(tr=>tr.stop());
+  stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:S.facing, width:{ideal:1280}, height:{ideal:720} } });
+  video.srcObject = stream; await video.play();
+}
+async function loadModels(){
+  const fileset = await FilesetResolver.forVisionTasks(MP_BASE);
+  const make = async (Cls,url,extra) => {
+    try { return await Cls.createFromOptions(fileset,{ baseOptions:{ modelAssetPath:url, delegate:"GPU" }, runningMode:"VIDEO", ...extra }); }
+    catch(e){ return await Cls.createFromOptions(fileset,{ baseOptions:{ modelAssetPath:url, delegate:"CPU" }, runningMode:"VIDEO", ...extra }); }
+  };
+  const [pose,hands] = await Promise.all([ make(PoseLandmarker,POSE_URL,{ numPoses:1 }), make(HandLandmarker,HAND_URL,{ numHands:2 }) ]);
+  models = { pose, hands };
+}
+function updateStatus(){
+  const tx = T[S.lang]; let msg, ok=false;
+  if (!models) msg = tx.loading;
+  else if (!poseLM && !handsLM.length) msg = tx.looking;
+  else { msg = `${tx.tracking} · ${fps} fps`; ok = true; }
+  $("#stext").textContent = msg; $("#sdot").classList.toggle("ok",ok);
+}
+
+$("#go").addEventListener("click", async ()=>{
+  const btn=$("#go"); btn.disabled=true; btn.textContent=T[S.lang].starting; $("#err").textContent="";
+  const cam = startCamera(), mdl = loadModels();
+  try { await cam; } catch(e){ btn.disabled=false; applyLang(); $("#err").textContent=T[S.lang].camErr; return; }
+  $("#start").hidden = true; $("#status").hidden = false; updateStatus();
+  requestAnimationFrame(loop);
+  try { await mdl; updateStatus(); } catch(e){ console.error(e); $("#stext").textContent=T[S.lang].modelErr; }
+});
+
+/* ---------- UI ---------- */
+function applyLang(){
+  const tx = T[S.lang]; document.documentElement.lang = S.lang;
+  document.querySelectorAll("[data-i]").forEach(el=>{ if (tx[el.dataset.i]) el.textContent = tx[el.dataset.i]; });
+  for (const b of [$("#lang"),$("#lang2")]) b.textContent = S.lang==="it" ? "EN" : "IT";
+  document.title = tx.title; if (models) updateStatus();
+}
+function syncUI(){
+  document.querySelectorAll("[data-layer]").forEach(el=>{ el.checked = !!S.layers[el.dataset.layer]; });
+  document.querySelectorAll("[data-seg]").forEach(seg=>{ seg.querySelectorAll("button").forEach(b=>b.classList.toggle("on", S[seg.dataset.seg]===b.dataset.v)); });
+  document.querySelectorAll("[data-preset]").forEach(b=>{ const p=PRESETS[b.dataset.preset];
+    b.classList.toggle("on", Object.keys(p).every(k=>!!p[k]===!!S.layers[k])); });
+  $("#real").value = Math.round(S.real*100); $("#brightness").value = Math.round(S.brightness*100);
+  $("#lensSize").value = Math.round(S.lensSize*100); $("#zoom").value = Math.round(S.zoom*10);
+}
+document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{
+  const p=PRESETS[b.dataset.preset]; for (const k in p) S.layers[k]=!!p[k]; syncUI(); }));
+document.querySelectorAll("[data-layer]").forEach(el=>el.addEventListener("change",()=>{ S.layers[el.dataset.layer]=el.checked; syncUI(); }));
+document.querySelectorAll("[data-seg]").forEach(seg=>seg.addEventListener("click",(e)=>{
+  const b=e.target.closest("button"); if (!b) return; S[seg.dataset.seg]=b.dataset.v; syncUI(); }));
+$("#real").addEventListener("input",e=>S.real=e.target.value/100);
+$("#brightness").addEventListener("input",e=>S.brightness=e.target.value/100);
+$("#lensSize").addEventListener("input",e=>S.lensSize=e.target.value/100);
+$("#zoom").addEventListener("input",e=>S.zoom=e.target.value/10);
+$("#more").addEventListener("click",()=>{ const open=$("#sheet").classList.toggle("open"); $("#more").setAttribute("aria-expanded",String(open)); });
+for (const b of [$("#lang"),$("#lang2")]) b.addEventListener("click",()=>{ S.lang = S.lang==="it" ? "en" : "it"; applyLang(); });
+$("#flip").addEventListener("click", async ()=>{
+  S.facing = S.facing==="user" ? "environment" : "user"; poseLM=null; handsLM=[]; lensCur=null;
+  try { await startCamera(); } catch(e){ $("#stext").textContent=T[S.lang].camErr; }
+});
+$("#snap").addEventListener("click",()=>{
+  const f=$("#flash"); f.classList.add("on"); setTimeout(()=>f.classList.remove("on"),60);
+  canvas.toBlob(async (blob)=>{
+    if (!blob) return;
+    const file = new File([blob],"anatomy-lens.png",{ type:"image/png" });
+    if (navigator.canShare && navigator.canShare({ files:[file] })){ try { await navigator.share({ files:[file], title:T[S.lang].title }); return; } catch(e){} }
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="anatomy-lens.png"; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  },"image/png");
+});
+let dragging=false;
+canvas.addEventListener("pointerdown",e=>{ dragging=true; S.touch={ x:e.clientX, y:e.clientY }; });
+canvas.addEventListener("pointermove",e=>{ if (dragging) S.touch={ x:e.clientX, y:e.clientY }; });
+window.addEventListener("pointerup",()=>dragging=false);
+window.addEventListener("pointercancel",()=>dragging=false);
+
+applyLang(); syncUI();
+</script>
+</body>
+</html>
