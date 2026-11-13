@@ -117,6 +117,7 @@ button:focus-visible,input:focus-visible{ outline:2px solid var(--film); outline
       <button class="chip" data-preset="bones" data-i="bones">Bones</button>
       <button class="chip" data-preset="muscles" data-i="muscles">Muscles</button>
       <button class="chip" data-preset="organs" data-i="organs">Organs</button>
+      <button class="chip" data-preset="skin" data-i="skinChip">Skin</button>
     </div>
     <button class="iconbtn" id="more" aria-label="Settings" aria-expanded="false">⚙︎</button>
   </div>
@@ -139,8 +140,18 @@ button:focus-visible,input:focus-visible{ outline:2px solid var(--film); outline
         <label class="tog"><input type="checkbox" data-layer="muscles"><span data-i="muscleL">Muscles</span></label>
         <label class="tog"><input type="checkbox" data-layer="organs"><span data-i="organL">Organs</span></label>
         <label class="tog"><input type="checkbox" data-layer="brain"><span data-i="brain">Brain</span></label>
+        <label class="tog"><input type="checkbox" data-layer="skin"><span data-i="skin">Face skin check</span></label>
         <label class="tog"><input type="checkbox" data-layer="labels"><span data-i="labels">Labels</span></label>
       </div>
+    </div>
+    <div class="group">
+      <div class="row2">
+        <div><h4 data-i="quality">Tracking</h4>
+          <div class="seg" data-seg="quality"><button data-v="high" data-i="high">Stable</button><button data-v="fast" data-i="fast">Fast</button></div></div>
+        <div><h4 data-i="density">Labels shown</h4>
+          <div class="seg" data-seg="density"><button data-v="key" data-i="key">Main ones</button><button data-v="all" data-i="every">All</button></div></div>
+      </div>
+      <p class="hint" data-i="skinNote"></p>
     </div>
     <div class="group">
       <h4 data-i="look">Look</h4>
@@ -175,367 +186,967 @@ button:focus-visible,input:focus-visible{ outline:2px solid var(--film); outline
   </div>
 </div>
 
+<script>
+(function(G){
+"use strict";
+const TAU=Math.PI*2;
+const add=(a,b)=>({x:a.x+b.x,y:a.y+b.y}), sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y}), mul=(a,k)=>({x:a.x*k,y:a.y*k});
+const len=(a)=>Math.hypot(a.x,a.y), lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}), mid=(a,b)=>lerp(a,b,0.5);
+const norm=(a)=>{const l=len(a)||1;return{x:a.x/l,y:a.y/l};}, perp=(a)=>({x:-a.y,y:a.x}), dot=(a,b)=>a.x*b.x+a.y*b.y;
+const fin=(...v)=>v.every(Number.isFinite);
+const centroid=(ps)=>{let x=0,y=0;for(const p of ps){x+=p.x;y+=p.y;}return{x:x/ps.length,y:y/ps.length};};
+
+/* MediaPipe face-mesh index sets */
+const FACE_OVAL=[10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109];
+const EYE_R=[33,7,163,144,145,153,154,155,133,173,157,158,159,160,161,246];
+const EYE_L=[263,249,390,373,374,380,381,382,362,398,384,385,386,387,388,466];
+const BROW_R=[70,63,105,66,107], BROW_L=[300,293,334,296,336];
+const LIPS_OUT=[61,146,91,181,84,17,314,405,321,375,291,409,270,269,267,0,37,39,40,185];
+const LOWER_LIP_OUT=[291,375,321,405,314,17,84,181,91,146,61];
+const UP_IN=[78,191,80,81,82,13,312,311,310,415,308], LO_IN=[78,95,88,178,87,14,317,402,318,324,308];
+const JAW=[93,132,58,172,136,150,149,176,148,152,377,400,378,379,365,397,288,361,323];
+
+const COL={
+  bone:[206,236,255], boneS:[234,225,205], cart:[150,205,235], cartS:[200,218,226],
+  muscle:[232,92,98], muscleS:[176,50,56], tendon:[220,236,248], tendonS:[230,222,204],
+  lung:[246,150,184], lungS:[224,132,152], heart:[245,72,88], heartS:[176,40,50],
+  artery:[250,84,94], arteryS:[200,40,48], vein:[112,142,255], veinS:[66,94,190],
+  liver:[214,112,94], liverS:[128,50,40], gall:[150,212,112], gallS:[92,140,58],
+  stomach:[248,180,142], stomachS:[214,138,116], spleen:[204,112,196], spleenS:[118,50,94],
+  pancreas:[248,214,140], pancreasS:[224,186,118], kidney:[234,114,126], kidneyS:[148,54,64],
+  gut:[248,192,162], gutS:[226,162,140], colon:[242,172,142], colonS:[196,124,102],
+  bladder:[250,222,132], bladderS:[228,196,110], ureter:[242,222,162], ureterS:[218,198,138],
+  airway:[190,228,246], airwayS:[228,214,206], brain:[202,152,255], brainS:[232,186,188],
+  eye:[250,242,190], eyeS:[246,246,240], iris:[150,220,255], irisS:[90,120,90]
+};
+
+let c=null, E=null, DPR=1, LW=1.5, OUT=null;
+
+/* ---------- transforms ---------- */
+function base(){ c.setTransform(DPR,0,0,DPR,0,0); }
+function fp(F,u,v){ return {x:F.o.x+F.a.x*u+F.d.x*v, y:F.o.y+F.a.y*u+F.d.y*v}; }
+function inFrame(F){ c.setTransform(DPR*F.a.x,DPR*F.a.y,DPR*F.d.x,DPR*F.d.y,DPR*F.o.x,DPR*F.o.y); }
+function okFrame(F){ return !!F && fin(F.o.x,F.o.y,F.a.x,F.a.y,F.d.x,F.d.y) && Math.abs(F.a.x*F.d.y-F.a.y*F.d.x)>6; }
+const okP=(p)=>!!p && fin(p.x,p.y);
+const on=(p)=>okP(p) && p.on;
+
+/* ---------- color & paint ---------- */
+const rgba=(cc,a)=>"rgba("+cc[0]+","+cc[1]+","+cc[2]+","+Math.max(0,Math.min(1,a)).toFixed(3)+")";
+const shade=(cc,k)=>cc.map(v=>Math.round(v*k)), tint=(cc,k)=>cc.map(v=>Math.round(v+(255-v)*k));
+function colOf(name){ return E.look==="xray" ? COL[name] : (COL[name+"S"]||COL[name]); }
+function aMul(o){ return E.fade*(o && o.alpha!=null ? o.alpha : 1); }
+function paint(name,o){
+  o=o||{}; base();
+  const xr=E.look==="xray", cc=colOf(name), am=aMul(o), br=E.br*am;
+  if(o.fill!==false){
+    c.fillStyle = o.grad || (xr ? rgba(cc,(o.fa!=null?o.fa:0.14)*br) : rgba(cc,0.95*am));
+    if(o.evenodd) c.fill("evenodd"); else c.fill();
+  }
+  if(o.stroke===false) return;
+  const lw=o.lw||LW;
+  if(xr){
+    if(o.glow!==false){ c.lineWidth=lw*3; c.strokeStyle=rgba(cc,0.12*br); c.stroke(); }
+    c.lineWidth=lw; c.strokeStyle=rgba(cc,(o.sa!=null?o.sa:0.85)*br); c.stroke();
+  } else {
+    const line=(o.fill===false && o.light) ? cc : shade(cc, o.fill===false?0.62:0.5);
+    c.lineWidth = o.fill===false ? lw*1.1 : lw*0.7;
+    c.strokeStyle = rgba(line,(o.fill===false?(o.sa!=null?o.sa:0.85):0.9)*am); c.stroke();
+  }
+}
+function radialG(name,x,y,r,o){
+  if(!fin(x,y,r) || r<1) return null;
+  const cc=colOf(name), am=aMul(o), br=E.br*am;
+  const g=c.createRadialGradient(x-r*0.25,y-r*0.3,r*0.04,x,y,r);
+  if(E.look==="xray"){ g.addColorStop(0,rgba(cc,0.03*br)); g.addColorStop(0.6,rgba(cc,0.12*br)); g.addColorStop(1,rgba(cc,0.42*br)); }
+  else { g.addColorStop(0,rgba(tint(cc,0.35),am)); g.addColorStop(0.55,rgba(cc,am)); g.addColorStop(1,rgba(shade(cc,0.6),am)); }
+  return g;
+}
+function linG(name,A,B,o){
+  if(!fin(A.x,A.y,B.x,B.y) || len(sub(A,B))<1) return null;
+  const cc=colOf(name), am=aMul(o), br=E.br*am;
+  const g=c.createLinearGradient(A.x,A.y,B.x,B.y);
+  if(E.look==="xray"){ g.addColorStop(0,rgba(cc,0.4*br)); g.addColorStop(0.22,rgba(cc,0.09*br)); g.addColorStop(0.5,rgba(cc,0.04*br)); g.addColorStop(0.78,rgba(cc,0.09*br)); g.addColorStop(1,rgba(cc,0.4*br)); }
+  else { g.addColorStop(0,rgba(shade(cc,0.58),am)); g.addColorStop(0.32,rgba(tint(cc,0.3),am)); g.addColorStop(0.6,rgba(cc,am)); g.addColorStop(1,rgba(shade(cc,0.5),am)); }
+  return g;
+}
+function tag(key,p,grp){ if(OUT && okP(p)) OUT.push({key,x:p.x,y:p.y,grp}); }
+
+/* ---------- path helpers ---------- */
+function smoothPath(pts,closed){
+  const n=pts.length; if(n<2) return;
+  if(n<3){ c.moveTo(pts[0][0],pts[0][1]); c.lineTo(pts[1][0],pts[1][1]); return; }
+  if(closed){
+    const m=(i)=>{const a=pts[i%n], b=pts[(i+1)%n]; return [(a[0]+b[0])/2,(a[1]+b[1])/2];};
+    const s=m(n-1); c.moveTo(s[0],s[1]);
+    for(let i=0;i<n;i++){ const p=pts[i], q=m(i); c.quadraticCurveTo(p[0],p[1],q[0],q[1]); }
+    c.closePath();
+  } else {
+    c.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<n-1;i++){ const q=[(pts[i][0]+pts[i+1][0])/2,(pts[i][1]+pts[i+1][1])/2]; c.quadraticCurveTo(pts[i][0],pts[i][1],q[0],q[1]); }
+    c.lineTo(pts[n-1][0],pts[n-1][1]);
+  }
+}
+function fpath(F,pts,closed){ inFrame(F); c.beginPath(); smoothPath(pts,closed!==false); }
+function spath(P,closed){ base(); c.beginPath(); smoothPath(P.map(p=>[p.x,p.y]),closed!==false); }
+function chaikin(pts,it){ let p=pts; for(let k=0;k<(it||2);k++){ const q=[p[0]]; for(let i=0;i<p.length-1;i++){ const a=p[i],b=p[i+1]; q.push([a[0]*0.75+b[0]*0.25,a[1]*0.75+b[1]*0.25],[a[0]*0.25+b[0]*0.75,a[1]*0.25+b[1]*0.75]); } q.push(p[p.length-1]); p=q; } return p; }
+function toScr(F,pts){ return pts.map(p=>fp(F,p[0],p[1])); }
+function bezS(F,p0,p1,p2,p3,n){ const out=[]; for(let i=0;i<=n;i++){ const t=i/n, m=1-t; const u=m*m*m*p0[0]+3*m*m*t*p1[0]+3*m*t*t*p2[0]+t*t*t*p3[0], v=m*m*m*p0[1]+3*m*m*t*p1[1]+3*m*t*t*p2[1]+t*t*t*p3[1]; out.push(fp(F,u,v)); } return out; }
+function bandPath(P,wfn){
+  const n=P.length; if(n<2) return false;
+  const Lp=[],Rp=[];
+  for(let i=0;i<n;i++){ const a=P[Math.max(0,i-1)], b=P[Math.min(n-1,i+1)], nn=perp(norm(sub(b,a))), h=wfn(i/(n-1));
+    Lp.push(add(P[i],mul(nn,h))); Rp.push(sub(P[i],mul(nn,h))); }
+  base(); c.beginPath(); c.moveTo(Lp[0].x,Lp[0].y);
+  for(let i=1;i<n;i++) c.lineTo(Lp[i].x,Lp[i].y);
+  for(let i=n-1;i>=0;i--) c.lineTo(Rp[i].x,Rp[i].y);
+  c.closePath(); return true;
+}
+function alongPoly(P,t){
+  if(P.length===1) return P[0];
+  const seg=[]; let tot=0; for(let i=0;i<P.length-1;i++){ const l=len(sub(P[i+1],P[i])); seg.push(l); tot+=l; }
+  let d=t*tot; for(let i=0;i<seg.length;i++){ if(d<=seg[i]||i===seg.length-1) return lerp(P[i],P[i+1],seg[i]?Math.min(1,d/seg[i]):0); d-=seg[i]; }
+  return P[P.length-1];
+}
+function roundedRect(x,y,w,h,r){ c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.quadraticCurveTo(x+w,y,x+w,y+r); c.lineTo(x+w,y+h-r); c.quadraticCurveTo(x+w,y+h,x+w-r,y+h); c.lineTo(x+r,y+h); c.quadraticCurveTo(x,y+h,x,y+h-r); c.lineTo(x,y+r); c.quadraticCurveTo(x,y,x+r,y); c.closePath(); }
+function fe(F,u,v,ru,rv,rot,name,o){ inFrame(F); c.beginPath(); c.ellipse(u,v,ru,rv,rot,0,TAU); const p=fp(F,u,v); paint(name,Object.assign({grad:radialG(name,p.x,p.y,Math.max(ru,rv)*Math.max(len(F.a),len(F.d))*1.1,o)},o||{})); }
+function organ(F,pts,name,cu,cv,rr,o){ fpath(F,pts,true); const p=fp(F,cu,cv); paint(name,Object.assign({grad:radialG(name,p.x,p.y,rr*len(F.a),o)},o||{})); }
+function fline(F,pts,name,o){ fpath(F,pts,false); paint(name,Object.assign({fill:false,glow:false},o||{})); }
+function tube(P,w,name,o){
+  o=o||{}; if(P.length<2) return;
+  base(); c.beginPath(); c.moveTo(P[0].x,P[0].y); for(let i=1;i<P.length;i++) c.lineTo(P[i].x,P[i].y);
+  const cc=colOf(name), am=aMul(o), br=E.br*am;
+  if(E.look==="xray"){ c.lineWidth=w; c.strokeStyle=rgba(cc,0.13*br); c.stroke(); c.lineWidth=Math.max(1,w*0.16); c.strokeStyle=rgba(cc,0.4*br); c.stroke(); }
+  else { c.lineWidth=w+2; c.strokeStyle=rgba(shade(cc,0.5),am); c.stroke(); c.lineWidth=w; c.strokeStyle=rgba(cc,am); c.stroke(); c.lineWidth=Math.max(1,w*0.3); c.strokeStyle=rgba(tint(cc,0.35),0.55*am); c.stroke(); }
+}
+
+/* ---------- bones ---------- */
+function longBone(A,B,w,o){
+  o=o||{}; if(!okP(A)||!okP(B)) return;
+  const d=sub(B,A), L=len(d); if(!(L>3) || !(w>0.5)) return;
+  const u=mul(d,1/L), n=perp(u), ra=w*(o.ra!=null?o.ra:0.55), rb=w*(o.rb!=null?o.rb:0.55), sh=w*(o.sh!=null?o.sh:0.3);
+  const N=16, Lp=[], Rp=[];
+  for(let i=0;i<=N;i++){ const t=i/N, h=sh+(ra-sh)*Math.exp(-((t/0.13)**2))+(rb-sh)*Math.exp(-(((1-t)/0.13)**2)), p=lerp(A,B,t); Lp.push(add(p,mul(n,h))); Rp.push(sub(p,mul(n,h))); }
+  const ang=Math.atan2(u.y,u.x);
+  base(); c.beginPath(); c.moveTo(Lp[0].x,Lp[0].y);
+  for(let i=1;i<=N;i++) c.lineTo(Lp[i].x,Lp[i].y);
+  c.arc(B.x,B.y,rb,ang+Math.PI/2,ang-Math.PI/2,true);
+  for(let i=N;i>=0;i--) c.lineTo(Rp[i].x,Rp[i].y);
+  c.arc(A.x,A.y,ra,ang-Math.PI/2,ang+Math.PI/2,true);
+  c.closePath();
+  const m=lerp(A,B,0.5), R=Math.max(ra,rb);
+  paint("bone",{grad:linG("bone",add(m,mul(n,R)),sub(m,mul(n,R)),o),alpha:o.alpha});
+  if(E.look==="xray" && L>w*2.5){ base(); c.beginPath();
+    for(const s of [-1,1]){ const a=add(lerp(A,B,0.24),mul(n,s*sh*0.42)), b=add(lerp(A,B,0.76),mul(n,s*sh*0.42)); c.moveTo(a.x,a.y); c.lineTo(b.x,b.y); }
+    paint("bone",{fill:false,lw:LW*0.5,sa:0.3,glow:false,alpha:o.alpha}); }
+  if(o.key) tag(o.key,m,"bone");
+}
+function ball(P,r,o){ if(!okP(P)||!(r>0.5)) return; base(); c.beginPath(); c.arc(P.x,P.y,r,0,TAU); paint("bone",Object.assign({grad:radialG("bone",P.x,P.y,r,o)},o||{})); }
+function spineSeg(A,B,n,w,o){
+  o=o||{}; if(!okP(A)||!okP(B)) return;
+  const d=sub(B,A), L=len(d); if(L<4) return;
+  const u=mul(d,1/L), nn=perp(u), seg=L/n, tp=o.tp||1;
+  for(let i=0;i<n;i++){
+    const p=lerp(A,B,(i+0.5)/n), F={o:p,a:mul(nn,w/2),d:mul(u,seg/2)};
+    if(!okFrame(F)) continue;
+    inFrame(F); c.beginPath(); roundedRect(-1,-0.74,2,1.48,0.4);
+    paint("bone",{grad:radialG("bone",p.x,p.y,w*0.62,o),alpha:o.alpha});
+    inFrame(F); c.beginPath(); c.moveTo(-1,-0.25); c.lineTo(-1.25-0.4*tp,0.05); c.moveTo(1,-0.25); c.lineTo(1.25+0.4*tp,0.05); c.moveTo(0.16,0.05); c.arc(0,0.05,0.16,0,TAU);
+    paint("bone",{fill:false,lw:LW*0.8,glow:false,alpha:o.alpha});
+  }
+  if(o.key) tag(o.key,lerp(A,B,0.5),"bone");
+}
+
+/* ---------- muscles ---------- */
+function tendonLine(A,B,w,o){ base(); c.beginPath(); c.moveTo(A.x,A.y); c.lineTo(B.x,B.y); paint("tendon",{fill:false,lw:Math.max(LW,w),sa:0.55,glow:false,light:true,alpha:o&&o.alpha}); }
+function muscle(A,B,w,o){
+  o=o||{}; if(!okP(A)||!okP(B)) return;
+  const d=sub(B,A), L=len(d); if(!(L>4) || !(w>1)) return;
+  const n=perp(mul(d,1/L)), tA=o.tA!=null?o.tA:0.08, tB=o.tB!=null?o.tB:0.12, bulge=o.bulge!=null?o.bulge:0.5;
+  const A2=lerp(A,B,tA), B2=lerp(A,B,1-tB);
+  if(tA>0.02) tendonLine(A,A2,w*0.16,o);
+  if(tB>0.02) tendonLine(B2,B,w*0.14,o);
+  const N=18, prof=(t)=>{ const s=t<bulge ? t/bulge*0.5 : 0.5+(t-bulge)/(1-bulge)*0.5; return w*0.5*Math.pow(Math.sin(Math.PI*s),0.75)+w*0.05; };
+  const Lp=[],Rp=[];
+  for(let i=0;i<=N;i++){ const t=i/N, p=lerp(A2,B2,t), h=prof(t); Lp.push(add(p,mul(n,h))); Rp.push(sub(p,mul(n,h))); }
+  base(); c.beginPath(); c.moveTo(Lp[0].x,Lp[0].y);
+  for(let i=1;i<=N;i++) c.lineTo(Lp[i].x,Lp[i].y);
+  for(let i=N;i>=0;i--) c.lineTo(Rp[i].x,Rp[i].y);
+  c.closePath();
+  const m=lerp(A2,B2,bulge);
+  paint("muscle",{grad:linG("muscle",add(m,mul(n,w*0.56)),sub(m,mul(n,w*0.56)),o),alpha:o.alpha});
+  base(); c.beginPath();
+  for(const f of [-0.72,-0.45,-0.18,0.1,0.38,0.66]){ for(let i=0;i<=N;i++){ const t=i/N, p=add(lerp(A2,B2,t),mul(n,prof(t)*f)); if(i) c.lineTo(p.x,p.y); else c.moveTo(p.x,p.y); } }
+  paint("muscle",{fill:false,lw:LW*0.4,sa:0.4,glow:false,alpha:o.alpha});
+  if(o.key) tag(o.key,m,"muscle");
+}
+function fan(orig,insA,insB,o){
+  o=o||{}; if(orig.length<2 || !orig.every(okP) || !okP(insA) || !okP(insB)) return;
+  const pts=orig.concat(o.outer||[],[insB,insA]);
+  spath(pts,true);
+  const ce=centroid(pts); let r=1; for(const p of pts) r=Math.max(r,len(sub(p,ce)));
+  paint("muscle",{grad:radialG("muscle",ce.x,ce.y,r,o),alpha:o.alpha});
+  const K=o.fibers||10; base(); c.beginPath();
+  for(let k=0;k<=K;k++){ const t=k/K, s=alongPoly(orig,t), e=lerp(insA,insB,t), cp=add(lerp(s,e,0.5),o.bulge?mul(o.bulge,Math.sin(Math.PI*(0.3+0.7*t))):{x:0,y:0}); c.moveTo(s.x,s.y); c.quadraticCurveTo(cp.x,cp.y,e.x,e.y); }
+  paint("muscle",{fill:false,lw:LW*0.4,sa:0.4,glow:false,alpha:o.alpha});
+  if(o.key) tag(o.key,o.labelAt||ce,"muscle");
+}
+
+/* ---------- frames ---------- */
+function headFromMesh(M){
+  const eR=mid(M[33],M[133]), eL=mid(M[263],M[362]), em=mid(eR,eL);
+  const across=sub(eL,eR), down=sub(M[152],em);
+  const W=len(sub(M[454],M[234]))/0.93, H=len(down)/0.85;
+  return {o:em, a:mul(norm(across),W), d:mul(norm(down),H)};
+}
+function headFromPose(P,T){
+  const em=mid(P[2],P[5]), across=sub(P[2],P[5]), ed=len(across); if(ed<5) return null;
+  const mouth=(on(P[9])&&on(P[10])) ? mid(P[9],P[10]) : null;
+  let down=mouth ? sub(mouth,em) : perp(across);
+  if(!mouth && T && dot(down,sub(T.o,em))<0) down=mul(down,-1);
+  const W=ed/0.42, H=mouth ? len(down)/0.5 : W;
+  return {o:em, a:mul(norm(across),W), d:mul(norm(down),H)};
+}
+
+/* ---------- organs ---------- */
+const BRONCHI=(()=>{ let seed=7; const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; }; const segs=[];
+  function br(x,y,a,l,dep){ if(dep>5) return; const x2=x+Math.cos(a)*l, y2=y+Math.sin(a)*l; segs.push([x,y,x2,y2]); const sp=0.42+rnd()*0.3; br(x2,y2,a-sp,l*0.74,dep+1); br(x2,y2,a+sp*0.85,l*0.7,dep+1); }
+  br(0.1,0.2,0.95,0.07,1); br(0.1,0.2,-0.55,0.05,2); br(0.1,0.2,1.45,0.075,1); return segs; })();
+function organs(T,SW,t){
+  fline(T,[[-0.36,0.5],[-0.2,0.42],[-0.05,0.47],[0.05,0.47],[0.2,0.44],[0.36,0.52]],"muscle",{lw:LW*0.8,sa:0.3});
+  for(const s of [-1,1]){
+    const k=[[0,-0.075],[0.045,-0.06],[0.055,0],[0.045,0.06],[0,0.075],[-0.035,0.055],[-0.02,0.015],[-0.024,-0.015],[-0.035,-0.055]];
+    organ(T,k.map(p=>[s*0.15+s*p[0],0.645+p[1]]),"kidney",s*0.15,0.645,0.08,{alpha:0.85});
+    organ(T,[[s*0.13,0.575],[s*0.17,0.55],[s*0.19,0.58]],"pancreas",s*0.16,0.565,0.04,{alpha:0.7});
+    fline(T,[[s*0.125,0.65],[s*0.11,0.8],[s*0.05,0.96]],"ureter",{lw:LW*1.1,sa:0.6});
+  }
+  tag("kidneys",fp(T,-0.15,0.66),"organs");
+  fe(T,0.3,0.56,0.04,0.075,0.5,"spleen",{alpha:0.8}); tag("spleen",fp(T,0.31,0.58),"organs");
+  bandPath(toScr(T,chaikin([[-0.05,0.665],[0.08,0.645],[0.18,0.62],[0.26,0.6]],2)),(q)=>SW*(0.028-0.014*q)); paint("pancreas",{alpha:0.75}); tag("pancreas",fp(T,0.12,0.64),"organs");
+  // airway + lungs
+  tube(toScr(T,[[0,-0.14],[0,0.13]]),SW*0.035,"airway");
+  base(); c.beginPath(); for(let i=0;i<9;i++){ const a=fp(T,-0.018,-0.12+i*0.028), b=fp(T,0.018,-0.12+i*0.028); c.moveTo(a.x,a.y); c.lineTo(b.x,b.y); } paint("airway",{fill:false,lw:LW*0.6,glow:false,sa:0.6});
+  for(const s of [-1,1]) tube(toScr(T,chaikin([[0,0.13],[s*0.05,0.16],[s*0.1,0.2]],1)),SW*0.022,"airway");
+  tag("trachea",fp(T,0,-0.07),"organs");
+  organ(T,[[-0.07,-0.01],[-0.2,0.04],[-0.3,0.14],[-0.35,0.3],[-0.36,0.45],[-0.3,0.52],[-0.18,0.47],[-0.07,0.46],[-0.05,0.3],[-0.06,0.12]],"lung",-0.2,0.28,0.24);
+  organ(T,[[0.07,-0.01],[0.2,0.04],[0.3,0.14],[0.35,0.3],[0.36,0.46],[0.31,0.53],[0.22,0.5],[0.15,0.47],[0.1,0.42],[0.13,0.34],[0.07,0.3],[0.06,0.12]],"lung",0.22,0.28,0.24);
+  fline(T,[[-0.08,0.27],[-0.2,0.26],[-0.34,0.28]],"lung",{lw:LW*0.7,sa:0.55});
+  fline(T,[[-0.31,0.17],[-0.22,0.33],[-0.12,0.48]],"lung",{lw:LW*0.7,sa:0.55});
+  fline(T,[[0.3,0.17],[0.22,0.33],[0.14,0.47]],"lung",{lw:LW*0.7,sa:0.55});
+  for(const s of [-1,1]){ inFrame(T); c.beginPath(); for(const g of BRONCHI){ c.moveTo(s*g[0],g[1]); c.lineTo(s*g[2],g[3]); } paint("airway",{fill:false,lw:LW*0.55,sa:0.45,glow:false}); }
+  tag("lungR",fp(T,-0.24,0.36),"organs"); tag("lungL",fp(T,0.27,0.24),"organs");
+  // great vessels
+  tube(toScr(T,chaikin([[-0.05,0.29],[-0.05,0.2],[-0.05,0.11]],1)),SW*0.024,"vein");
+  tube(toScr(T,chaikin([[-0.035,0.44],[-0.025,0.65],[-0.02,0.95]],1)),SW*0.024,"vein",{alpha:0.55});
+  tube(toScr(T,chaikin([[0.06,0.25],[0.045,0.5],[0.025,0.75],[0.015,0.95]],1)),SW*0.026,"artery",{alpha:0.6});
+  for(const s of [-1,1]) tube(toScr(T,[[0.015,0.94],[s*0.09,1.05]]),SW*0.016,"artery",{alpha:0.55});
+  tag("vc",fp(T,-0.05,0.17),"organs");
+  // heart
+  const beat=Math.pow(Math.max(0,Math.sin(t*0.0072)),6), k=1+0.07*beat, hc=[0.05,0.345];
+  const H0=[[-0.06,0.25],[-0.095,0.3],[-0.095,0.37],[-0.05,0.42],[0.05,0.445],[0.15,0.43],[0.185,0.38],[0.16,0.31],[0.1,0.27],[0.02,0.25]];
+  organ(T,H0.map(p=>[hc[0]+(p[0]-hc[0])*k,hc[1]+(p[1]-hc[1])*k]),"heart",0.05,0.35,0.15);
+  fline(T,[[0.02,0.28],[0.07,0.34],[0.13,0.42]],"artery",{lw:LW*0.9,sa:0.75});
+  fline(T,[[-0.05,0.27],[-0.085,0.33],[-0.06,0.41],[0.02,0.44]],"artery",{lw:LW*0.9,sa:0.75});
+  tube(toScr(T,chaikin([[0.0,0.28],[-0.005,0.2],[0.01,0.15],[0.05,0.13],[0.08,0.16],[0.07,0.24]],2)),SW*0.032,"artery");
+  for(const b of [[-0.005,0.155,-0.03,0.06],[0.025,0.14,0.02,0.05],[0.055,0.135,0.075,0.06]]) tube(toScr(T,[[b[0],b[1]],[b[2],b[3]]]),SW*0.012,"artery");
+  tube(toScr(T,chaikin([[0.05,0.3],[0.06,0.24],[0.04,0.21]],1)),SW*0.026,"vein");
+  for(const s of [-1,1]) tube(toScr(T,[[0.04,0.21],[s*0.11,0.22]]),SW*0.016,"vein",{alpha:0.8});
+  tag("heart",fp(T,0.1,0.38),"organs"); tag("aorta",fp(T,0.05,0.13),"organs");
+  // abdomen
+  organ(T,[[-0.37,0.49],[-0.2,0.43],[0,0.455],[0.13,0.47],[0.19,0.5],[0.06,0.55],[-0.1,0.6],[-0.28,0.645],[-0.37,0.58]],"liver",-0.18,0.52,0.24);
+  fline(T,[[0.0,0.455],[-0.02,0.53],[-0.03,0.585]],"liver",{lw:LW*0.7,sa:0.5});
+  fe(T,-0.12,0.605,0.025,0.042,0.3,"gall");
+  tag("liver",fp(T,-0.24,0.53),"organs"); tag("gall",fp(T,-0.12,0.63),"organs");
+  organ(T,[[0.1,0.47],[0.17,0.44],[0.24,0.47],[0.27,0.54],[0.24,0.61],[0.16,0.66],[0.07,0.665],[0.01,0.63],[0.02,0.6],[0.08,0.6],[0.14,0.56],[0.14,0.5]],"stomach",0.17,0.55,0.15);
+  fline(T,[[0.18,0.49],[0.22,0.55],[0.18,0.62]],"stomach",{lw:LW*0.6,sa:0.5}); fline(T,[[0.13,0.6],[0.18,0.58],[0.22,0.52]],"stomach",{lw:LW*0.6,sa:0.5});
+  tube(toScr(T,chaikin([[0.01,0.63],[-0.06,0.64],[-0.085,0.7],[-0.03,0.745],[0.04,0.72]],2)),SW*0.02,"stomach");
+  tag("stomach",fp(T,0.19,0.55),"organs");
+  const colon=toScr(T,chaikin([[-0.17,0.93],[-0.21,0.85],[-0.22,0.76],[-0.2,0.69],[-0.1,0.705],[0,0.735],[0.1,0.695],[0.21,0.665],[0.245,0.72],[0.245,0.82],[0.23,0.9],[0.17,0.955],[0.08,0.94],[0.02,0.97],[0,1.01]],2));
+  if(bandPath(colon,(q)=>SW*0.033*(0.84+0.2*Math.abs(Math.sin(q*Math.PI*26)))*(q>0.86?0.8:1))){ const p=fp(T,0,0.82); paint("colon",{grad:radialG("colon",p.x,p.y,SW*0.32)}); }
+  tube(toScr(T,[[-0.175,0.95],[-0.15,0.995]]),SW*0.012,"colon");
+  const si=[]; for(let i=0;i<=150;i++){ const q=i/150*TAU; si.push([0.012+0.14*Math.sin(5*q+0.4)*Math.cos(q*0.5),0.835+0.08*Math.sin(7*q+1.1)*Math.cos(0.3*q)]); }
+  tube(toScr(T,si),SW*0.02,"gut",{alpha:0.85});
+  tag("colon",fp(T,-0.22,0.8),"organs"); tag("smallint",fp(T,0.05,0.83),"organs");
+  fe(T,0,0.985,0.075,0.05,0,"bladder"); tag("bladder",fp(T,0,0.99),"organs");
+}
+
+/* ---------- skeleton ---------- */
+const HW=[0.15,0.22,0.27,0.3,0.32,0.335,0.34,0.34,0.335,0.32,0.29,0.26];
+const AE=[0.07,0.1,0.13,0.15,0.17,0.19,0.2,0.2,0.19,0.18];
+function backSkeleton(T,Hf,SW){
+  if(Hf) spineSeg(fp(Hf,0,0.74),fp(T,0,-0.02),7,SW*0.065,{key:"cervical"});
+  spineSeg(fp(T,0,0),fp(T,0,0.6),12,SW*0.07,{key:"thoracic",tp:1.2});
+  spineSeg(fp(T,0,0.6),fp(T,0,0.93),5,SW*0.095,{key:"spine",tp:1.4});
+  if(E.look==="xray") for(const s of [-1,1]){ fpath(T,[[s*0.2,0.0],[s*0.44,-0.02],[s*0.42,0.06],[s*0.33,0.18],[s*0.27,0.42],[s*0.2,0.2]]); paint("bone",{fa:0.05,alpha:0.5}); }
+  tag("scapula",fp(T,-0.36,0.12),"bone");
+  for(let i=0;i<12;i++) for(const s of [-1,1]){ const vp=0.02+i*0.05, hw=HW[i];
+    if(bandPath(bezS(T,[s*0.035,vp],[s*hw*0.5,vp-0.012],[s*hw*0.95,vp],[s*hw,vp+0.05],10),(q)=>SW*0.012*(1-0.3*q))) paint("bone",{alpha:0.5}); }
+}
+function frontSkeleton(T,SW){
+  for(let i=0;i<12;i++) for(const s of [-1,1]){
+    const vp=0.02+i*0.05, hw=HW[i];
+    if(i<10){
+      const va=vp+0.12+i*0.008;
+      if(bandPath(bezS(T,[s*hw,vp+0.05],[s*(hw+0.012),vp+0.12],[s*(AE[i]+0.09),va+0.015],[s*AE[i],va],12),(q)=>SW*(0.021-0.006*q))) paint("bone",{});
+      const tg=i<7 ? [s*0.035,0.05+i*0.046] : [s*(0.06+(i-7)*0.04),0.36+(i-7)*0.035];
+      if(bandPath(bezS(T,[s*AE[i],va],[s*(AE[i]-0.03),va],[tg[0]+s*0.03,tg[1]+0.01],tg,8),()=>SW*0.012)) paint("cart",{fa:0.12});
+    } else if(bandPath(bezS(T,[s*hw,vp+0.05],[s*(hw+0.005),vp+0.09],[s*(hw-0.02),vp+0.12],[s*(hw-0.05),vp+0.13],6),(q)=>SW*0.016*(1-0.5*q))) paint("bone",{});
+  }
+  tag("ribs",fp(T,-0.3,0.3),"bone"); tag("cartilage",fp(T,0.1,0.4),"bone");
+  fpath(T,[[-0.05,0.025],[-0.02,0.015],[0,0.03],[0.02,0.015],[0.05,0.025],[0.035,0.09],[0.03,0.1],[0.035,0.3],[0.025,0.36],[0.01,0.37],[0,0.42],[-0.01,0.37],[-0.025,0.36],[-0.035,0.3],[-0.03,0.1],[-0.035,0.09]]);
+  { const p=fp(T,0,0.2); paint("bone",{grad:radialG("bone",p.x,p.y,SW*0.2)}); }
+  fline(T,[[-0.03,0.095],[0.03,0.095]],"bone",{lw:LW*0.6,sa:0.5});
+  tag("sternum",fp(T,0,0.22),"bone");
+  for(const s of [-1,1]){ if(bandPath(toScr(T,chaikin([[s*0.04,0.035],[s*0.16,0.005],[s*0.3,0.02],[s*0.47,-0.025]],2)),(q)=>SW*(0.017+0.009*Math.abs(q-0.5)*2))) paint("bone",{}); }
+  tag("clavicle",fp(T,0.25,0.0),"bone");
+}
+function pelvis(Pv){
+  for(const s of [-1,1]){
+    organ(Pv,[[s*0.12,-0.55],[s*0.3,-0.78],[s*0.6,-0.92],[s*0.86,-0.82],[s*0.89,-0.55],[s*0.76,-0.25],[s*0.66,-0.05],[s*0.5,-0.17],[s*0.3,-0.3],[s*0.15,-0.36]],"bone",s*0.5,-0.55,0.45);
+    organ(Pv,[[s*0.66,0.0],[s*0.67,0.18],[s*0.5,0.37],[s*0.28,0.39],[s*0.05,0.31],[s*0.05,0.19],[s*0.25,0.1],[s*0.4,-0.06]],"bone",s*0.4,0.15,0.3);
+    inFrame(Pv); c.beginPath(); c.ellipse(s*0.32,0.21,0.1,0.075,0,0,TAU);
+    if(E.look==="solid"){ base(); c.fillStyle="rgba(40,30,24,"+(0.85*E.fade).toFixed(3)+")"; c.fill(); }
+    paint("bone",{fill:false,lw:LW*0.8});
+    inFrame(Pv); c.beginPath(); c.arc(s*0.5,0,0.14,0,TAU); paint("bone",{fill:false,lw:LW*0.8,sa:0.6});
+  }
+  organ(Pv,[[-0.17,-0.6],[0.17,-0.6],[0.12,-0.3],[0.05,-0.08],[0,0.0],[-0.05,-0.08],[-0.12,-0.3]],"bone",0,-0.35,0.25);
+  inFrame(Pv); c.beginPath(); for(let k=0;k<4;k++) for(const s of [-1,1]){ const x=s*0.065*(1-k*0.12), y=-0.5+k*0.1; c.moveTo(x+0.018,y); c.arc(x,y,0.018,0,TAU); } paint("bone",{fill:false,lw:LW*0.6,glow:false});
+  tube(toScr(Pv,[[0,0.0],[0,0.09]]),Math.max(2,len(Pv.a)*0.03),"bone");
+  tag("pelvis",fp(Pv,-0.7,-0.62),"bone"); tag("sacrum",fp(Pv,0,-0.4),"bone");
+}
+const SIDES=[{sh:11,el:13,wr:15,hip:23,kn:25,an:27,he:29,ft:31,s:1,main:true},{sh:12,el:14,wr:16,hip:24,kn:26,an:28,he:30,ft:32,s:-1,main:false}];
+function latOf(a,b,away){ let n=perp(norm(sub(b,a))); if(away && dot(n,away)<0) n=mul(n,-1); return n; }
+function limbBones(P,T,Pv,SW){
+  const hipMid=(on(P[23])&&on(P[24]))?mid(P[23],P[24]):null;
+  for(const S of SIDES){
+    const k=(key)=>S.main?key:null;
+    const sh=P[S.sh], el=P[S.el], wr=P[S.wr];
+    if(on(sh)&&on(el)){ longBone(sh,el,SW*0.085,{ra:0.55,rb:0.8,sh:0.3,key:k("humerus")}); ball(sh,SW*0.085*0.62); }
+    if(on(el)&&on(wr)){
+      const lat=latOf(el,wr,T?sub(el,T.o):null), o=SW*0.024;
+      longBone(sub(el,mul(lat,o)),sub(wr,mul(lat,o*1.2)),SW*0.042,{ra:0.85,rb:0.45});
+      longBone(add(el,mul(lat,o)),add(wr,mul(lat,o*1.2)),SW*0.045,{ra:0.5,rb:0.85,key:k("radius")});
+    }
+    const hp=P[S.hip], kn=P[S.kn], an=P[S.an];
+    if(on(hp)&&on(kn)){
+      const w=SW*0.11, latH=hipMid?norm(sub(hp,hipMid)):latOf(hp,kn,null), dn=norm(sub(kn,hp));
+      const Tr=add(add(hp,mul(latH,w*1.15)),mul(dn,w*0.25));
+      longBone(hp,lerp(hp,Tr,0.75),w*0.8,{ra:0.55,rb:0.55,sh:0.36});
+      longBone(add(Tr,mul(latH,-w*0.25)),kn,w,{ra:0.75,rb:0.85,sh:0.3,key:k("femur")});
+      ball(hp,w*0.55);
+      const pc=lerp(kn,hp,0.04); base(); c.beginPath(); c.ellipse(pc.x,pc.y,w*0.4,w*0.46,Math.atan2(dn.y,dn.x),0,TAU); paint("bone",{grad:radialG("bone",pc.x,pc.y,w*0.46)});
+      if(S.main) tag("patella",pc,"bone");
+    }
+    if(on(kn)&&on(an)){
+      const latL=hipMid&&on(hp)?latOf(kn,an,sub(hp,hipMid)):latOf(kn,an,null);
+      longBone(lerp(kn,an,0.03),an,SW*0.08,{ra:0.85,rb:0.6,sh:0.3,key:k("tibia")});
+      longBone(add(lerp(kn,an,0.08),mul(latL,SW*0.045)),add(an,mul(latL,SW*0.04)),SW*0.03,{ra:0.8,rb:0.9,sh:0.35});
+    }
+    const ft=P[S.ft], he=P[S.he];
+    if(on(an)&&on(ft)){
+      const f=sub(ft,an), sp=perp(norm(f));
+      if(on(he)) longBone(an,he,SW*0.055,{ra:0.5,rb:0.75});
+      ball(an,SW*0.03);
+      for(let j=-2;j<=2;j++){ const o=mul(sp,j*SW*0.016); const a=add(lerp(an,ft,0.4),mul(o,0.6)), b=add(lerp(an,ft,0.82),o), tip=add(lerp(an,ft,1.02),mul(o,1.15));
+        longBone(a,b,SW*0.016,{ra:0.6,rb:0.7}); longBone(b,tip,SW*0.012,{ra:0.6,rb:0.5}); }
+      ball(lerp(an,ft,0.28),SW*0.025);
+      if(S.main) tag("metatarsals",lerp(an,ft,0.6),"bone");
+    }
+  }
+}
+const CHAINS=[[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16],[17,18,19,20]];
+function handBones(p,main){
+  if(!p || !p.every(okP)) return;
+  const hs=len(sub(p[9],p[0])); if(hs<8) return;
+  for(const k of [5,9,13,17]) for(const t of [0.1,0.22]){ const q=lerp(p[0],p[k],t); ball(q,hs*0.055); }
+  ball(lerp(p[0],p[1],0.35),hs*0.05);
+  for(const ch of CHAINS){
+    if(ch[0]===1) longBone(lerp(p[0],p[1],0.45),p[1],hs*0.11,{ra:0.55,rb:0.55});
+    else longBone(lerp(p[0],p[ch[0]],0.3),p[ch[0]],hs*0.12,{ra:0.5,rb:0.62,sh:0.28});
+    for(let j=0;j<3;j++) longBone(p[ch[j]],p[ch[j+1]],hs*(0.11-j*0.015),{ra:0.55,rb:j===2?0.45:0.5,sh:0.3});
+  }
+  if(main){ tag("carpals",p[0],"bone"); tag("metacarpals",lerp(p[0],p[9],0.62),"bone"); tag("phalanges",p[11],"bone"); }
+}
+
+/* ---------- head ---------- */
+function cranium(Hf){
+  const half=[[0,-0.9],[0.3,-0.86],[0.5,-0.66],[0.57,-0.36],[0.55,-0.1],[0.49,0.04],[0.54,0.15],[0.46,0.3],[0.32,0.4],[0.16,0.46],[0,0.47]];
+  const sil=half.concat(half.slice(1,-1).reverse().map(p=>[-p[0],p[1]]));
+  fpath(Hf,sil,true);
+  { const p=fp(Hf,0,-0.3); paint("bone",{grad:radialG("bone",p.x,p.y,len(Hf.a)*0.66)}); }
+  fline(Hf,[[-0.5,-0.12],[-0.44,-0.5],[-0.2,-0.72]],"bone",{lw:LW*0.6,sa:0.45});
+  fline(Hf,[[0.5,-0.12],[0.44,-0.5],[0.2,-0.72]],"bone",{lw:LW*0.6,sa:0.45});
+  fline(Hf,[[-0.46,-0.62],[-0.2,-0.84],[0,-0.88],[0.2,-0.84],[0.46,-0.62]],"bone",{lw:LW*0.6,sa:0.45});
+  tag("cranium",fp(Hf,0.3,-0.68),"skull");
+}
+const SULCI=(()=>{ let seed=11; const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; }; const lines=[];
+  for(let k=0;k<110;k++){ const r=Math.sqrt(rnd())*0.92, th=rnd()*TAU; let x=r*Math.cos(th), y=r*Math.sin(th), a=rnd()*TAU; const sg=Math.sign(x)||1; const pts=[[x,y]]; const n=4+Math.floor(rnd()*7);
+    for(let i=0;i<n;i++){ a+=(rnd()-0.5)*1.7; x+=Math.cos(a)*0.065; y+=Math.sin(a)*0.065; if(x*x+y*y>0.94 || Math.sign(x)!==sg || Math.abs(x)<0.03) break; pts.push([x,y]); }
+    if(pts.length>2) lines.push(pts); }
+  return lines; })();
+function brain(Hf){
+  for(const s of [-1,1]){ inFrame(Hf); c.beginPath(); c.ellipse(s*0.235,-0.37,0.24,0.46,0,0,TAU); const p=fp(Hf,s*0.235,-0.37); paint("brain",{grad:radialG("brain",p.x,p.y,len(Hf.a)*0.32)}); }
+  inFrame(Hf); c.beginPath(); for(const l of SULCI) smoothPath(l.map(q=>[q[0]*0.46,-0.37+q[1]*0.45]),false);
+  paint("brain",{fill:false,lw:LW*0.65,sa:0.6,glow:false});
+  for(const s of [-1,1]) fline(Hf,[[s*0.46,-0.1],[s*0.32,-0.22],[s*0.17,-0.3]],"brain",{lw:LW*1.1,sa:0.8});
+  fline(Hf,[[0,-0.83],[0,-0.1]],"brain",{lw:LW*1.1,sa:0.8});
+  tag("frontal",fp(Hf,0.12,-0.55),"brain"); tag("parietal",fp(Hf,-0.25,-0.74),"brain"); tag("temporal",fp(Hf,0.42,-0.16),"brain");
+}
+function darkFill(){ if(E.look==="solid"){ base(); c.fillStyle="rgba(34,26,22,"+(0.9*E.fade).toFixed(3)+")"; c.fill(); } }
+function expand(pts,ua,ud,ku,kv,shift){ const ce=centroid(pts); return pts.map(p=>{ const d=sub(p,ce), a=dot(d,ua), b=dot(d,ud); return add(add(ce,add(mul(ua,a*ku),mul(ud,b*kv))),shift||{x:0,y:0}); }); }
+function teethRow(line,dn,h,upper){
+  const n=12;
+  for(let k=0;k<n;k++){
+    const t=(k+0.5)/n, p=alongPoly(line,t), q=alongPoly(line,Math.min(1,t+0.5/n)), q0=alongPoly(line,Math.max(0,t-0.5/n));
+    const tg=sub(q,q0), wd=len(tg)*0.44; if(wd<0.6) continue;
+    const hh=h*(1-0.45*Math.abs(t-0.5)*2);
+    const F={o:p,a:mul(norm(tg),wd),d:mul(dn,hh)}; if(!okFrame(F)) continue;
+    inFrame(F); c.beginPath(); if(upper) roundedRect(-1,-1,2,1.05,0.35); else roundedRect(-1,-0.05,2,1.05,0.35);
+    paint("bone",{fa:0.2,lw:LW*0.6,glow:false});
+  }
+}
+function meshFace(Hf,M){
+  const ua=norm(Hf.a), ud=norm(Hf.d), fw=len(sub(M[454],M[234])), fh=len(sub(M[152],M[10]));
+  const C0=centroid(FACE_OVAL.map(i=>M[i])), ins=(i,k)=>lerp(M[i],C0,k);
+  for(const br of [BROW_R,BROW_L]){ spath(br.map(i=>add(M[i],mul(ud,fh*0.015))),false); paint("bone",{fill:false,lw:LW*1.2,sa:0.7}); }
+  let orbitTag=null;
+  for(const ring of [EYE_R,EYE_L]){
+    const o=expand(ring.map(i=>M[i]),ua,ud,1.5,2.7,mul(ud,-fh*0.012));
+    spath(o,true); darkFill(); paint("bone",{fill:false,lw:LW*1.1});
+    spath(expand(o,ua,ud,0.82,0.82),true); paint("bone",{fill:false,lw:LW*0.5,sa:0.35,glow:false});
+    orbitTag=o[12];
+  }
+  tag("orbit",orbitTag,"skull");
+  const top=lerp(M[168],M[1],0.5), bot=lerp(M[2],M[1],0.1), nc=lerp(top,bot,0.6);
+  const aL=lerp(M[327],nc,0.15), aR=lerp(M[98],nc,0.15);
+  spath([top,lerp(top,aL,0.55),aL,lerp(aL,bot,0.6),bot,lerp(aR,bot,0.6),aR,lerp(top,aR,0.55)],true); darkFill(); paint("bone",{fill:false,lw:LW});
+  if(bandPath([M[168],lerp(M[168],top,0.5),top],(q)=>fw*0.035*(1-0.35*q))) paint("bone",{});
+  tag("nasal",lerp(top,bot,0.5),"skull");
+  for(const [eo,ck,ear] of [[33,116,234],[263,345,454]]){
+    const pts=[lerp(M[eo],M[ck],0.45),M[ck],ins(ear,0.05)];
+    if(bandPath(pts,(q)=>fw*0.032*(1.25-0.6*q))) paint("bone",{});
+  }
+  tag("zygomatic",lerp(M[116],M[234],0.4),"skull");
+  const latV=(i,k)=>add(M[i],mul(ua,(dot(sub(M[i],C0),ua)>0?1:-1)*fw*k));
+  spath([M[98],M[327],latV(327,0.05),lerp(M[291],M[327],0.3),M[291],M[0],M[61],lerp(M[61],M[98],0.3),latV(98,0.05)],true);
+  paint("bone",{fa:0.06,sa:0.45,lw:LW*0.8,alpha:E.look==="xray"?1:0.35}); tag("maxilla",lerp(M[0],M[291],0.4),"skull");
+  const th=fh*0.06;
+  teethRow(UP_IN.map(i=>M[i]),ud,th,true); teethRow(LO_IN.map(i=>M[i]),ud,th*0.9,false);
+  tag("teeth",M[13],"skull");
+  const jaw=JAW.map((i,k)=>ins(i,(k>6&&k<12)?0.04:0.07));
+  const back=[lerp(M[323],M[291],0.38)].concat(LOWER_LIP_OUT.map(i=>add(M[i],mul(ud,th*0.9))),[lerp(M[93],M[61],0.38)]);
+  spath(jaw.concat(back),true);
+  { const p=lerp(M[152],M[17],0.5); paint("bone",{grad:radialG("bone",p.x,p.y,fw*0.5)}); }
+  for(const [a,b] of [[176,61],[400,291]]){ const q=lerp(M[a],M[b],0.45); base(); c.beginPath(); c.arc(q.x,q.y,Math.max(1,fw*0.012),0,TAU); paint("bone",{fill:false,lw:LW*0.6,glow:false}); }
+  tag("mandible",jaw[4],"skull");
+}
+function frameFace(Hf){
+  for(const s of [-1,1]){ inFrame(Hf); c.beginPath(); c.ellipse(s*0.21,-0.01,0.14,0.12,0,0,TAU); darkFill(); paint("bone",{fill:false,lw:LW*1.1});
+    fline(Hf,[[s*0.33,0.12],[s*0.45,0.08],[s*0.53,0.13]],"bone",{lw:LW*1.6,sa:0.8}); fline(Hf,[[s*0.36,-0.14],[s*0.2,-0.17],[s*0.05,-0.12]],"bone",{lw:LW*1.1,sa:0.7}); }
+  tag("orbit",fp(Hf,0.21,-0.12),"skull");
+  fpath(Hf,[[0,0.1],[-0.06,0.22],[-0.07,0.31],[0,0.34],[0.07,0.31],[0.06,0.22]]); darkFill(); paint("bone",{fill:false}); tag("nasal",fp(Hf,0,0.24),"skull");
+  for(const row of [[0.41,0.085,true],[0.505,0.075,false]]){ inFrame(Hf); c.beginPath(); for(let i=-5;i<5;i++) roundedRect(i*0.04+0.004,row[0],0.032,row[1],0.01); paint("bone",{fa:0.2,lw:LW*0.6,glow:false}); }
+  tag("teeth",fp(Hf,0,0.5),"skull");
+  fpath(Hf,[[-0.5,0.05],[-0.47,0.4],[-0.4,0.62],[-0.2,0.82],[0,0.88],[0.2,0.82],[0.4,0.62],[0.47,0.4],[0.5,0.05],[0.4,0.12],[0.36,0.45],[0.2,0.6],[0,0.62],[-0.2,0.6],[-0.36,0.45],[-0.4,0.12]]);
+  { const p=fp(Hf,0,0.6); paint("bone",{grad:radialG("bone",p.x,p.y,len(Hf.a)*0.5)}); }
+  tag("mandible",fp(Hf,-0.32,0.68),"skull"); tag("zygomatic",fp(Hf,-0.45,0.1),"skull"); tag("maxilla",fp(Hf,0.16,0.38),"skull");
+}
+function meshFaceMuscles(Hf,M){
+  const ua=norm(Hf.a), ud=norm(Hf.d), fw=len(sub(M[454],M[234]));
+  for(const s of [-1,1]){
+    fpath(Hf,[[s*0.04,-0.17],[s*0.25,-0.2],[s*0.42,-0.26],[s*0.4,-0.56],[s*0.22,-0.66],[s*0.05,-0.62]]); { const p=fp(Hf,s*0.22,-0.42); paint("muscle",{grad:radialG("muscle",p.x,p.y,len(Hf.a)*0.25),alpha:0.8}); }
+    inFrame(Hf); c.beginPath(); for(let k=0;k<7;k++){ const u=s*(0.07+k*0.05); c.moveTo(u,-0.2); c.lineTo(u*0.97,-0.6); } paint("muscle",{fill:false,lw:LW*0.4,sa:0.4,glow:false,alpha:0.8});
+    fan([fp(Hf,s*0.5,-0.12),fp(Hf,s*0.48,-0.38),fp(Hf,s*0.4,-0.56),fp(Hf,s*0.26,-0.62)],fp(Hf,s*0.38,0.18),fp(Hf,s*0.42,0.2),{fibers:8,alpha:0.75,key:s>0?"temporalis":null,labelAt:fp(Hf,s*0.46,-0.35)});
+  }
+  tag("frontalis",fp(Hf,-0.22,-0.45),"muscle");
+  for(const ring of [EYE_R,EYE_L]){
+    const pts=ring.map(i=>M[i]);
+    spath(expand(pts,ua,ud,2.05,3.8),true); smoothPath(expand(pts,ua,ud,1.2,1.5).map(p=>[p.x,p.y]),true);
+    paint("muscle",{evenodd:true,alpha:0.75,fa:0.12,lw:LW*0.7});
+  }
+  tag("oculi",expand(EYE_L.map(i=>M[i]),ua,ud,2.05,3.8)[0],"muscle");
+  const lips=LIPS_OUT.map(i=>M[i]);
+  spath(expand(lips,ua,ud,1.3,1.5),true); smoothPath(expand(lips,ua,ud,1.0,1.0).map(p=>[p.x,p.y]),true);
+  paint("muscle",{evenodd:true,alpha:0.8,fa:0.14,lw:LW*0.7}); tag("oris",lerp(M[17],M[152],0.25),"muscle");
+  for(const [ck,ear,cor,ang] of [[116,234,61,172],[345,454,291,397]]){
+    muscle(lerp(M[ck],M[ear],0.35),M[cor],fw*0.07,{tA:0.05,tB:0.05,alpha:0.85,key:ck===345?"zygomaticus":null});
+    muscle(lerp(M[ear],M[ck],0.2),lerp(M[ang],lerp(M[ear],M[cor],0.5),0.12),fw*0.17,{tA:0.03,tB:0.03,bulge:0.55,alpha:0.85,key:ck===116?"masseter":null});
+  }
+}
+function frameFaceMuscles(Hf){
+  for(const s of [-1,1]){ fe(Hf,s*0.4,0.45,0.08,0.16,0,"muscle",{alpha:0.8}); fpath(Hf,[[s*0.04,-0.17],[s*0.42,-0.26],[s*0.4,-0.56],[s*0.05,-0.62]]); paint("muscle",{alpha:0.7}); }
+  tag("masseter",fp(Hf,-0.4,0.45),"muscle"); tag("frontalis",fp(Hf,-0.22,-0.42),"muscle");
+}
+function eyes(Hf,M){
+  if(M){ for(const ring of [EYE_R,EYE_L]){ const pts=ring.map(i=>M[i]), ce=centroid(pts), r=len(sub(M[ring[0]],M[ring[8]]))*0.55;
+    base(); c.beginPath(); c.arc(ce.x,ce.y,r,0,TAU); paint("eye",{grad:radialG("eye",ce.x,ce.y,r)});
+    base(); c.beginPath(); c.arc(ce.x,ce.y,r*0.42,0,TAU); paint("iris",{fa:0.25,lw:LW*0.7,glow:false}); }
+    tag("eye",centroid(EYE_R.map(i=>M[i])),"organs");
+  } else { for(const s of [-1,1]) fe(Hf,s*0.21,0,0.075,0.075,0,"eye"); tag("eye",fp(Hf,-0.21,0),"organs"); }
+}
+
+/* ---------- body muscles ---------- */
+function bodyMuscles(P,T,Pv,Hf,SW){
+  const hipMid=(on(P[23])&&on(P[24]))?mid(P[23],P[24]):null;
+  for(const S of SIDES){
+    const k=(key)=>S.main?key:null, s=S.s;
+    const sh=P[S.sh], el=P[S.el], wr=P[S.wr], hp=P[S.hip], kn=P[S.kn], an=P[S.an], ft=P[S.ft];
+    if(on(sh)&&on(el)){
+      const latA=latOf(sh,el,T?sub(sh,T.o):null);
+      if(T){ const acr=fp(T,s*0.48,-0.025), ins=lerp(sh,el,0.45);
+        fan([fp(T,s*0.3,0.0),fp(T,s*0.4,-0.035),acr],ins,add(ins,mul(latA,SW*0.015)),{outer:[add(lerp(acr,ins,0.45),mul(latA,SW*0.07))],bulge:mul(latA,SW*0.05),fibers:9,key:k("deltoid"),labelAt:add(lerp(acr,ins,0.4),mul(latA,SW*0.04))}); }
+      muscle(lerp(sh,el,0.15),on(wr)?lerp(el,wr,0.08):el,SW*0.105,{tA:0.12,tB:0.16,bulge:0.55,key:k("biceps")});
+      muscle(add(lerp(sh,el,0.25),mul(latA,SW*0.05)),add(lerp(sh,el,0.95),mul(latA,SW*0.03)),SW*0.07,{tA:0.05,tB:0.2,key:k("triceps"),alpha:0.85});
+      if(on(wr)){ const latF=latOf(el,wr,latA);
+        muscle(add(lerp(sh,el,0.72),mul(latA,SW*0.045)),add(lerp(el,wr,0.95),mul(latF,SW*0.02)),SW*0.075,{tA:0.03,tB:0.45,bulge:0.3,key:k("brachiorad")});
+        for(let j=0;j<3;j++) muscle(add(el,mul(latF,-SW*0.05)),add(lerp(el,wr,0.97),mul(latF,-SW*(j*0.012))),SW*0.05,{tA:0.04,tB:0.5,bulge:0.3,key:j===0?k("forearm"):null});
+      }
+    }
+    if(on(hp)&&on(kn)){
+      const latL=latOf(hp,kn,hipMid?sub(hp,hipMid):null);
+      if(Pv) fan([fp(Pv,s*0.06,0.32),fp(Pv,s*0.2,0.33)],add(lerp(hp,kn,0.7),mul(latL,-SW*0.035)),add(lerp(hp,kn,0.5),mul(latL,-SW*0.04)),{fibers:6,alpha:0.85,key:k("adductors")});
+      muscle(add(lerp(hp,kn,0.12),mul(latL,SW*0.07)),add(lerp(hp,kn,0.95),mul(latL,SW*0.04)),SW*0.1,{tA:0.05,tB:0.12,bulge:0.5});
+      muscle(add(lerp(hp,kn,0.45),mul(latL,-SW*0.05)),add(lerp(hp,kn,0.97),mul(latL,-SW*0.035)),SW*0.1,{tA:0.05,tB:0.1,bulge:0.7});
+      muscle(add(lerp(hp,kn,0.06),mul(latL,SW*0.02)),on(an)?lerp(kn,an,0.08):kn,SW*0.11,{tA:0.08,tB:0.2,bulge:0.45,key:k("quads")});
+      if(Pv && on(an)){ const a=fp(Pv,s*0.78,-0.52), cp=add(lerp(hp,kn,0.5),mul(latL,-SW*0.05)), b=add(lerp(kn,an,0.08),mul(latL,-SW*0.05)); const pts=[];
+        for(let i=0;i<=14;i++){ const t=i/14, m=1-t; pts.push({x:m*m*a.x+2*m*t*cp.x+t*t*b.x,y:m*m*a.y+2*m*t*cp.y+t*t*b.y}); }
+        if(bandPath(pts,(q)=>SW*0.02*(0.6+0.4*Math.sin(Math.PI*q)))) paint("muscle",{alpha:0.9}); if(S.main) tag("sartorius",pts[5],"muscle"); }
+    }
+    if(on(kn)&&on(an)){
+      const latK=latOf(kn,an,hipMid&&on(hp)?sub(hp,hipMid):null);
+      muscle(add(lerp(kn,an,0.02),mul(latK,-SW*0.04)),add(lerp(kn,an,0.7),mul(latK,-SW*0.01)),SW*0.085,{tA:0.03,tB:0.25,bulge:0.35,key:k("calf")});
+      muscle(add(lerp(kn,an,0.1),mul(latK,SW*0.035)),on(ft)?lerp(an,ft,0.25):an,SW*0.06,{tA:0.03,tB:0.45,bulge:0.35,key:k("tibialis")});
+    }
+  }
+  if(T){
+    for(const s of [-1,1]){
+      const S=s>0?SIDES[0]:SIDES[1], sh=P[S.sh], el=P[S.el];
+      const ins=(on(sh)&&on(el))?lerp(sh,el,0.18):fp(T,s*0.48,0.1), ins2=(on(sh)&&on(el))?lerp(sh,el,0.26):fp(T,s*0.47,0.16);
+      fan([fp(T,s*0.24,0.015),fp(T,s*0.12,0.03),fp(T,s*0.04,0.06),fp(T,s*0.04,0.16),fp(T,s*0.05,0.26),fp(T,s*0.08,0.33),fp(T,s*0.16,0.37)],ins,ins2,{fibers:12,key:s>0?"pecs":null,labelAt:fp(T,s*0.24,0.17)});
+      for(let i=0;i<4;i++){ const y0=0.4+i*0.115, y1=i<3?y0+0.105:0.98, x1=i<3?0.11:0.075;
+        fpath(T,[[s*0.012,y0],[s*0.06,y0-0.006],[s*x1,y0],[s*(x1+0.006),(y0+y1)/2],[s*(x1-0.005),y1],[s*0.012,y1]]);
+        const p=fp(T,s*0.06,(y0+y1)/2); paint("muscle",{grad:radialG("muscle",p.x,p.y,SW*0.09)});
+        inFrame(T); c.beginPath(); for(let f=1;f<5;f++){ const u=s*(0.012+f*(x1-0.012)/5); c.moveTo(u,y0+0.008); c.lineTo(u,y1-0.008); } paint("muscle",{fill:false,lw:LW*0.4,sa:0.4,glow:false}); }
+      fpath(T,[[s*0.3,0.38],[s*0.34,0.6],[s*0.3,0.85],[s*0.16,0.96],[s*0.13,0.6],[s*0.15,0.42]]); { const p=fp(T,s*0.24,0.65); paint("muscle",{grad:radialG("muscle",p.x,p.y,SW*0.16),alpha:0.8}); }
+      inFrame(T); c.beginPath(); for(let f=0;f<8;f++){ const t=f/7; c.moveTo(s*(0.31+0.02*Math.sin(Math.PI*t)),0.42+t*0.38); c.lineTo(s*0.15,0.5+t*0.42); } paint("muscle",{fill:false,lw:LW*0.4,sa:0.35,glow:false,alpha:0.8});
+      for(let j=0;j<4;j++) fe(T,s*0.31,0.29+j*0.055,0.035,0.016,-s*0.5,"muscle",{alpha:0.85});
+      const o1=Hf?fp(Hf,s*0.08,0.76):fp(T,s*0.06,-0.28), o2=Hf?fp(Hf,s*0.2,0.86):fp(T,s*0.11,-0.18);
+      fan([o1,o2],fp(T,s*0.47,-0.02),fp(T,s*0.28,-0.04),{fibers:7,alpha:0.85,key:s>0?"trapezius":null});
+      if(Hf) muscle(fp(Hf,s*0.42,0.42),fp(T,s*0.035,0.03),SW*0.05,{tA:0.04,tB:0.12,key:s>0?"scm":null});
+    }
+    tag("abs",fp(T,0.06,0.55),"muscle"); tag("obliques",fp(T,-0.27,0.7),"muscle"); tag("serratus",fp(T,0.33,0.35),"muscle");
+  }
+}
+
+/* ---------- skin findings ---------- */
+const SKCAT=["skinAbr","skinBump","skinRed","skinSpot"];
+const SKCOL=[[255,70,50],[255,190,70],[255,110,130],[190,160,255]];
+function drawSkin(M,blobs){
+  if(!blobs || !blobs.length) return;
+  const F={o:mid(M[10],M[152]),a:sub(M[454],M[234]),d:sub(M[152],M[10])}; if(!okFrame(F)) return;
+  for(const b of blobs){ const cc=SKCOL[b.cat];
+    inFrame(F); c.beginPath(); c.ellipse(b.u,b.v,Math.max(0.02,b.ru),Math.max(0.02,b.rv),0,0,TAU); base();
+    c.fillStyle=rgba(cc,0.14*E.fade); c.fill(); c.setLineDash([4,3]); c.lineWidth=1.6; c.strokeStyle=rgba(cc,0.95*E.fade); c.stroke(); c.setLineDash([]);
+    tag(SKCAT[b.cat],fp(F,b.u,b.v-b.rv),"skin"); }
+}
+const GW=40, GH=48;
+function inPoly(p,poly){ let ins=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const a=poly[i], b=poly[j]; if(((a.y>p.y)!==(b.y>p.y)) && (p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)) ins=!ins; } return ins; }
+function scalePoly(ps,k){ const ce=centroid(ps); return ps.map(p=>add(ce,mul(sub(p,ce),k))); }
+function median(arr){ if(!arr.length) return 0; const s=Float32Array.from(arr).sort(); return s[s.length>>1]; }
+function blurMasked(V,mask,r){ const out=new Float32Array(V.length);
+  for(let j=0;j<GH;j++) for(let i=0;i<GW;i++){ const id=j*GW+i; if(!mask[id]) continue; let s=0,n=0;
+    for(let dj=-r;dj<=r;dj++){ const jj=j+dj; if(jj<0||jj>=GH) continue; for(let di=-r;di<=r;di++){ const ii=i+di; if(ii<0||ii>=GW) continue; const k=jj*GW+ii; if(mask[k]){ s+=V[k]; n++; } } }
+    out[id]=n?s/n:V[id]; }
+  return out; }
+function skinCore(st,data,iw,ih,M,toImg){
+  const n=GW*GH;
+  if(!st.heat) st.heat=[0,1,2,3].map(()=>new Float32Array(n));
+  const decay=()=>{ for(const h of st.heat) for(let k=0;k<n;k++) h[k]*=0.7; st.blobs=[]; return st.blobs; };
+  const C=mid(M[10],M[152]), A=sub(M[454],M[234]), D=sub(M[152],M[10]), fw=len(A);
+  if(fw<20) return decay();
+  const oval=FACE_OVAL.map(i=>M[i]), eyeP=[EYE_R,EYE_L].map(r=>scalePoly(r.map(i=>M[i]),1.8)), lips=scalePoly(LIPS_OUT.map(i=>M[i]),1.18);
+  const avoid=BROW_R.concat(BROW_L).map(i=>({p:M[i],r:fw*0.075})).concat([98,327,2,1].map(i=>({p:M[i],r:fw*0.06})));
+  const Lv=new Float32Array(n), Rv=new Float32Array(n), mask=new Uint8Array(n), Ls=[];
+  for(let j=0;j<GH;j++) for(let i=0;i<GW;i++){
+    const u=-0.5+(i+0.5)/GW, v=-0.5+(j+0.5)/GH, P={x:C.x+A.x*u+D.x*v, y:C.y+A.y*u+D.y*v};
+    if(!inPoly(P,oval) || eyeP.some(e=>inPoly(P,e)) || inPoly(P,lips) || avoid.some(a=>len(sub(P,a.p))<a.r)) continue;
+    const q=toImg(P), x=Math.floor(q.x), y=Math.floor(q.y); if(x<0||y<0||x>=iw-1||y>=ih-1) continue;
+    let r=0,g=0,b=0; for(const [dx,dy] of [[0,0],[1,0],[0,1],[1,1]]){ const kk=((y+dy)*iw+(x+dx))*4; r+=data[kk]; g+=data[kk+1]; b+=data[kk+2]; }
+    r/=4; g/=4; b/=4;
+    const id=j*GW+i; Lv[id]=0.299*r+0.587*g+0.114*b; Rv[id]=(r-g)/(r+g+1); mask[id]=1; Ls.push(Lv[id]);
+  }
+  if(Ls.length<120) return decay();
+  const medL=median(Ls); if(medL<35) return decay();
+  const Rs=[]; for(let k=0;k<n;k++) if(mask[k]){ if(Lv[k]<0.55*medL || Lv[k]>1.6*medL) mask[k]=0; else Rs.push(Rv[k]); }
+  if(Rs.length<100) return decay();
+  const medR=median(Rs), madR=median(Rs.map(v=>Math.abs(v-medR)))*1.4826+0.004;
+  const b1=blurMasked(Lv,mask,1), b3=blurMasked(Lv,mask,3), b1sq=blurMasked(Lv.map(v=>v*v),mask,1);
+  for(let k=0;k<n;k++){
+    let f0=0,f1=0,f2=0,f3=0;
+    if(mask[k]){ const z=(Rv[k]-medR)/madR, d=(b1[k]-b3[k])/medL, tex=Math.sqrt(Math.max(0,b1sq[k]-b1[k]*b1[k]))/medL;
+      const abr=z>2.8 && tex>0.11 && d<-0.04, bump=!abr && d>0.055 && z>1.0, red=!abr && z>2.4, spot=!abr && !red && d<-0.065;
+      f0=abr?1:0; f1=bump?1:0; f2=red?1:0; f3=spot?1:0; }
+    const fl=[f0,f1,f2,f3]; for(let q=0;q<4;q++) st.heat[q][k]=st.heat[q][k]*0.72+fl[q]*0.28;
+  }
+  const MIN=[3,2,4,2], blobs=[];
+  for(let cat=0;cat<4;cat++){ const h=st.heat[cat], seen=new Uint8Array(n);
+    for(let k=0;k<n;k++){ if(seen[k] || h[k]<0.5) continue; const q=[k]; seen[k]=1; const cells=[];
+      while(q.length){ const x=q.pop(); cells.push(x); const i=x%GW, j=(x/GW)|0;
+        for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]){ const ii=i+di, jj=j+dj; if(ii<0||jj<0||ii>=GW||jj>=GH) continue; const y=jj*GW+ii; if(!seen[y] && h[y]>=0.5){ seen[y]=1; q.push(y); } } }
+      if(cells.length<MIN[cat]) continue;
+      let su=0,sv=0,mnu=9,mxu=-9,mnv=9,mxv=-9;
+      for(const x of cells){ const u=-0.5+((x%GW)+0.5)/GW, v=-0.5+(((x/GW)|0)+0.5)/GH; su+=u; sv+=v; mnu=Math.min(mnu,u); mxu=Math.max(mxu,u); mnv=Math.min(mnv,v); mxv=Math.max(mxv,v); }
+      blobs.push({cat,u:su/cells.length,v:sv/cells.length,ru:Math.max(0.03,(mxu-mnu)/2+1/GW),rv:Math.max(0.03,(mxv-mnv)/2+1/GH),n:cells.length});
+    } }
+  blobs.sort((a,b)=>b.n-a.n); st.blobs=blobs.slice(0,6); return st.blobs;
+}
+
+
+/* Canvas wrapper: path points are mapped through the current local frame in JS, so the real
+   context always draws in plain screen space (consistent line widths, no reliance on CTM-at-add). */
+function wrap(real){
+  let m=[1,0,0,1,0,0], ident=true, has=false;
+  const T=(x,y)=>[m[0]*x+m[2]*y+m[4], m[1]*x+m[3]*y+m[5]];
+  const api={
+    setTransform(a,b,cc,d,e,f){ m=[a/DPR,b/DPR,cc/DPR,d/DPR,e/DPR,f/DPR]; ident=Math.abs(m[0]-1)<1e-9&&Math.abs(m[3]-1)<1e-9&&m[1]===0&&m[2]===0&&m[4]===0&&m[5]===0; real.setTransform(DPR,0,0,DPR,0,0); },
+    beginPath(){ has=false; real.beginPath(); },
+    closePath(){ real.closePath(); },
+    moveTo(x,y){ const p=T(x,y); real.moveTo(p[0],p[1]); has=true; },
+    lineTo(x,y){ const p=T(x,y); if(has) real.lineTo(p[0],p[1]); else real.moveTo(p[0],p[1]); has=true; },
+    quadraticCurveTo(a,b,x,y){ const p=T(a,b), q=T(x,y); if(!has) real.moveTo(p[0],p[1]); real.quadraticCurveTo(p[0],p[1],q[0],q[1]); has=true; },
+    bezierCurveTo(a,b,e,f,x,y){ const p=T(a,b), q=T(e,f), r=T(x,y); if(!has) real.moveTo(p[0],p[1]); real.bezierCurveTo(p[0],p[1],q[0],q[1],r[0],r[1]); has=true; },
+    ellipse(x,y,rx,ry,rot,a0,a1,ccw){
+      if(ident){ real.ellipse(x,y,rx,ry,rot,a0,a1,!!ccw); has=true; return; }
+      let sw; if(!ccw){ const d=a1-a0; sw=d>=TAU?TAU:((d%TAU)+TAU)%TAU; } else { const d=a0-a1; sw=d>=TAU?-TAU:-(((d%TAU)+TAU)%TAU); }
+      const n=Math.max(8,Math.ceil(Math.abs(sw)/TAU*40)), cr=Math.cos(rot), sr=Math.sin(rot);
+      for(let i=0;i<=n;i++){ const t=a0+sw*i/n, ex=rx*Math.cos(t), ey=ry*Math.sin(t), p=T(x+ex*cr-ey*sr,y+ex*sr+ey*cr);
+        if(i===0 && !has) real.moveTo(p[0],p[1]); else real.lineTo(p[0],p[1]); }
+      has=true;
+    },
+    arc(x,y,r,a0,a1,ccw){ api.ellipse(x,y,r,r,0,a0,a1,ccw); }
+  };
+  return new Proxy(real,{ get(t,p){ if(Object.prototype.hasOwnProperty.call(api,p)) return api[p]; const v=t[p]; return typeof v==="function"?v.bind(t):v; }, set(t,p,v){ t[p]=v; return true; } });
+}
+
+/* ---------- main entry ---------- */
+function draw(ctx,env){
+  DPR=env.dpr; c=wrap(ctx); E=env; OUT=env.labels; OUT.length=0; E.br=env.brightness;
+  const L=env.layers, P=env.pose, M=(env.face && env.faceFade>0.02) ? env.face : null;
+  c.lineJoin="round"; c.lineCap="round";
+  if(env.look==="xray") c.globalCompositeOperation="lighter";
+  let SW=140, T=null, Pv=null, Hf=null, headFade=0;
+  if(P){
+    const haveSh=on(P[11])&&on(P[12]), head=on(P[0])&&on(P[2])&&on(P[5]), hips=on(P[23])&&on(P[24]);
+    SW=haveSh ? len(sub(P[11],P[12])) : head ? len(sub(P[2],P[5]))*5 : 140;
+    if(haveSh){ const o=mid(P[11],P[12]), a=sub(P[11],P[12]); let d;
+      if(hips) d=sub(mid(P[23],P[24]),o); else { d=mul(perp(a),1.4); if((head && dot(d,sub(o,P[0]))<0) || (!head && d.y<0)) d=mul(d,-1); }
+      T={o,a,d}; if(hips){ const ha=sub(P[23],P[24]); Pv={o:mid(P[23],P[24]),a:ha,d:mul(norm(d),len(ha))}; } }
+    if(!M && head){ Hf=headFromPose(P,T); headFade=env.poseFade; }
+  }
+  if(M){ Hf=headFromMesh(M); headFade=env.faceFade; if(!P) SW=len(sub(M[454],M[234]))*2.6; }
+  if(T && !okFrame(T)) T=null; if(Pv && !okFrame(Pv)) Pv=null; if(Hf && !okFrame(Hf)) Hf=null;
+  if(Hf && T && dot(Hf.a,T.a)<0) Hf.a=mul(Hf.a,-1);
+  LW=Math.max(1.1,SW*0.0055);
+  if(P){ E.fade=env.poseFade;
+    if(T && L.skeleton) backSkeleton(T,Hf,SW);
+    if(T && L.organs) organs(T,SW,env.t);
+    if(L.skeleton){ if(T) frontSkeleton(T,SW); if(Pv) pelvis(Pv); limbBones(P,T,Pv,SW); }
+    if(L.muscles) bodyMuscles(P,T,Pv,Hf,SW);
+  }
+  if(L.hands) env.hands.forEach((h,i)=>{ E.fade=h.fade; handBones(h.pts,i===0); });
+  if(Hf){ E.fade=headFade;
+    if(L.skull) cranium(Hf);
+    if(L.brain) brain(Hf);
+    if(L.skull){ if(M) meshFace(Hf,M); else frameFace(Hf); }
+    if(L.muscles){ if(M) meshFaceMuscles(Hf,M); else frameFaceMuscles(Hf); }
+    if(L.organs) eyes(Hf,M);
+  }
+  if(L.skin && M && env.skin){ E.fade=env.faceFade; drawSkin(M,env.skin); }
+  c.globalCompositeOperation="source-over"; base(); c.setLineDash([]);
+}
+
+G.AnatomyLib={draw,skinCore,FACE_OVAL};
+})(typeof window!=="undefined"?window:globalThis);
+
+</script>
 <script type="module">
-import { FilesetResolver, PoseLandmarker, HandLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+import { FilesetResolver, PoseLandmarker, HandLandmarker, FaceLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 
 const MP_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
-const POSE_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
-const HAND_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const MODEL = "https://storage.googleapis.com/mediapipe-models/";
+const POSE_URL = { high: MODEL+"pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task", fast: MODEL+"pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task" };
+const HAND_URL = MODEL+"hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const FACE_URL = MODEL+"face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+const LIB = window.AnatomyLib;
 
 /* ---------- text ---------- */
 const T = {
-  en:{ title:"Anatomy Lens", subtitle:"Live anatomy overlay", all:"Everything", bones:"Bones", muscles:"Muscles", organs:"Organs",
+  en:{ title:"Anatomy Lens", subtitle:"Live anatomy overlay", all:"Everything", bones:"Bones", muscles:"Muscles", organs:"Organs", skinChip:"Skin",
     reveal:"Reveal", lens:"Lens", whole:"Whole body", follow:"Lens follows", finger:"Fingertip", touch:"Touch",
-    layers:"Layers", skeleton:"Skeleton", skull:"Skull", hands:"Hand bones", muscleL:"Muscles", organL:"Organs", brain:"Brain", labels:"Labels",
+    layers:"Layers", skeleton:"Skeleton", skull:"Skull", hands:"Hand bones", muscleL:"Muscles", organL:"Organs", brain:"Brain", labels:"Labels", skin:"Face skin check",
     look:"Look", xray:"X-ray", solid:"Solid", real:"Real person showing through", brightness:"Brightness", lensSize:"Lens size", zoom:"Zoom",
+    quality:"Tracking", high:"Stable", fast:"Fast", density:"Labels shown", key:"Main ones", every:"All",
     start:"Start camera", starting:"Starting…",
     intro:"Point the camera at a person, or at yourself. Bones, muscles and organs are pinned to the body and follow every move.",
     disclaimer:"Illustrative anatomy placed on body landmarks. It’s not an X-ray and not a medical tool. Video is processed on this device and never uploaded.",
     hint:"In Lens mode, point your index finger and the lens follows it. No hand in view? Drag on the screen.",
-    loading:"Loading AI models…", looking:"Looking for a body…", tracking:"Tracking",
+    skinNote:"The skin check only compares colour and texture across the face. It works best in even, frontal light, and it’s not a diagnosis.",
+    loading:"Loading AI models…", looking:"Looking for a person…", tracking:"Tracking", faceOnly:"Face only",
     camErr:"Camera not available. Allow camera access for this site, then reload.", modelErr:"AI models didn’t load. Check your connection, then reload." },
-  it:{ title:"Lente Anatomica", subtitle:"Anatomia dal vivo", all:"Tutto", bones:"Ossa", muscles:"Muscoli", organs:"Organi",
+  it:{ title:"Lente Anatomica", subtitle:"Anatomia dal vivo", all:"Tutto", bones:"Ossa", muscles:"Muscoli", organs:"Organi", skinChip:"Pelle",
     reveal:"Mostra", lens:"Lente", whole:"Corpo intero", follow:"La lente segue", finger:"Dito", touch:"Tocco",
-    layers:"Livelli", skeleton:"Scheletro", skull:"Cranio", hands:"Ossa della mano", muscleL:"Muscoli", organL:"Organi", brain:"Cervello", labels:"Etichette",
+    layers:"Livelli", skeleton:"Scheletro", skull:"Cranio", hands:"Ossa della mano", muscleL:"Muscoli", organL:"Organi", brain:"Cervello", labels:"Etichette", skin:"Controllo pelle del viso",
     look:"Aspetto", xray:"Raggi X", solid:"Solido", real:"Quanto si vede la persona", brightness:"Luminosità", lensSize:"Dimensione lente", zoom:"Zoom",
+    quality:"Tracciamento", high:"Stabile", fast:"Veloce", density:"Etichette", key:"Principali", every:"Tutte",
     start:"Avvia fotocamera", starting:"Avvio…",
     intro:"Inquadra una persona, o te stesso. Ossa, muscoli e organi vengono agganciati al corpo e seguono ogni movimento.",
     disclaimer:"Anatomia illustrativa posizionata sui punti del corpo. Non è una radiografia né uno strumento medico. Il video viene elaborato su questo dispositivo e non viene mai caricato.",
     hint:"In modalità Lente punta l’indice e la lente lo segue. Nessuna mano inquadrata? Trascina sullo schermo.",
-    loading:"Caricamento modelli AI…", looking:"Cerco un corpo…", tracking:"Tracciamento",
+    skinNote:"Il controllo della pelle confronta solo colore e grana sul viso. Funziona meglio con luce uniforme e frontale, e non è una diagnosi.",
+    loading:"Caricamento modelli AI…", looking:"Cerco una persona…", tracking:"Tracciamento", faceOnly:"Solo viso",
     camErr:"Fotocamera non disponibile. Consenti l’accesso alla fotocamera per questo sito, poi ricarica.", modelErr:"I modelli AI non si sono caricati. Controlla la connessione, poi ricarica." }
 };
 const N = {
   cranium:["Cranium","Cranio"], orbit:["Orbit","Orbita"], nasal:["Nasal cavity","Cavità nasale"], zygomatic:["Zygomatic bone","Osso zigomatico"],
-  maxilla:["Maxilla","Mascella"], mandible:["Mandible","Mandibola"], frontal:["Frontal lobe","Lobo frontale"], parietal:["Parietal lobe","Lobo parietale"],
-  temporal:["Temporal lobe","Lobo temporale"], eye:["Eye","Occhio"], cervical:["Cervical spine","Colonna cervicale"], spine:["Lumbar spine","Colonna lombare"],
-  clavicle:["Clavicle","Clavicola"], sternum:["Sternum","Sterno"], ribs:["Ribs","Costole"], pelvis:["Pelvis","Bacino"], humerus:["Humerus","Omero"],
-  radius:["Radius & ulna","Radio e ulna"], femur:["Femur","Femore"], patella:["Patella","Rotula"], tibia:["Tibia & fibula","Tibia e perone"],
-  foot:["Foot bones","Ossa del piede"], carpals:["Carpals","Carpo"], metacarpals:["Metacarpals","Metacarpi"], phalanges:["Phalanges","Falangi"],
-  lungR:["Right lung","Polmone destro"], lungL:["Left lung","Polmone sinistro"], heart:["Heart","Cuore"], trachea:["Trachea","Trachea"],
-  liver:["Liver","Fegato"], stomach:["Stomach","Stomaco"], kidneys:["Kidneys","Reni"], intestines:["Intestines","Intestino"], bladder:["Bladder","Vescica"],
-  deltoid:["Deltoid","Deltoide"], biceps:["Biceps","Bicipite"], forearm:["Forearm flexors","Flessori avambraccio"], pecs:["Pectoralis major","Grande pettorale"],
-  abs:["Rectus abdominis","Retto dell’addome"], quads:["Quadriceps","Quadricipite"], calf:["Gastrocnemius","Gastrocnemio"],
-  scm:["Sternocleidomastoid","Sternocleidomastoideo"], trapezius:["Trapezius","Trapezio"], masseter:["Masseter","Massetere"]
+  maxilla:["Maxilla","Mascella"], mandible:["Mandible","Mandibola"], teeth:["Teeth","Denti"],
+  frontal:["Frontal lobe","Lobo frontale"], parietal:["Parietal lobe","Lobo parietale"], temporal:["Temporal lobe","Lobo temporale"], eye:["Eye","Occhio"],
+  cervical:["Cervical spine","Colonna cervicale"], thoracic:["Thoracic spine","Colonna toracica"], spine:["Lumbar spine","Colonna lombare"],
+  scapula:["Scapula","Scapola"], clavicle:["Clavicle","Clavicola"], sternum:["Sternum","Sterno"], ribs:["Ribs","Costole"], cartilage:["Costal cartilage","Cartilagine costale"],
+  pelvis:["Pelvis","Bacino"], sacrum:["Sacrum","Osso sacro"], humerus:["Humerus","Omero"], radius:["Radius & ulna","Radio e ulna"],
+  femur:["Femur","Femore"], patella:["Patella","Rotula"], tibia:["Tibia & fibula","Tibia e perone"], metatarsals:["Metatarsals","Metatarsi"],
+  carpals:["Carpals","Carpo"], metacarpals:["Metacarpals","Metacarpi"], phalanges:["Phalanges","Falangi"],
+  lungR:["Right lung","Polmone destro"], lungL:["Left lung","Polmone sinistro"], heart:["Heart","Cuore"], aorta:["Aorta","Aorta"], vc:["Vena cava","Vena cava"],
+  trachea:["Trachea","Trachea"], liver:["Liver","Fegato"], gall:["Gallbladder","Cistifellea"], stomach:["Stomach","Stomaco"], spleen:["Spleen","Milza"],
+  pancreas:["Pancreas","Pancreas"], kidneys:["Kidneys","Reni"], colon:["Large intestine","Intestino crasso"], smallint:["Small intestine","Intestino tenue"], bladder:["Bladder","Vescica"],
+  deltoid:["Deltoid","Deltoide"], biceps:["Biceps","Bicipite"], triceps:["Triceps","Tricipite"], brachiorad:["Brachioradialis","Brachioradiale"],
+  forearm:["Forearm flexors","Flessori avambraccio"], pecs:["Pectoralis major","Grande pettorale"], abs:["Rectus abdominis","Retto dell’addome"],
+  obliques:["External oblique","Obliquo esterno"], serratus:["Serratus anterior","Dentato anteriore"], quads:["Quadriceps","Quadricipite"],
+  sartorius:["Sartorius","Sartorio"], adductors:["Adductors","Adduttori"], calf:["Gastrocnemius","Gastrocnemio"], tibialis:["Tibialis anterior","Tibiale anteriore"],
+  scm:["Sternocleidomastoid","Sternocleidomastoideo"], trapezius:["Trapezius","Trapezio"], masseter:["Masseter","Massetere"], temporalis:["Temporalis","Muscolo temporale"],
+  frontalis:["Frontalis","Muscolo frontale"], oculi:["Orbicularis oculi","Orbicolare dell’occhio"], oris:["Orbicularis oris","Orbicolare della bocca"], zygomaticus:["Zygomaticus major","Grande zigomatico"],
+  skinRed:["Redness","Zona arrossata"], skinBump:["Raised spot","Rilievo / protuberanza"], skinSpot:["Dark spot","Macchia scura"], skinAbr:["Possible abrasion","Possibile abrasione"]
 };
+const ESSENTIAL = new Set(["cranium","mandible","teeth","frontal","eye","cervical","clavicle","sternum","ribs","spine","pelvis","humerus","radius","femur","tibia","phalanges",
+  "heart","lungR","lungL","liver","stomach","colon","smallint","kidneys","bladder","pecs","deltoid","biceps","abs","quads","masseter","skinRed","skinBump","skinSpot","skinAbr"]);
 
 /* ---------- state ---------- */
 const S = {
-  layers:{ skeleton:true, skull:true, hands:true, muscles:true, organs:true, brain:true, labels:true },
+  layers:{ skeleton:true, skull:true, hands:true, muscles:true, organs:true, brain:true, skin:true, labels:true },
   look:"xray", brightness:1, real:0.55, reveal:"lens", follow:"finger", lensSize:0.3, zoom:1.5,
-  facing:"environment", lang:(navigator.language||"en").toLowerCase().startsWith("it") ? "it" : "en",
-  touch:null
+  quality:"high", density:"key",
+  facing:"environment", lang:(navigator.language||"en").toLowerCase().startsWith("it") ? "it" : "en", touch:null
 };
 const PRESETS = {
-  all:{ skeleton:1, skull:1, hands:1, muscles:1, organs:1, brain:1 },
-  bones:{ skeleton:1, skull:1, hands:1, muscles:0, organs:0, brain:0 },
-  muscles:{ skeleton:0, skull:0, hands:0, muscles:1, organs:0, brain:0 },
-  organs:{ skeleton:0, skull:0, hands:0, muscles:0, organs:1, brain:1 }
+  all:{ skeleton:1, skull:1, hands:1, muscles:1, organs:1, brain:1, skin:1 },
+  bones:{ skeleton:1, skull:1, hands:1, muscles:0, organs:0, brain:0, skin:0 },
+  muscles:{ skeleton:0, skull:0, hands:0, muscles:1, organs:0, brain:0, skin:0 },
+  organs:{ skeleton:0, skull:0, hands:0, muscles:0, organs:1, brain:1, skin:0 },
+  skin:{ skeleton:0, skull:0, hands:0, muscles:0, organs:0, brain:0, skin:1 }
 };
 
 const $ = (s) => document.querySelector(s);
 const video = $("#video"), canvas = $("#view"), ctx = canvas.getContext("2d");
 const scene = document.createElement("canvas"), sctx = scene.getContext("2d");
+const acv = document.createElement("canvas"); acv.width = acv.height = 160;
+const actx = acv.getContext("2d", { willReadFrequently:true });
 
-let W = 0, H = 0, dpr = 1;
+let W=0, H=0, dpr=1, sdpr=1, drawMs=16, perfT=0;
+function sizeScene(){ scene.width=Math.round(W*sdpr); scene.height=Math.round(H*sdpr); }
 function resize(){
   dpr = Math.min(window.devicePixelRatio || 1, 2); W = window.innerWidth; H = window.innerHeight;
-  for (const c of [canvas, scene]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
-  if (!S.touch) S.touch = { x: W / 2, y: H * 0.4 };
+  canvas.width = Math.round(W*dpr); canvas.height = Math.round(H*dpr);
+  sdpr = Math.min(dpr,1.5); sizeScene();
+  if (!S.touch) S.touch = { x:W/2, y:H*0.4 };
 }
 window.addEventListener("resize", resize); resize();
+const TAU = Math.PI*2;
+function base(c,k){ const s=k||dpr; c.setTransform(s,0,0,s,0,0); }
+/* keeps the frame rate up: lowers the anatomy layer's resolution if drawing gets slow */
+function adapt(ms,now){
+  drawMs += (ms-drawMs)*0.1;
+  if (now-perfT < 2000) return; perfT=now;
+  const top=Math.min(dpr,1.5);
+  if (drawMs>28 && sdpr>1){ sdpr=Math.max(1,sdpr-0.25); sizeScene(); }
+  else if (drawMs<12 && sdpr<top){ sdpr=Math.min(top,sdpr+0.25); sizeScene(); }
+}
 
-/* ---------- math ---------- */
-const add=(a,b)=>({x:a.x+b.x,y:a.y+b.y}), sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y}), mul=(a,k)=>({x:a.x*k,y:a.y*k});
-const len=(a)=>Math.hypot(a.x,a.y), lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
-const norm=(a)=>{ const l=len(a)||1; return {x:a.x/l,y:a.y/l}; }, perp=(a)=>({x:-a.y,y:a.x}), dot=(a,b)=>a.x*b.x+a.y*b.y;
-const TAU = Math.PI * 2;
-
-/* ---------- video → screen mapping ---------- */
+/* ---------- video → screen ---------- */
 let cover = { ox:0, oy:0, dw:1, dh:1 };
 const mirror = () => S.facing === "user";
-function updCover(){
-  const vw = video.videoWidth, vh = video.videoHeight; if (!vw) return;
-  const sc = Math.max(W / vw, H / vh); cover = { dw:vw*sc, dh:vh*sc, ox:(W-vw*sc)/2, oy:(H-vh*sc)/2 };
-}
-function mp(p){ return { x: cover.ox + (mirror() ? 1 - p.x : p.x) * cover.dw, y: cover.oy + p.y * cover.dh, v: p.v }; }
-function base(c){ c.setTransform(dpr,0,0,dpr,0,0); }
-function drawVideo(c){
-  base(c); c.save(); if (mirror()) { c.translate(W,0); c.scale(-1,1); }
-  c.drawImage(video, cover.ox, cover.oy, cover.dw, cover.dh); c.restore();
-}
+function updCover(){ const vw=video.videoWidth, vh=video.videoHeight; if (!vw) return; const sc=Math.max(W/vw,H/vh); cover={ dw:vw*sc, dh:vh*sc, ox:(W-vw*sc)/2, oy:(H-vh*sc)/2 }; }
+function mp(p){ return { x:cover.ox + (mirror()?1-p.x:p.x)*cover.dw, y:cover.oy + p.y*cover.dh }; }
+function drawVideo(c,k){ base(c,k); c.save(); if (mirror()){ c.translate(W,0); c.scale(-1,1); } c.drawImage(video,cover.ox,cover.oy,cover.dw,cover.dh); c.restore(); }
 
-/* ---------- local frames: build paths in body units, stroke in screen units ---------- */
-function fp(F,u,v){ return { x:F.o.x+F.a.x*u+F.d.x*v, y:F.o.y+F.a.y*u+F.d.y*v }; }
-function inFrame(c,F){ c.setTransform(dpr*F.a.x, dpr*F.a.y, dpr*F.d.x, dpr*F.d.y, dpr*F.o.x, dpr*F.o.y); }
-function shape(c,F,pts,closed=true){
-  inFrame(c,F); c.beginPath(); c.moveTo(pts[0][0],pts[0][1]);
-  for (let i=1;i<pts.length;i++){ const p=pts[i];
-    if (p.length===4) c.quadraticCurveTo(p[0],p[1],p[2],p[3]);
-    else if (p.length===6) c.bezierCurveTo(p[0],p[1],p[2],p[3],p[4],p[5]);
-    else c.lineTo(p[0],p[1]); }
-  if (closed) c.closePath();
+/* ---------- One Euro smoothing: steady when still, responsive when moving ---------- */
+class LowPass { constructor(){ this.y=null; } f(x,a){ this.y = this.y===null ? x : this.y + a*(x-this.y); return this.y; } }
+class OneEuro {
+  constructor(mc,beta){ this.mc=mc; this.beta=beta; this.x=new LowPass(); this.dx=new LowPass(); this.t=null; }
+  alpha(cut,dt){ const tau=1/(TAU*cut); return 1/(1+tau/dt); }
+  f(v,t){
+    if (this.t===null || this.x.y===null){ this.t=t; this.dx.y=0; return this.x.f(v,1); }
+    const dt=Math.max(1e-3,t-this.t); this.t=t;
+    const edv=this.dx.f((v-this.x.y)/dt, this.alpha(1,dt));
+    return this.x.f(v, this.alpha(this.mc+this.beta*Math.abs(edv), dt));
+  }
+  reset(){ this.x.y=null; this.dx.y=null; this.t=null; }
 }
+function filterSet(n,mc,beta){ return Array.from({length:n},()=>({ x:new OneEuro(mc,beta), y:new OneEuro(mc,beta) })); }
+function resetSet(set){ for (const f of set){ f.x.reset(); f.y.reset(); } }
+function applyFilter(set,lm,t){ return lm.map((p,i)=>({ x:set[i].x.f(p.x,t), y:set[i].y.f(p.y,t), v:p.visibility ?? 1 })); }
 
-/* ---------- paint ---------- */
-const C = { bone:[205,236,255], muscle:[236,92,96], lung:[246,144,178], heart:[240,58,74], liver:[186,84,66], stomach:[246,172,122],
-  kidney:[214,96,106], gut:[246,188,152], bladder:[246,214,122], brain:[196,146,255], eye:[250,238,170], airway:[190,225,240] };
-const rgba=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${Math.max(0,Math.min(1,a))})`;
-const darken=(c)=>c.map(v=>Math.round(v*0.45));
-let LW = 1.5;
-function paint(c,col,opt={}){
-  const fill = opt.fill !== false, lw = opt.lw || LW, br = S.brightness; base(c);
-  if (S.look === "xray") {
-    if (fill) { c.fillStyle = rgba(col,(col===C.bone?0.10:0.22)*br); c.fill(); }
-    c.lineWidth = lw*3.2; c.strokeStyle = rgba(col,0.16*br); c.stroke();
-    c.lineWidth = lw; c.strokeStyle = rgba(col,0.92*br); c.stroke();
-  } else {
-    const solid = col===C.bone ? [236,228,210] : col;
-    if (fill) { c.fillStyle = rgba(solid,0.92); c.fill(); c.lineWidth = lw*0.8; c.strokeStyle = rgba(darken(solid),0.95); c.stroke(); }
-    else { c.lineWidth = lw*2.4; c.strokeStyle = rgba(darken(solid),0.9); c.stroke(); c.lineWidth = lw*1.5; c.strokeStyle = rgba(solid,1); c.stroke(); }
+/* ---------- tracking state with confirmation (rejects objects and flicker) ---------- */
+function track(n,mc,beta,acq,lose){ return { lm:null, filt:filterSet(n,mc,beta), good:0, bad:0, tracked:false, fade:0, acq, lose }; }
+const TR = {
+  pose: Object.assign(track(33,0.9,4,4,10), { on:new Array(33).fill(false) }),
+  face: track(478,1.1,5,3,8),
+  hands:[ track(21,1.4,6,2,5), track(21,1.4,6,2,5) ]
+};
+function hit(tr,ok,t,lm){
+  if (ok){
+    tr.bad=0; tr.good++;
+    if (!tr.tracked && tr.good===1) resetSet(tr.filt);
+    tr.lm = applyFilter(tr.filt, lm, t);
+    if (tr.good>=tr.acq) tr.tracked=true;
+  } else { tr.good=0; tr.bad++; if (tr.bad>=tr.lose){ tr.tracked=false; } }
+}
+const px = (p) => ({ x:p.x*(video.videoWidth||1), y:p.y*(video.videoHeight||1) });
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+function plausiblePose(lm){
+  const v=(i)=>lm[i].visibility ?? 1;
+  if ((v(0)+v(11)+v(12))/3 < 0.75) return false;
+  const sh=dist(px(lm[11]),px(lm[12])), ed=dist(px(lm[2]),px(lm[5]));
+  if (sh < 24) return false;
+  if (v(2)>0.6 && v(5)>0.6 && ed>2){ const r=sh/ed; if (r<2.2 || r>12) return false; }
+  const nd=dist(px(lm[0]), { x:(px(lm[11]).x+px(lm[12]).x)/2, y:(px(lm[11]).y+px(lm[12]).y)/2 });
+  return nd > 0.22*sh && nd < 1.7*sh;
+}
+/* a body facing the camera must have a real face where its head is; otherwise it must not sit on a tracked hand */
+function bbox(pts){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for (const p of pts){ x0=Math.min(x0,p.x); y0=Math.min(y0,p.y); x1=Math.max(x1,p.x); y1=Math.max(y1,p.y); } return {x0,y0,x1,y1}; }
+function onHand(lm){
+  const core=[0,11,12,23,24].filter(i=>(lm[i].visibility ?? 1)>0.5).map(i=>px(lm[i])); if (!core.length) return false;
+  const pc=bbox(core), cx=(pc.x0+pc.x1)/2, cy=(pc.y0+pc.y1)/2;
+  for (const h of TR.hands){
+    if (!h.tracked || !h.lm) continue;
+    const hb=bbox(h.lm.map(px)), mx=(hb.x1-hb.x0)*0.3, my=(hb.y1-hb.y0)*0.3;
+    if (cx>hb.x0-mx && cx<hb.x1+mx && cy>hb.y0-my && cy<hb.y1+my) return true;
+  }
+  return false;
+}
+function confirmed(lm,t){
+  const noseVis=(lm[0].visibility ?? 1)>0.6;
+  if (models.face && noseVis){
+    const f=TR.face;
+    if (!f.lastOk || t-f.lastOk>1.2 || !f.lm) return false;
+    const sh=dist(px(lm[11]),px(lm[12]));
+    return dist(px(f.lm[1]),px(lm[0])) < 0.6*sh;
+  }
+  return !onHand(lm);
+}
+function onPose(r,t){
+  const lm = r && r.landmarks && r.landmarks[0];
+  const ok = !!lm && plausiblePose(lm) && confirmed(lm,t);
+  hit(TR.pose, ok, t, lm);
+  if (ok){ const P=TR.pose; P.lm.forEach((p,i)=>{ P.on[i] = P.on[i] ? p.v>0.3 : p.v>0.6; }); }
+}
+function onFace(r,t){
+  const lm = r && r.faceLandmarks && r.faceLandmarks[0];
+  let ok = !!lm;
+  if (ok){
+    const fw=dist(px(lm[234]),px(lm[454]));
+    if (fw < 30) ok=false;
+    if (ok && TR.pose.tracked && TR.pose.lm){ const sh=dist(px(TR.pose.lm[11]),px(TR.pose.lm[12])); if (dist(px(lm[1]),px(TR.pose.lm[0])) > 0.6*sh) ok=false; }
+  }
+  hit(TR.face, ok, t, lm);
+  if (ok) TR.face.lastOk=t;
+}
+function onHands(r,t){
+  const found=[];
+  const L=(r && r.landmarks) || [], Hd=(r && (r.handedness || r.handednesses)) || [];
+  L.forEach((lm,i)=>{ const sc=(Hd[i] && Hd[i][0] && Hd[i][0].score) ?? 1; if (sc>0.75 && dist(px(lm[0]),px(lm[9]))>18) found.push(lm); });
+  const used=[false,false];
+  for (const slot of TR.hands){
+    let best=-1, bd=1e9;
+    found.forEach((lm,i)=>{ if (used[i]) return; const d = slot.lm ? Math.hypot(lm[0].x-slot.lm[0].x, lm[0].y-slot.lm[0].y) : 0; if (d<bd){ bd=d; best=i; } });
+    if (best>=0 && (!slot.lm || !slot.tracked || bd<0.25)){ used[best]=true; hit(slot,true,t,found[best]); }
+    else hit(slot,false,t,null);
   }
 }
-function ell(c,F,x,y,rx,ry,rot,col,opt){ inFrame(c,F); c.beginPath(); c.ellipse(x,y,rx,ry,rot,0,TAU); paint(c,col,opt); }
 
-/* ---------- labels ---------- */
-const labels = [];
-function tag(key,p){ if (S.layers.labels && p) labels.push({ key, x:p.x, y:p.y }); }
-
-/* ---------- primitives ---------- */
-function bone(c,A,B,w,key){
-  const d=sub(B,A), L=len(d); if (L<2) return;
-  const u=mul(d,1/L), n=perp(u), r=w/2, m=lerp(A,B,.5), ang=Math.atan2(u.y,u.x);
-  base(c); c.beginPath();
-  const pA=add(A,mul(n,r)), pB=add(B,mul(n,r)), q1=add(m,mul(n,w*0.1)), qA=sub(A,mul(n,r)), q2=sub(m,mul(n,w*0.1));
-  c.moveTo(pA.x,pA.y); c.quadraticCurveTo(q1.x,q1.y,pB.x,pB.y);
-  c.arc(B.x,B.y,r,ang+Math.PI/2,ang-Math.PI/2,true);
-  c.quadraticCurveTo(q2.x,q2.y,qA.x,qA.y);
-  c.arc(A.x,A.y,r,ang-Math.PI/2,ang+Math.PI/2,true);
-  c.closePath(); paint(c,C.bone);
-  if (key) tag(key,m);
-}
-function vertebrae(c,A,B,n,w,key){
-  const d=sub(B,A), L=len(d); if (L<3) return;
-  const rot=Math.atan2(d.y,d.x)+Math.PI/2, seg=L/n; base(c); c.beginPath();
-  for (let i=0;i<n;i++){ const p=lerp(A,B,(i+.5)/n), rx=w/2, ry=seg*0.38;
-    c.moveTo(p.x+rx*Math.cos(rot), p.y+rx*Math.sin(rot)); c.ellipse(p.x,p.y,rx,ry,rot,0,TAU); }
-  paint(c,C.bone); if (key) tag(key,lerp(A,B,.5));
-}
-function muscle(c,A,B,w,key){
-  const d=sub(B,A); if (len(d)<3) return;
-  const m=lerp(A,B,.5), n=perp(norm(d)), p1=add(m,mul(n,w)), p2=sub(m,mul(n,w));
-  base(c); c.beginPath(); c.moveTo(A.x,A.y); c.quadraticCurveTo(p1.x,p1.y,B.x,B.y); c.quadraticCurveTo(p2.x,p2.y,A.x,A.y); c.closePath();
-  paint(c,C.muscle);
-  base(c); c.beginPath();
-  for (const k of [-0.45,0,0.45]){ const q=add(m,mul(n,w*k)); c.moveTo(A.x,A.y); c.quadraticCurveTo(q.x,q.y,B.x,B.y); }
-  paint(c,C.muscle,{ fill:false, lw:LW*0.45 });
-  if (key) tag(key,m);
+/* ---------- face skin check ---------- */
+const SK = { blobs:[], last:0 };
+function analyzeSkin(){
+  const lm = TR.face.lm; if (!lm || !video.videoWidth) return;
+  const vw=video.videoWidth, vh=video.videoHeight, Mv=lm.map(px);
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for (const i of LIB.FACE_OVAL){ const p=Mv[i]; x0=Math.min(x0,p.x); y0=Math.min(y0,p.y); x1=Math.max(x1,p.x); y1=Math.max(y1,p.y); }
+  const pad=(x1-x0)*0.08; x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad); x1=Math.min(vw,x1+pad); y1=Math.min(vh,y1+pad);
+  const bw=x1-x0, bh=y1-y0; if (bw<30 || bh<30) return;
+  actx.drawImage(video,x0,y0,bw,bh,0,0,160,160);
+  const data = actx.getImageData(0,0,160,160).data;
+  LIB.skinCore(SK, data, 160, 160, Mv, (P)=>({ x:(P.x-x0)/bw*160, y:(P.y-y0)/bh*160 }));
 }
 
-/* ---------- tracking data ---------- */
-let models = null, poseLM = null, handsLM = [], poseMiss = 0, handMiss = 0;
-const vis = (p) => p && (p.v === undefined || p.v > 0.5);
-function smooth(prev,next,a){
-  if (!prev || prev.length !== next.length) return next.map(p=>({ x:p.x, y:p.y, v:p.visibility ?? 1 }));
-  return next.map((p,i)=>({ x:prev[i].x+(p.x-prev[i].x)*a, y:prev[i].y+(p.y-prev[i].y)*a, v:p.visibility ?? 1 }));
+/* ---------- labels that stay put ---------- */
+const LST = new Map();
+function updateLabels(cands, lens, now){
+  const seen=new Set();
+  for (const cd of cands){
+    if (seen.has(cd.key) || !N[cd.key]) continue; seen.add(cd.key);
+    if (!lens && S.density==="key" && !ESSENTIAL.has(cd.key)) continue;
+    let st=LST.get(cd.key);
+    if (lens){ const lim=lens.r/S.zoom*((st && st.vis) ? 1.12 : 0.86); if (Math.hypot(cd.x-lens.x, cd.y-lens.y) > lim) continue; }
+    if (!st){ st={ x:cd.x, y:cd.y, a:0, ty:null, side:null, vis:true, seen:now }; LST.set(cd.key, st); }
+    else { st.x += (cd.x-st.x)*0.4; st.y += (cd.y-st.y)*0.4; }
+    st.seen=now; st.vis=true;
+  }
+  for (const [k,st] of LST){
+    const live = now-st.seen < 450; if (!live) st.vis=false;
+    st.a += ((live?1:0)-st.a)*(live?0.22:0.08);
+    if (!live && st.a<0.02) LST.delete(k);
+  }
 }
-function onPose(r){
-  if (r && r.landmarks && r.landmarks.length){ poseLM = smooth(poseLM, r.landmarks[0], 0.55); poseMiss = 0; }
-  else if (++poseMiss > 8) poseLM = null;
-}
-function onHands(r){
-  let L = (r && r.landmarks) ? r.landmarks.slice() : [];
-  if (L.length){
-    if (handsLM.length===2 && L.length===2){
-      const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-      if (d(handsLM[0][0],L[0][0])+d(handsLM[1][0],L[1][0]) > d(handsLM[0][0],L[1][0])+d(handsLM[1][0],L[0][0])) L = [L[1],L[0]];
+function drawLabels(c, lens){
+  if (!S.layers.labels || !LST.size) return;
+  const li = S.lang==="it" ? 1 : 0;
+  base(c); c.font="500 12px 'IBM Plex Sans Condensed', system-ui, sans-serif"; c.textBaseline="middle";
+  const cx = lens ? lens.x : W/2, top = 100, lh = 19, items=[];
+  for (const [k,st] of LST){
+    let x=st.x, y=st.y; if (lens){ x=lens.x+(x-lens.x)*S.zoom; y=lens.y+(y-lens.y)*S.zoom; }
+    if (!st.side) st.side = x<cx ? "L" : "R";
+    else if (st.side==="L" && x>cx+40) st.side="R";
+    else if (st.side==="R" && x<cx-40) st.side="L";
+    items.push({ st, x, y, text:N[k][li] });
+  }
+  for (const side of ["L","R"]){
+    const arr = items.filter(it=>it.st.side===side).sort((a,b)=>a.y-b.y);
+    let last=-1e9;
+    for (const it of arr){
+      const tw=c.measureText(it.text).width;
+      let tx = lens ? (side==="L" ? lens.x-lens.r-24 : lens.x+lens.r+24) : (side==="L" ? tw+16 : W-tw-16);
+      tx = side==="L" ? Math.max(tx, tw+16) : Math.min(tx, W-tw-16);
+      const target = Math.max(it.y, last+lh, top);
+      if (target > H-110) continue;
+      it.st.ty = it.st.ty==null ? target : it.st.ty + (target-it.st.ty)*0.3;
+      last = target;
+      const ty=it.st.ty;
+      c.globalAlpha = Math.max(0, Math.min(1, it.st.a));
+      c.strokeStyle="rgba(215,238,255,.7)"; c.lineWidth=1; c.beginPath(); c.moveTo(it.x,it.y); c.lineTo(tx,ty); c.stroke();
+      c.fillStyle="rgba(235,248,255,.95)"; c.beginPath(); c.arc(it.x,it.y,2.4,0,TAU); c.fill();
+      const bx = side==="L" ? tx-tw-10 : tx+2;
+      c.fillStyle="rgba(4,14,24,.66)"; c.fillRect(bx,ty-9,tw+8,18);
+      c.fillStyle="#eaf6ff"; c.textAlign = side==="L" ? "right" : "left";
+      c.fillText(it.text, side==="L" ? tx-6 : tx+6, ty);
     }
-    handsLM = L.map((h,i)=>smooth(handsLM[i], h, 0.6)); handMiss = 0;
-  } else if (++handMiss > 6) handsLM = [];
-}
-
-/* ---------- anatomy ---------- */
-const SIDES = [ {sh:11,el:13,wr:15,hip:23,kn:25,an:27,he:29,ft:31,main:true}, {sh:12,el:14,wr:16,hip:24,kn:26,an:28,he:30,ft:32,main:false} ];
-const CHAINS = [[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16],[17,18,19,20]];
-
-function drawAnatomy(c,t){
-  labels.length = 0;
-  if (S.look === "xray") c.globalCompositeOperation = "lighter";
-  let SW = 140;
-
-  if (poseLM){
-    const P = poseLM.map(mp);
-    const haveSh = vis(P[11]) && vis(P[12]);
-    const head = vis(P[0]) && vis(P[2]) && vis(P[5]);
-    const hipsVis = vis(P[23]) && vis(P[24]);
-    SW = haveSh ? len(sub(P[11],P[12])) : head ? len(sub(P[2],P[5]))*5 : 140;
-    LW = Math.max(1.1, SW*0.006);
-
-    let Tf = null, Pv = null, Hf = null;
-    if (haveSh){
-      const o = lerp(P[11],P[12],.5), a = sub(P[11],P[12]); let d;
-      if (hipsVis) d = sub(lerp(P[23],P[24],.5), o);
-      else { d = mul(perp(a),1.4); if ((head && dot(d,sub(o,P[0]))<0) || (!head && d.y<0)) d = mul(d,-1); }
-      Tf = { o, a, d };
-      if (hipsVis){ const ha = sub(P[23],P[24]); Pv = { o:lerp(P[23],P[24],.5), a:ha, d:mul(norm(d),len(ha)) }; }
-    }
-    if (head){
-      const em = lerp(P[2],P[5],.5), across = sub(P[2],P[5]), ed = len(across);
-      if (ed > 5){
-        const mouth = (vis(P[9]) && vis(P[10])) ? lerp(P[9],P[10],.5) : null;
-        let down = mouth ? sub(mouth,em) : perp(across);
-        if (!mouth && Tf && dot(down,sub(Tf.o,em))<0) down = mul(down,-1);
-        const Wd = ed/0.42, Hd = mouth ? len(down)/0.5 : Wd;
-        Hf = { o:em, a:mul(norm(across),Wd), d:mul(norm(down),Hd) };
-      }
-    }
-
-    if (S.layers.organs && Tf) drawOrgans(c,Tf,t);
-    if (S.layers.skeleton){ if (Tf) drawTorsoSkeleton(c,Tf,Hf,SW); drawLimbBones(c,P,SW); if (Pv) drawPelvis(c,Pv); }
-    if (Hf && S.layers.skull) drawSkull(c,Hf);
-    if (Hf && S.layers.brain) drawBrain(c,Hf);
-    if (S.layers.muscles) drawMuscles(c,P,Tf,Hf,SW);
-    if (Hf && S.layers.organs){ for (const s of [-1,1]) ell(c,Hf,s*0.21,0,0.075,0.075,0,C.eye); tag("eye",fp(Hf,0.21,0)); }
   }
-  if (S.layers.hands) drawHands(c);
-  c.globalCompositeOperation = "source-over"; base(c);
+  c.globalAlpha=1;
 }
 
-function drawOrgans(c,T,t){
-  for (const s of [-1,1]) ell(c,T,s*0.16,0.64,0.042,0.068,s*0.25,C.kidney);
-  tag("kidneys",fp(T,-0.16,0.66));
-  shape(c,T,[[0,-0.12],[0,0.13]],false); inFrame(c,T);
-  c.moveTo(0,0.13); c.quadraticCurveTo(-0.05,0.15,-0.12,0.22); c.moveTo(0,0.13); c.quadraticCurveTo(0.05,0.15,0.12,0.22);
-  paint(c,C.airway,{ fill:false, lw:LW*1.8 }); tag("trachea",fp(T,0,-0.06));
-  shape(c,T,[[-0.08,0.02],[-0.3,0.08,-0.34,0.3],[-0.36,0.46,-0.3,0.52],[-0.18,0.5,-0.06,0.47],[-0.04,0.3,-0.08,0.02]]); paint(c,C.lung);
-  shape(c,T,[[0.08,0.02],[0.3,0.08,0.34,0.3],[0.36,0.46,0.3,0.52],[0.22,0.5,0.16,0.48],[0.06,0.42,0.09,0.32],[0.05,0.2,0.08,0.02]]); paint(c,C.lung);
-  tag("lungR",fp(T,-0.22,0.26)); tag("lungL",fp(T,0.25,0.22));
-  const beat = Math.pow(Math.max(0,Math.sin(t*0.0072)),6), k = 1 + 0.07*beat;
-  ell(c,T,0.07,0.34,0.1*k,0.08*k,0.6,C.heart); tag("heart",fp(T,0.08,0.35));
-  shape(c,T,[[-0.36,0.5],[-0.1,0.42,0.14,0.49],[0.04,0.58,-0.3,0.64],[-0.38,0.6,-0.36,0.5]]); paint(c,C.liver); tag("liver",fp(T,-0.2,0.54));
-  ell(c,T,0.17,0.56,0.1,0.065,-0.5,C.stomach); tag("stomach",fp(T,0.18,0.56));
-  shape(c,T,[[-0.2,0.94],[-0.25,0.8,-0.22,0.69],[0,0.65,0.22,0.69],[0.25,0.8,0.2,0.95]],false); paint(c,C.gut,{ fill:false, lw:LW*3 });
-  inFrame(c,T); c.beginPath();
-  for (let r=0;r<5;r++){ const y=0.73+r*0.045; for (let i=0;i<=24;i++){ const x=-0.16+i*(0.32/24), yy=y+0.012*Math.sin(i*1.3+r); if (i) c.lineTo(x,yy); else c.moveTo(x,yy); } }
-  paint(c,C.gut,{ fill:false, lw:LW*1.4 }); tag("intestines",fp(T,0.05,0.8));
-  ell(c,T,0,0.99,0.07,0.045,0,C.bladder); tag("bladder",fp(T,0,0.99));
-}
-
-function drawTorsoSkeleton(c,T,Hf,SW){
-  if (Hf) vertebrae(c,fp(Hf,0,0.75),fp(T,0,-0.02),7,SW*0.07,"cervical");
-  vertebrae(c,fp(T,0,0),fp(T,0,0.62),12,SW*0.075);
-  vertebrae(c,fp(T,0,0.62),fp(T,0,0.96),5,SW*0.095,"spine");
-  for (const s of [-1,1]) bone(c,fp(T,s*0.05,0.03),fp(T,s*0.45,-0.01),SW*0.045, s>0?"clavicle":null);
-  shape(c,T,[[-0.035,0.03],[0.035,0.03],[0.03,0.36],[0,0.42],[-0.03,0.36]]); paint(c,C.bone); tag("sternum",fp(T,0,0.2));
-  inFrame(c,T); c.beginPath();
-  for (let i=0;i<10;i++){ const vS=0.07+i*0.036, hw=0.27+0.07*Math.sin(Math.PI*(i+1)/11);
-    for (const s of [-1,1]){ c.moveTo(s*0.04,vS); c.bezierCurveTo(s*hw*0.55,vS-0.05,s*hw,vS-0.02,s*hw,vS+0.08); c.quadraticCurveTo(s*hw,vS+0.14,s*(hw-0.05),vS+0.17); } }
-  paint(c,C.bone,{ fill:false, lw:LW*1.4 }); tag("ribs",fp(T,-0.3,0.32));
-}
-
-function drawPelvis(c,Pv){
-  shape(c,Pv,[[0,-0.62],[-0.25,-0.75,-0.55,-0.85],[-0.85,-0.85,-0.8,-0.45],[-0.72,-0.1,-0.62,0.02],[-0.62,0.25,-0.35,0.36],[-0.15,0.38,-0.04,0.3],
-    [0.04,0.3],[0.15,0.38,0.35,0.36],[0.62,0.25,0.62,0.02],[0.72,-0.1,0.8,-0.45],[0.85,-0.85,0.55,-0.85],[0.25,-0.75,0,-0.62]]);
-  paint(c,C.bone);
-  for (const s of [-1,1]) ell(c,Pv,s*0.3,0.2,0.1,0.08,0,C.bone,{ fill:false, lw:LW });
-  shape(c,Pv,[[-0.15,-0.6],[0.15,-0.6],[0,-0.05]]); paint(c,C.bone,{ fill:false, lw:LW });
-  tag("pelvis",fp(Pv,-0.55,-0.45));
-}
-
-function drawLimbBones(c,P,SW){
-  for (const s of SIDES){
-    const k = (key) => s.main ? key : null;
-    const sh=P[s.sh], el=P[s.el], wr=P[s.wr];
-    if (vis(sh) && vis(el)) bone(c,sh,el,SW*0.085,k("humerus"));
-    if (vis(el) && vis(wr)){ const n=perp(norm(sub(wr,el))), o=SW*0.024;
-      bone(c,add(el,mul(n,o)),add(wr,mul(n,o*1.3)),SW*0.045,k("radius")); bone(c,sub(el,mul(n,o)),sub(wr,mul(n,o*1.3)),SW*0.038); }
-    const hp=P[s.hip], kn=P[s.kn], an=P[s.an];
-    if (vis(hp) && vis(kn)){ bone(c,hp,kn,SW*0.11,k("femur")); base(c); c.beginPath(); c.arc(kn.x,kn.y,SW*0.045,0,TAU); paint(c,C.bone); if (s.main) tag("patella",kn); }
-    if (vis(kn) && vis(an)){ const n=perp(norm(sub(an,kn))), o=SW*0.035;
-      bone(c,kn,an,SW*0.08,k("tibia")); bone(c,add(lerp(kn,an,.06),mul(n,o)),add(an,mul(n,o)),SW*0.032); }
-    if (vis(an) && vis(P[s.ft])){ bone(c,an,P[s.ft],SW*0.05,k("foot")); if (vis(P[s.he])) bone(c,an,P[s.he],SW*0.055); }
-  }
-}
-
-function drawHands(c){
-  handsLM.forEach((h,hi)=>{
-    const p = h.map(mp), hs = len(sub(p[9],p[0])); if (hs < 8) return;
-    base(c); c.beginPath();
-    for (const kk of [1,5,9,13,17]) for (const tt of [0.07,0.16]){ const q=lerp(p[0],p[kk],tt); c.moveTo(q.x+hs*0.055,q.y); c.arc(q.x,q.y,hs*0.055,0,TAU); }
-    paint(c,C.bone);
-    for (const ch of CHAINS){
-      bone(c,lerp(p[0],p[ch[0]],ch[0]===1?0.2:0.24),p[ch[0]],hs*0.13);
-      for (let j=0;j<3;j++) bone(c,p[ch[j]],p[ch[j+1]],hs*(0.12-j*0.02));
-    }
-    if (hi===0){ tag("carpals",p[0]); tag("metacarpals",lerp(p[0],p[9],.62)); tag("phalanges",p[11]); }
-  });
-}
-
-function drawSkull(c,Hf){
-  ell(c,Hf,0,-0.27,0.56,0.62,0,C.bone);
-  shape(c,Hf,[[-0.5,0.02],[-0.52,0.22,-0.42,0.34],[-0.4,0.62,-0.18,0.8],[0,0.9,0.18,0.8],[0.4,0.62,0.42,0.34],[0.52,0.22,0.5,0.02]],false);
-  paint(c,C.bone,{ fill:false });
-  for (const s of [-1,1]){
-    inFrame(c,Hf); c.beginPath(); c.ellipse(s*0.21,0,0.13,0.11,0,0,TAU);
-    if (S.look==="solid"){ base(c); c.fillStyle="rgba(28,22,18,.9)"; c.fill(); }
-    paint(c,C.bone,{ fill:false });
-    shape(c,Hf,[[s*0.32,0.12],[s*0.45,0.08,s*0.53,0.12]],false); paint(c,C.bone,{ fill:false });
-  }
-  shape(c,Hf,[[0,0.1],[-0.08,0.3,-0.04,0.34],[0,0.31],[0.04,0.34],[0.08,0.3,0,0.1]]);
-  if (S.look==="solid"){ base(c); c.fillStyle="rgba(28,22,18,.9)"; c.fill(); }
-  paint(c,C.bone,{ fill:false });
-  inFrame(c,Hf); c.beginPath();
-  for (let i=-4;i<4;i++){ c.rect(i*0.05+0.005,0.41,0.04,0.085); c.rect(i*0.05+0.005,0.505,0.04,0.075); }
-  paint(c,C.bone,{ lw:LW*0.7 });
-  shape(c,Hf,[[-0.45,-0.55],[0,-0.78,0.45,-0.55]],false); paint(c,C.bone,{ fill:false, lw:LW*0.6 });
-  tag("cranium",fp(Hf,0.32,-0.66)); tag("orbit",fp(Hf,0.21,-0.09)); tag("nasal",fp(Hf,0,0.24));
-  tag("zygomatic",fp(Hf,-0.45,0.11)); tag("maxilla",fp(Hf,0.16,0.4)); tag("mandible",fp(Hf,-0.3,0.7));
-}
-
-function drawBrain(c,Hf){
-  ell(c,Hf,0,-0.36,0.47,0.46,0,C.brain);
-  inFrame(c,Hf); c.beginPath();
-  for (let k=0;k<7;k++){ const y0=-0.76+k*0.1; let pen=false;
-    for (let x=-0.46;x<=0.46;x+=0.025){ const y=y0+0.028*Math.sin(x*38+k*1.9)+0.012*Math.sin(x*91+k);
-      if ((x/0.45)**2+((y+0.36)/0.44)**2<1){ if (pen) c.lineTo(x,y); else c.moveTo(x,y); pen=true; } else pen=false; } }
-  c.moveTo(0,-0.8); c.lineTo(0,-0.1);
-  paint(c,C.brain,{ fill:false, lw:LW*0.7 });
-  tag("frontal",fp(Hf,0.12,-0.52)); tag("parietal",fp(Hf,-0.25,-0.72)); tag("temporal",fp(Hf,0.4,-0.16));
-}
-
-function drawMuscles(c,P,T,Hf,SW){
-  const sm = T ? T.o : null;
-  for (const s of SIDES){
-    const k = (key) => s.main ? key : null;
-    const sh=P[s.sh], el=P[s.el], wr=P[s.wr], hp=P[s.hip], kn=P[s.kn], an=P[s.an];
-    if (vis(sh) && vis(el)){
-      const A = sm ? add(sh,mul(sub(sh,sm),0.12)) : sh;
-      muscle(c,A,lerp(sh,el,.42),SW*0.16,k("deltoid"));
-      muscle(c,lerp(sh,el,.22),lerp(sh,el,.9),SW*0.11,k("biceps"));
-    }
-    if (vis(el) && vis(wr)) muscle(c,el,lerp(el,wr,.8),SW*0.12,k("forearm"));
-    if (vis(hp) && vis(kn)) muscle(c,lerp(hp,kn,.08),lerp(hp,kn,.92),SW*0.17,k("quads"));
-    if (vis(kn) && vis(an)) muscle(c,lerp(kn,an,.08),lerp(kn,an,.6),SW*0.12,k("calf"));
-  }
-  if (T){
-    for (const s of [-1,1]){ shape(c,T,[[s*0.03,0.04],[s*0.25,0,s*0.44,0.06],[s*0.42,0.14],[s*0.26,0.34,s*0.03,0.3]]); paint(c,C.muscle); }
-    tag("pecs",fp(T,0.25,0.15));
-    inFrame(c,T); c.beginPath();
-    for (const s of [-1,1]) for (let i=0;i<4;i++) c.rect(s>0?0.015:-0.11,0.42+i*0.12,0.095,0.105);
-    paint(c,C.muscle); tag("abs",fp(T,0.06,0.55));
-    for (const s of [-1,1]) muscle(c,Hf?fp(Hf,s*0.3,0.85):fp(T,s*0.1,-0.2),fp(T,s*0.42,0),SW*0.06,s>0?"trapezius":null);
-    if (Hf) for (const s of [-1,1]) muscle(c,fp(Hf,s*0.42,0.38),fp(T,s*0.04,0.03),SW*0.05,s>0?"scm":null);
-  }
-  if (Hf){ for (const s of [-1,1]) ell(c,Hf,s*0.4,0.45,0.075,0.15,0,C.muscle); tag("masseter",fp(Hf,-0.4,0.45)); }
-}
-
-/* ---------- lens + labels ---------- */
-let lensCur = null;
+/* ---------- lens ---------- */
+let lensCur=null;
 function lensState(){
-  let target = S.touch;
-  if (S.follow==="finger" && handsLM.length) target = mp(handsLM[0][8]);
-  if (!lensCur) lensCur = { x:target.x, y:target.y };
-  lensCur.x += (target.x-lensCur.x)*0.35; lensCur.y += (target.y-lensCur.y)*0.35;
+  let target=S.touch;
+  const h=TR.hands[0];
+  if (S.follow==="finger" && h.tracked && h.lm) target=mp(h.lm[8]);
+  if (!lensCur) lensCur={ x:target.x, y:target.y };
+  lensCur.x += (target.x-lensCur.x)*0.3; lensCur.y += (target.y-lensCur.y)*0.3;
   return { x:lensCur.x, y:lensCur.y, r:Math.min(W,H)*S.lensSize };
 }
 function drawRing(c,L){
@@ -544,131 +1155,134 @@ function drawRing(c,L){
   c.lineWidth=7; c.strokeStyle="rgba(120,190,240,.18)"; c.stroke();
   c.lineWidth=1.5; c.strokeStyle="rgba(200,235,255,.9)"; c.stroke();
   c.beginPath();
-  for (let i=0;i<72;i++){ const a=i/72*TAU, k=i%6===0?10:5;
-    c.moveTo(L.x+Math.cos(a)*(L.r+4),L.y+Math.sin(a)*(L.r+4)); c.lineTo(L.x+Math.cos(a)*(L.r+4+k),L.y+Math.sin(a)*(L.r+4+k)); }
+  for (let i=0;i<72;i++){ const a=i/72*TAU, k=i%6===0?10:5; c.moveTo(L.x+Math.cos(a)*(L.r+4),L.y+Math.sin(a)*(L.r+4)); c.lineTo(L.x+Math.cos(a)*(L.r+4+k),L.y+Math.sin(a)*(L.r+4+k)); }
   c.lineWidth=1; c.strokeStyle="rgba(200,235,255,.45)"; c.stroke();
   c.font="600 12px 'IBM Plex Sans Condensed', system-ui, sans-serif"; c.textAlign="center"; c.textBaseline="middle";
   c.fillStyle="rgba(225,242,255,.95)"; c.fillText("×"+S.zoom.toFixed(1), L.x, L.y-L.r-24);
   c.restore();
 }
-function renderLabels(c,lens){
-  if (!S.layers.labels || !labels.length) return;
-  const seen = new Set(), items = [], li = S.lang==="it" ? 1 : 0;
-  for (const l of labels){
-    if (seen.has(l.key)) continue;
-    let x=l.x, y=l.y;
-    if (lens){ const dx=x-lens.x, dy=y-lens.y; if (Math.hypot(dx,dy) > lens.r/S.zoom*0.95) continue; x=lens.x+dx*S.zoom; y=lens.y+dy*S.zoom; }
-    else if (x<0 || x>W || y<0 || y>H) continue;
-    seen.add(l.key); items.push({ x, y, text:N[l.key][li] });
-  }
-  base(c); c.font="500 12px 'IBM Plex Sans Condensed', system-ui, sans-serif"; c.textBaseline="middle";
-  const cx = lens ? lens.x : W/2, top = 100, lh = 19;
-  for (const side of ["L","R"]){
-    const arr = items.filter(it => side==="L" ? it.x<cx : it.x>=cx).sort((a,b)=>a.y-b.y);
-    let last = -1e9;
-    for (const it of arr){
-      const tw = c.measureText(it.text).width;
-      let tx = lens ? (side==="L" ? lens.x-lens.r-22 : lens.x+lens.r+22) : (side==="L" ? it.x-44 : it.x+44);
-      tx = side==="L" ? Math.max(tx, tw+16) : Math.min(tx, W-tw-16);
-      let ty = Math.max(it.y, last+lh, top); last = ty;
-      c.strokeStyle="rgba(215,238,255,.7)"; c.lineWidth=1; c.beginPath(); c.moveTo(it.x,it.y); c.lineTo(tx,ty); c.stroke();
-      c.fillStyle="rgba(235,248,255,.95)"; c.beginPath(); c.arc(it.x,it.y,2.4,0,TAU); c.fill();
-      const bx = side==="L" ? tx-tw-10 : tx+2;
-      c.fillStyle="rgba(4,14,24,.62)"; c.fillRect(bx,ty-9,tw+8,18);
-      c.fillStyle="#eaf6ff"; c.textAlign = side==="L" ? "right" : "left";
-      c.fillText(it.text, side==="L" ? tx-6 : tx+6, ty);
-    }
-  }
-}
 
-/* ---------- render loop ---------- */
-function render(t){
+/* ---------- render ---------- */
+const labelsOut = [];
+function render(now){
   if (!video.videoWidth) return;
   updCover();
-  drawVideo(sctx);
-  base(sctx); sctx.fillStyle=`rgba(2,8,18,${(1-S.real)*0.93})`; sctx.fillRect(0,0,W,H);
-  drawAnatomy(sctx,t);
+  for (const tr of [TR.pose, TR.face, ...TR.hands]) tr.fade += ((tr.tracked?1:0)-tr.fade)*0.15;
+  drawVideo(sctx,sdpr);
+  base(sctx,sdpr); sctx.fillStyle=`rgba(2,8,18,${(1-S.real)*0.93})`; sctx.fillRect(0,0,W,H);
+  const P = TR.pose.lm && TR.pose.fade>0.02 ? TR.pose.lm.map((p,i)=>{ const q=mp(p); q.on=TR.pose.on[i]; return q; }) : null;
+  const F = TR.face.lm && TR.face.fade>0.02 ? TR.face.lm.map(mp) : null;
+  const hands = TR.hands.filter(h=>h.lm && h.fade>0.02).map(h=>({ pts:h.lm.map(mp), fade:h.fade }));
+  const d0=performance.now();
+  LIB.draw(sctx, { dpr:sdpr, look:S.look, brightness:S.brightness, layers:S.layers, pose:P, poseFade:TR.pose.fade,
+    face:F, faceFade:TR.face.fade, hands, t:now, labels:labelsOut, skin:SK.blobs });
+  adapt(performance.now()-d0, now);
   base(ctx); ctx.clearRect(0,0,W,H);
-  if (S.reveal==="all"){ ctx.drawImage(scene,0,0,W,H); renderLabels(ctx,null); }
+  let lens=null;
+  if (S.reveal==="all") ctx.drawImage(scene,0,0,W,H);
   else {
-    drawVideo(ctx);
-    const L = lensState(); base(ctx); ctx.save();
-    ctx.beginPath(); ctx.arc(L.x,L.y,L.r,0,TAU); ctx.clip();
-    ctx.translate(L.x,L.y); ctx.scale(S.zoom,S.zoom); ctx.translate(-L.x,-L.y);
-    ctx.drawImage(scene,0,0,W,H); ctx.restore();
-    drawRing(ctx,L); renderLabels(ctx,L);
+    drawVideo(ctx); lens=lensState(); base(ctx); ctx.save();
+    ctx.beginPath(); ctx.arc(lens.x,lens.y,lens.r,0,TAU); ctx.clip();
+    ctx.translate(lens.x,lens.y); ctx.scale(S.zoom,S.zoom); ctx.translate(-lens.x,-lens.y);
+    ctx.drawImage(scene,0,0,W,H); ctx.restore(); drawRing(ctx,lens);
   }
+  updateLabels(labelsOut, lens, now); drawLabels(ctx, lens);
 }
-let lastVT=-1, frameN=0, detN=0, fpsT=performance.now(), fps=0;
+
+/* ---------- detection loop ---------- */
+let models={ pose:null, hands:null, face:null }, lastVT=-1, frameN=0, otherN=0, detN=0, fpsT=performance.now(), fps=0;
 function loop(){
   requestAnimationFrame(loop);
-  const now = performance.now();
-  if (models && video.readyState>=2 && video.currentTime!==lastVT){
-    lastVT = video.currentTime;
-    const wantHands = S.layers.hands || (S.reveal==="lens" && S.follow==="finger");
+  const now=performance.now(), t=now/1000;
+  if (video.readyState>=2 && video.currentTime!==lastVT){
+    lastVT=video.currentTime;
+    const L=S.layers;
+    const wantHands = models.hands && (L.hands || (S.reveal==="lens" && S.follow==="finger"));
+    const wantFace = !!models.face; // always on: it also confirms that a detected body is a real person
+    let task = "pose";
+    if (frameN%2===1 || !models.pose){
+      if (wantHands && wantFace) task = (otherN++%2===0) ? "face" : "hands";
+      else if (wantFace) task="face"; else if (wantHands) task="hands";
+    }
     try {
-      if (!wantHands || frameN%2===0) onPose(models.pose.detectForVideo(video,now));
-      else onHands(models.hands.detectForVideo(video,now));
+      if (task==="pose" && models.pose) onPose(models.pose.detectForVideo(video,now),t);
+      else if (task==="face") onFace(models.face.detectForVideo(video,now),t);
+      else if (task==="hands") onHands(models.hands.detectForVideo(video,now),t);
     } catch(e){ console.warn(e); }
     frameN++; detN++;
+    if (L.skin && TR.face.tracked && now-SK.last>150){ SK.last=now; try { analyzeSkin(); } catch(e){ console.warn(e); } }
+    if (!L.skin || !TR.face.tracked) SK.blobs=[];
   }
-  if (now-fpsT > 1000){ fps = Math.round(detN*1000/(now-fpsT)); detN=0; fpsT=now; updateStatus(); }
+  if (now-fpsT>1000){ fps=Math.round(detN*1000/(now-fpsT)); detN=0; fpsT=now; updateStatus(); }
   render(now);
 }
 
 /* ---------- camera + models ---------- */
-let stream = null, statusKey = "loading";
+let stream=null, fileset=null;
 async function startCamera(){
   if (stream) stream.getTracks().forEach(tr=>tr.stop());
   stream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:S.facing, width:{ideal:1280}, height:{ideal:720} } });
   video.srcObject = stream; await video.play();
 }
+async function make(Cls,url,extra){
+  try { return await Cls.createFromOptions(fileset,{ baseOptions:{ modelAssetPath:url, delegate:"GPU" }, runningMode:"VIDEO", ...extra }); }
+  catch(e){ return await Cls.createFromOptions(fileset,{ baseOptions:{ modelAssetPath:url, delegate:"CPU" }, runningMode:"VIDEO", ...extra }); }
+}
+const POSE_OPTS = { numPoses:1, minPoseDetectionConfidence:0.7, minPosePresenceConfidence:0.7, minTrackingConfidence:0.65 };
+async function loadPose(){
+  const old=models.pose; models.pose=null; if (old) try { old.close(); } catch(e){}
+  models.pose = await make(PoseLandmarker, POSE_URL[S.quality], POSE_OPTS);
+}
 async function loadModels(){
-  const fileset = await FilesetResolver.forVisionTasks(MP_BASE);
-  const make = async (Cls,url,extra) => {
-    try { return await Cls.createFromOptions(fileset,{ baseOptions:{ modelAssetPath:url, delegate:"GPU" }, runningMode:"VIDEO", ...extra }); }
-    catch(e){ return await Cls.createFromOptions(fileset,{ baseOptions:{ modelAssetPath:url, delegate:"CPU" }, runningMode:"VIDEO", ...extra }); }
-  };
-  const [pose,hands] = await Promise.all([ make(PoseLandmarker,POSE_URL,{ numPoses:1 }), make(HandLandmarker,HAND_URL,{ numHands:2 }) ]);
-  models = { pose, hands };
+  fileset = await FilesetResolver.forVisionTasks(MP_BASE);
+  await loadPose(); updateStatus();
+  const [h,f] = await Promise.allSettled([
+    make(HandLandmarker, HAND_URL, { numHands:2, minHandDetectionConfidence:0.7, minHandPresenceConfidence:0.7, minTrackingConfidence:0.6 }),
+    make(FaceLandmarker, FACE_URL, { numFaces:1, minFaceDetectionConfidence:0.6, minFacePresenceConfidence:0.6, minTrackingConfidence:0.6, outputFaceBlendshapes:false })
+  ]);
+  if (h.status==="fulfilled") models.hands=h.value; else console.warn(h.reason);
+  if (f.status==="fulfilled") models.face=f.value; else console.warn(f.reason);
 }
 function updateStatus(){
-  const tx = T[S.lang]; let msg, ok=false;
-  if (!models) msg = tx.loading;
-  else if (!poseLM && !handsLM.length) msg = tx.looking;
-  else { msg = `${tx.tracking} · ${fps} fps`; ok = true; }
-  $("#stext").textContent = msg; $("#sdot").classList.toggle("ok",ok);
+  const tx=T[S.lang]; let msg, ok=false;
+  if (!models.pose) msg=tx.loading;
+  else if (TR.pose.tracked){ msg=`${tx.tracking} · ${fps} fps`; ok=true; }
+  else if (TR.face.tracked){ msg=`${tx.faceOnly} · ${fps} fps`; ok=true; }
+  else msg=tx.looking;
+  $("#stext").textContent=msg; $("#sdot").classList.toggle("ok",ok);
 }
 
 $("#go").addEventListener("click", async ()=>{
   const btn=$("#go"); btn.disabled=true; btn.textContent=T[S.lang].starting; $("#err").textContent="";
-  const cam = startCamera(), mdl = loadModels();
+  const cam=startCamera(), mdl=loadModels();
   try { await cam; } catch(e){ btn.disabled=false; applyLang(); $("#err").textContent=T[S.lang].camErr; return; }
-  $("#start").hidden = true; $("#status").hidden = false; updateStatus();
+  $("#start").hidden=true; $("#status").hidden=false; updateStatus();
   requestAnimationFrame(loop);
   try { await mdl; updateStatus(); } catch(e){ console.error(e); $("#stext").textContent=T[S.lang].modelErr; }
 });
 
 /* ---------- UI ---------- */
 function applyLang(){
-  const tx = T[S.lang]; document.documentElement.lang = S.lang;
-  document.querySelectorAll("[data-i]").forEach(el=>{ if (tx[el.dataset.i]) el.textContent = tx[el.dataset.i]; });
+  const tx=T[S.lang]; document.documentElement.lang=S.lang;
+  document.querySelectorAll("[data-i]").forEach(el=>{ if (tx[el.dataset.i]) el.textContent=tx[el.dataset.i]; });
   for (const b of [$("#lang"),$("#lang2")]) b.textContent = S.lang==="it" ? "EN" : "IT";
-  document.title = tx.title; if (models) updateStatus();
+  document.title=tx.title; if (models.pose) updateStatus();
 }
 function syncUI(){
-  document.querySelectorAll("[data-layer]").forEach(el=>{ el.checked = !!S.layers[el.dataset.layer]; });
+  document.querySelectorAll("[data-layer]").forEach(el=>{ el.checked=!!S.layers[el.dataset.layer]; });
   document.querySelectorAll("[data-seg]").forEach(seg=>{ seg.querySelectorAll("button").forEach(b=>b.classList.toggle("on", S[seg.dataset.seg]===b.dataset.v)); });
-  document.querySelectorAll("[data-preset]").forEach(b=>{ const p=PRESETS[b.dataset.preset];
-    b.classList.toggle("on", Object.keys(p).every(k=>!!p[k]===!!S.layers[k])); });
-  $("#real").value = Math.round(S.real*100); $("#brightness").value = Math.round(S.brightness*100);
-  $("#lensSize").value = Math.round(S.lensSize*100); $("#zoom").value = Math.round(S.zoom*10);
+  document.querySelectorAll("[data-preset]").forEach(b=>{ const p=PRESETS[b.dataset.preset]; b.classList.toggle("on", Object.keys(p).every(k=>!!p[k]===!!S.layers[k])); });
+  $("#real").value=Math.round(S.real*100); $("#brightness").value=Math.round(S.brightness*100);
+  $("#lensSize").value=Math.round(S.lensSize*100); $("#zoom").value=Math.round(S.zoom*10);
 }
-document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{
-  const p=PRESETS[b.dataset.preset]; for (const k in p) S.layers[k]=!!p[k]; syncUI(); }));
+document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{ const p=PRESETS[b.dataset.preset]; for (const k in p) S.layers[k]=!!p[k]; LST.clear(); syncUI(); }));
 document.querySelectorAll("[data-layer]").forEach(el=>el.addEventListener("change",()=>{ S.layers[el.dataset.layer]=el.checked; syncUI(); }));
 document.querySelectorAll("[data-seg]").forEach(seg=>seg.addEventListener("click",(e)=>{
-  const b=e.target.closest("button"); if (!b) return; S[seg.dataset.seg]=b.dataset.v; syncUI(); }));
+  const b=e.target.closest("button"); if (!b) return;
+  const key=seg.dataset.seg, prev=S[key]; S[key]=b.dataset.v; syncUI();
+  if (key==="reveal" || key==="density") LST.clear();
+  if (key==="quality" && prev!==S.quality && fileset){ updateStatus(); loadPose().then(updateStatus).catch(console.error); }
+}));
 $("#real").addEventListener("input",e=>S.real=e.target.value/100);
 $("#brightness").addEventListener("input",e=>S.brightness=e.target.value/100);
 $("#lensSize").addEventListener("input",e=>S.lensSize=e.target.value/100);
@@ -676,14 +1290,16 @@ $("#zoom").addEventListener("input",e=>S.zoom=e.target.value/10);
 $("#more").addEventListener("click",()=>{ const open=$("#sheet").classList.toggle("open"); $("#more").setAttribute("aria-expanded",String(open)); });
 for (const b of [$("#lang"),$("#lang2")]) b.addEventListener("click",()=>{ S.lang = S.lang==="it" ? "en" : "it"; applyLang(); });
 $("#flip").addEventListener("click", async ()=>{
-  S.facing = S.facing==="user" ? "environment" : "user"; poseLM=null; handsLM=[]; lensCur=null;
+  S.facing = S.facing==="user" ? "environment" : "user";
+  for (const tr of [TR.pose, TR.face, ...TR.hands]){ tr.tracked=false; tr.lm=null; tr.good=0; tr.fade=0; }
+  lensCur=null; LST.clear(); SK.blobs=[];
   try { await startCamera(); } catch(e){ $("#stext").textContent=T[S.lang].camErr; }
 });
 $("#snap").addEventListener("click",()=>{
   const f=$("#flash"); f.classList.add("on"); setTimeout(()=>f.classList.remove("on"),60);
   canvas.toBlob(async (blob)=>{
     if (!blob) return;
-    const file = new File([blob],"anatomy-lens.png",{ type:"image/png" });
+    const file=new File([blob],"anatomy-lens.png",{ type:"image/png" });
     if (navigator.canShare && navigator.canShare({ files:[file] })){ try { await navigator.share({ files:[file], title:T[S.lang].title }); return; } catch(e){} }
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="anatomy-lens.png"; a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
@@ -696,6 +1312,7 @@ window.addEventListener("pointerup",()=>dragging=false);
 window.addEventListener("pointercancel",()=>dragging=false);
 
 applyLang(); syncUI();
+
 </script>
 </body>
 </html>
