@@ -10,7 +10,7 @@
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#061019;
@@ -44,6 +44,23 @@ body:not(.v3d) .only3d, body.v3d .onlyAR{ display:none; }
 body:not(.secview) .secOnly{ display:none; }
 .credit{ position:fixed; left:16px; right:16px; top:calc(env(safe-area-inset-top,0px) + 112px); z-index:4; font-size:11px; line-height:1.35; color:#9fb9cc; pointer-events:none; display:none; max-width:46ch; }
 body.v3d.real3d .credit{ display:block; }
+.card3d{ position:fixed; left:12px; right:12px; bottom:calc(env(safe-area-inset-bottom,0px) + 84px); z-index:7; max-height:46vh; overflow:auto; background:var(--panel);
+  -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); border:1px solid var(--line); border-radius:18px; padding:14px 16px 12px; color:var(--text); box-shadow:0 10px 30px rgba(0,0,0,.35); }
+.card3d[hidden]{ display:none; }
+.card3d h3{ margin:2px 36px 2px 0; font-size:21px; font-weight:600; line-height:1.15; }
+.cardsys{ font-size:12px; color:var(--film); }
+.cardpart{ font-size:12px; color:var(--muted); margin-bottom:8px; }
+.card3d dl{ margin:0; display:grid; grid-template-columns:1fr; gap:2px; }
+.card3d dt{ font-size:12px; color:var(--muted); margin-top:6px; }
+.card3d dd{ margin:0; font-size:14.5px; line-height:1.4; }
+.cardx{ position:absolute; top:10px; right:10px; width:34px; height:34px; border-radius:17px; border:1px solid var(--line); background:var(--chip); color:var(--text); cursor:pointer; }
+.actp{ position:fixed; left:12px; top:calc(env(safe-area-inset-top,0px) + 150px); z-index:4; width:min(240px,62vw); background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:10px 12px; pointer-events:none; }
+.actp[hidden]{ display:none; }
+.actp h5{ margin:0 0 6px; font-size:12px; font-weight:600; color:#ffb14a; }
+.actp p{ margin:6px 0 0; font-size:10.5px; color:var(--muted); line-height:1.3; }
+.arow{ display:grid; grid-template-columns:1fr 54px 34px; align-items:center; gap:6px; font-size:12.5px; margin:3px 0; }
+.arow b{ height:6px; border-radius:3px; background:linear-gradient(90deg,#ff8a1f var(--w),rgba(255,255,255,.12) var(--w)); }
+.arow i{ font-style:normal; text-align:right; color:var(--muted); font-size:11.5px; }
 .iconbtn.on{ background:var(--film); color:var(--film-ink); border-color:transparent; }
 .secondary{ width:100%; height:50px; margin-top:10px; border-radius:25px; border:1px solid rgba(159,216,255,.45); background:transparent; color:#cfe8fa; font-size:16px; font-weight:600; cursor:pointer; }
 #video{ position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
@@ -104,7 +121,45 @@ body.v3d.real3d .credit{ display:block; }
 .note{ font-size:12.5px !important; color:#7e9aae !important; margin-top:16px !important; }
 .err{ color:#ff9a9a !important; font-size:14px !important; }
 .langsw{ position:absolute; top:calc(env(safe-area-inset-top,0px) + 14px); right:16px; }
-@media (prefers-reduced-motion: reduce){ .flash{ transition:none; } }
+@media (prefers-reduced-motion: reduce){ .flash{ transition:none; } .start .mark .spin, .start .mark .spinr{ animation:none !important; } }
+/* ===== holographic HUD theme ===== */
+.scanfx{ display:none; }
+body.hud{ --bg:#01080f; --panel:rgba(2,18,28,.76); --line:rgba(0,229,255,.34); --text:#d9fbff; --muted:#74b9c8; --film:#00e5ff; --film-ink:#00151d; --chip:rgba(0,229,255,.06); color-scheme:dark; }
+body.hud .scanfx{ display:block; position:fixed; inset:0; z-index:3; pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(0,229,255,.03) 0 1px, transparent 1px 3px), radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(0,10,18,.55) 100%); }
+body.hud.v3d{ background:radial-gradient(90% 60% at 50% 45%, #06283a 0%, #020d16 60%, #01060b 100%); }
+body.hud.v3d::before{ content:""; position:fixed; inset:0; pointer-events:none; opacity:.35;
+  background-image:linear-gradient(rgba(0,229,255,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,.07) 1px, transparent 1px); background-size:32px 32px; }
+body.hud .brand b{ font-family:'Rajdhani',var(--font); font-weight:700; font-size:17px; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#e9fdff; text-shadow:0 0 14px rgba(0,229,255,.65); }
+body.hud .brand span{ display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+body.hud .brand span{ font-family:'Share Tech Mono',ui-monospace,monospace; color:#5fd9ef; letter-spacing:.06em; text-transform:uppercase; font-size:11px; }
+body.hud .iconbtn{ border-radius:4px; background:rgba(2,22,34,.7); border-color:rgba(0,229,255,.45); color:#bff6ff; box-shadow:0 0 12px rgba(0,229,255,.15) inset;
+  clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px); font-family:'Rajdhani',var(--font); }
+body.hud .iconbtn.on{ background:#00e5ff; color:#00151d; box-shadow:0 0 18px rgba(0,229,255,.7); }
+body.hud .status{ border-radius:2px; font-family:'Share Tech Mono',ui-monospace,monospace; text-transform:uppercase; letter-spacing:.06em; font-size:11.5px; color:#9ff0ff;
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,8px 100%,0 50%); padding:6px 18px; }
+body.hud .dot.ok{ background:#00e5ff; box-shadow:0 0 10px #00e5ff; }
+body.hud .sheet{ border-radius:0; border-top:1px solid rgba(0,229,255,.5); box-shadow:0 -10px 34px rgba(0,229,255,.1);
+  clip-path:polygon(0 16px,16px 0,calc(100% - 16px) 0,100% 16px,100% 100%,0 100%); }
+body.hud .chip{ border-radius:2px; font-family:'Rajdhani',var(--font); font-weight:600; text-transform:uppercase; letter-spacing:.1em; font-size:13.5px; border-color:rgba(0,229,255,.4); }
+body.hud .chip.on{ background:#00e5ff; color:#00151d; box-shadow:0 0 14px rgba(0,229,255,.6); }
+body.hud .seg{ border-radius:2px; background:rgba(0,229,255,.05); border:1px solid rgba(0,229,255,.18); }
+body.hud .seg button{ border-radius:1px; font-family:'Rajdhani',var(--font); font-weight:600; letter-spacing:.06em; text-transform:uppercase; font-size:13px; }
+body.hud .seg button.on{ background:#00e5ff; color:#00151d; box-shadow:0 0 10px rgba(0,229,255,.55); }
+body.hud .group h4, body.hud .cardsys, body.hud .actp h5{ font-family:'Share Tech Mono',ui-monospace,monospace; text-transform:uppercase; letter-spacing:.08em; font-size:11px; }
+body.hud .card3d, body.hud .actp{ border-radius:0; border-color:rgba(0,229,255,.45); box-shadow:0 0 24px rgba(0,229,255,.14), 0 0 1px rgba(0,229,255,.8) inset;
+  clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px)); }
+body.hud .card3d h3{ font-family:'Rajdhani',var(--font); font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#eafdff; text-shadow:0 0 12px rgba(0,229,255,.5); }
+body.hud .card3d dt{ font-family:'Share Tech Mono',ui-monospace,monospace; text-transform:uppercase; letter-spacing:.06em; color:#38d5ee; font-size:11px; }
+body.hud .actp h5{ color:#ffb347; }
+body.hud .credit{ font-family:'Share Tech Mono',ui-monospace,monospace; font-size:10px; color:#4fb6ca; }
+body.hud .start{ background:radial-gradient(90% 60% at 50% 35%, #072c40 0%, #020d16 65%, #01060b 100%); }
+body.hud .card h1{ font-family:'Rajdhani',var(--font); font-weight:700; text-transform:uppercase; letter-spacing:.12em; text-shadow:0 0 18px rgba(0,229,255,.6); }
+body.hud .primary{ border-radius:2px; background:#00e5ff; color:#00151d; font-family:'Rajdhani',var(--font); font-weight:700; letter-spacing:.14em; text-transform:uppercase; box-shadow:0 0 22px rgba(0,229,255,.45);
+  clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px); }
+body.hud .secondary{ border-radius:2px; font-family:'Rajdhani',var(--font); font-weight:600; letter-spacing:.12em; text-transform:uppercase; border-color:rgba(0,229,255,.55); color:#aef4ff; }
+.start .mark .spin{ transform-origin:60px 60px; animation:spin 14s linear infinite; } .start .mark .spinr{ transform-origin:60px 60px; animation:spin 9s linear infinite reverse; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -112,6 +167,7 @@ body.v3d.real3d .credit{ display:block; }
 <canvas id="gl"></canvas>
 <canvas id="view"></canvas>
 <div class="flash" id="flash"></div>
+<div class="scanfx" aria-hidden="true"></div>
 
 <header class="top">
   <div class="brand"><b data-i="title">Anatomy Lens</b><span data-i="subtitle">Live anatomy overlay</span></div>
@@ -122,6 +178,8 @@ body.v3d.real3d .credit{ display:block; }
 </header>
 
 <div class="credit" id="credit3d" data-i="credit3d"></div>
+<div class="actp" id="actP" hidden><h5 data-i="actTitle">Active muscles</h5><div id="actL"></div><p data-i="actNote"></p></div>
+<section class="card3d" id="card3d" hidden aria-live="polite"><button class="cardx" id="cardX" aria-label="Close">✕</button><div class="cardsys" id="cardSys"></div><h3 id="cardT"></h3><div class="cardpart" id="cardP"></div><dl id="cardD"></dl></section>
 <div class="status" id="status" hidden><span class="dot" id="sdot"></span><span id="stext"></span></div>
 
 <section class="sheet" id="sheet">
@@ -186,7 +244,8 @@ body.v3d.real3d .credit{ display:block; }
     </div>
     <div class="group">
       <h4 data-i="look">Look</h4>
-      <div class="seg" data-seg="look"><button data-v="xray" data-i="xray">X-ray</button><button data-v="solid" data-i="solid">Solid</button></div>
+      <div class="seg" data-seg="look"><button data-v="holo" data-i="holo">Hologram</button><button data-v="xray" data-i="xray">X-ray</button><button data-v="solid" data-i="solid">Solid</button></div>
+      <div style="margin:10px 0 4px"><h4 data-i="theme">Style</h4><div class="seg" data-seg="theme"><button data-v="hud" data-i="tHud">Holographic</button><button data-v="classic" data-i="tClassic">Classic</button></div></div>
       <label class="range"><span data-i="real">Real me showing through</span><input type="range" id="real" min="0" max="100"></label>
       <label class="range"><span data-i="brightness">Brightness</span><input type="range" id="brightness" min="40" max="200"></label>
       <label class="range"><span data-i="lensSize">Lens size</span><input type="range" id="lensSize" min="15" max="48"></label>
@@ -200,6 +259,8 @@ body.v3d.real3d .credit{ display:block; }
   <button class="iconbtn txt langsw" id="lang2" aria-label="Language">IT</button>
   <div class="card">
     <svg class="mark" viewBox="0 0 120 120" aria-hidden="true">
+      <circle class="spin" cx="60" cy="60" r="57" fill="none" stroke="#00e5ff" stroke-opacity=".7" stroke-width="1.5" stroke-dasharray="22 9 4 9"/>
+      <circle class="spinr" cx="60" cy="60" r="51" fill="none" stroke="#00e5ff" stroke-opacity=".45" stroke-width="1" stroke-dasharray="2 5"/>
       <circle cx="60" cy="60" r="54" fill="none" stroke="#9fd8ff" stroke-width="1.5"/>
       <circle cx="60" cy="60" r="58" fill="none" stroke="#9fd8ff" stroke-opacity=".25" stroke-width="5"/>
       <ellipse cx="60" cy="50" rx="24" ry="26" fill="none" stroke="#efe6d2" stroke-width="2"/>
@@ -265,7 +326,9 @@ const on=(p)=>okP(p) && p.on;
 /* ---------- color & paint ---------- */
 const rgba=(cc,a)=>"rgba("+cc[0]+","+cc[1]+","+cc[2]+","+Math.max(0,Math.min(1,a)).toFixed(3)+")";
 const shade=(cc,k)=>cc.map(v=>Math.round(v*k)), tint=(cc,k)=>cc.map(v=>Math.round(v+(255-v)*k));
-function colOf(name){ return E.look==="xray" ? COL[name] : (COL[name+"S"]||COL[name]); }
+const HOLO={ bone:[205,248,255], cart:[150,232,255], muscle:[50,210,255], tendon:[170,240,255], lung:[110,200,255], heart:[90,195,255], artery:[95,205,255], vein:[70,150,255], liver:[100,190,255], gall:[120,220,255],
+  stomach:[110,210,255], spleen:[90,180,255], pancreas:[130,220,255], kidney:[100,195,255], gut:[120,215,255], colon:[110,205,255], bladder:[140,225,255], ureter:[140,225,255], airway:[170,235,255], brain:[150,215,255], eye:[200,250,255], iris:[120,230,255] };
+function colOf(name){ if(E.hud) return HOLO[name]||[110,225,255]; return E.look==="xray" ? COL[name] : (COL[name+"S"]||COL[name]); }
 function aMul(o){ return E.fade*(o && o.alpha!=null ? o.alpha : 1); }
 function paint(name,o){
   o=o||{}; base();
@@ -1461,11 +1524,20 @@ const LAYER={ skeleton:"skeleton", skull:"skull", hands:"hands", muscles:"muscle
 for(const g of ORG) LAYER[g]="organs"; for(const g of BRN) LAYER[g]="brain";
 const TINT={ skeleton:[0.8,0.92,1], skull:[0.8,0.92,1], hands:[0.8,0.92,1], muscles:[0.95,0.36,0.38], musFront:[0.95,0.36,0.38], eyes:[1,0.95,0.75], shell:[0.6,0.8,0.95], hair:[0.6,0.8,0.95],
   lungs:[1,0.7,0.8], airway:[0.75,0.9,1], heart:[1,0.35,0.4], vessels:[1,0.4,0.45], solid:[0.95,0.55,0.5], gut:[1,0.75,0.6], kidney:[0.95,0.5,0.6], brain:[0.8,0.6,1], brainWM:[0.85,0.8,1], brainDeep:[0.75,0.55,1], brainCSF:[0.5,0.75,1] };
+const HTINT={ skeleton:[0.78,0.96,1], skull:[0.78,0.96,1], hands:[0.78,0.96,1], muscles:[0.18,0.82,1], musFront:[0.18,0.82,1], eyes:[0.85,1,1], shell:[0.3,0.9,1], hair:[0.3,0.9,1],
+  lungs:[0.35,0.72,1], airway:[0.6,0.9,1], heart:[0.45,0.78,1], vessels:[0.32,0.62,1], solid:[0.4,0.75,1], gut:[0.45,0.8,1], kidney:[0.42,0.74,1], brain:[0.6,0.85,1], brainWM:[0.7,0.9,1], brainDeep:[0.55,0.8,1], brainCSF:[0.4,0.7,1] };
+const HOP={ skeleton:0.95, skull:0.95, hands:0.95, muscles:0.5, musFront:0.5, eyes:0.9, shell:0.2, hair:0.15, lungs:0.6, airway:0.8, heart:0.8, vessels:0.8, solid:0.75, gut:0.7, kidney:0.8, brain:0.75, brainWM:0.25, brainDeep:0.5, brainCSF:0.6 };
 const XOP={ skeleton:0.8, skull:0.8, hands:0.8, muscles:0.55, musFront:0.55, eyes:0.9, shell:0.25, hair:0.2, lungs:0.7, airway:0.8, heart:0.85, vessels:0.85, solid:0.85, gut:0.8, kidney:0.85, brain:0.75, brainWM:0.25, brainDeep:0.5, brainCSF:0.6 };
 /* cross-section tones: MRI (T1-like grey levels) and anatomical colours */
 const MRI={ shell:0.8, muscles:0.3, musFront:0.3, skeleton:0.6, skull:0.56, hands:0.6, lungs:0.04, airway:0.02, heart:0.34, vessels:0.12, solid:0.46, gut:0.4, kidney:0.42, brain:0.42, brainWM:0.72, brainDeep:0.52, brainCSF:0.06, eyes:0.12 };
 const ANAT={ shell:[0.95,0.83,0.6], muscles:[0.62,0.14,0.16], musFront:[0.62,0.14,0.16], skeleton:[0.93,0.89,0.79], skull:[0.93,0.89,0.79], hands:[0.93,0.89,0.79], lungs:[0.86,0.56,0.62], airway:[0.92,0.86,0.82],
   heart:[0.56,0.1,0.13], vessels:[0.65,0.08,0.11], solid:[0.52,0.2,0.15], gut:[0.86,0.62,0.52], kidney:[0.6,0.2,0.22], brain:[0.74,0.62,0.6], brainWM:[0.94,0.9,0.86], brainDeep:[0.7,0.58,0.56], brainCSF:[0.56,0.68,0.82], eyes:[0.9,0.9,0.86] };
+/* muscle groups for the activation glow (index = 1 + 2*k + side) */
+const MG=[["deltoid",/deltoid/],["pecs",/pectoralis major/],["biceps",/biceps brachii|brachialis/],["triceps",/triceps brachii|anconeus/],["fFlex",/flexor (carpi|digitorum|pollicis)|palmaris|pronator/],
+  ["fExt",/extensor (carpi|digitorum|pollicis|indicis)|brachioradialis|supinator/],["lats",/latissimus|teres major/],["trap",/trapezius|rhomboid|levator scapulae/],["quads",/rectus femoris|vastus/],
+  ["hams",/biceps femoris|semitendinosus|semimembranosus/],["glutes",/gluteus/],["add",/adductor|gracilis|pectineus/],["calf",/gastrocnemius|soleus|plantaris/],["tibAnt",/tibialis anterior|extensor (digitorum|hallucis) longus/],
+  ["hipFlex",/iliacus|psoas|sartorius|tensor fasciae/],["scm",/sternocleidomastoid/],["obliq",/(external|internal) oblique/],["abs",/rectus abdominis|transversus abdominis/],["erector",/iliocostalis|longissimus|spinalis|multifidus/]];
+function mgOf(en){ for(let k=0;k<MG.length;k++) if(MG[k][1].test(en)) return 1+2*k+(/\bright\b/.test(en)?1:0); return 0; }
 const CAPORDER=["shell","muscles","musFront","skeleton","skull","hands","lungs","airway","heart","vessels","solid","gut","kidney","brain","brainWM","brainDeep","brainCSF","eyes"];
 const PL={ axial:{ n:[0,1,0], ax:1, view:[0,1,0], up:[0,0,1], o:["A","P","R","L"] }, coronal:{ n:[0,0,-1], ax:2, view:[0,0,-1], up:[0,1,0], o:["S","I","R","L"] }, sagittal:{ n:[-1,0,0], ax:0, view:[-1,0,0], up:[0,1,0], o:["S","I","A","P"] } };
 /* MRI framing per focus: [centre y, needed height, needed width] for coronal/sagittal; [needed AP, needed width] for axial */
@@ -1535,6 +1607,20 @@ async function create(canvas,PACK,onProgress){
   if(ADD.RoomEnvironment){ try{ const pm=new THREE.PMREMGenerator(renderer); scene.environment=pm.fromScene(new ADD.RoomEnvironment(renderer),0.04).texture; }catch(e){ console.warn(e); } }
   const root=new THREE.Group(); scene.add(root);
   const grid=new THREE.PolarGridHelper(0.9,16,5,64,0x9fd8ff,0x9fd8ff); grid.material.transparent=true; grid.material.opacity=0.2; grid.material.depthWrite=false; scene.add(grid);
+  /* holographic HUD rings: floor dial, waist and head halos */
+  const hud=new THREE.Group(); hud.visible=false; scene.add(hud);
+  const lineMat=(o)=>new THREE.LineBasicMaterial({ color:0x5fe8ff, transparent:true, opacity:o, blending:THREE.AdditiveBlending, depthWrite:false });
+  function ringGeo(r,segs,dash,ticks,tickLen){ const v=[];
+    for(let i=0;i<segs;i++){ if(dash && (i%dash[0])>=dash[1]) continue; const a0=i/segs*Math.PI*2, a1=(i+1)/segs*Math.PI*2; v.push(Math.cos(a0)*r,0,Math.sin(a0)*r, Math.cos(a1)*r,0,Math.sin(a1)*r); }
+    if(ticks) for(let i=0;i<ticks;i++){ const a=i/ticks*Math.PI*2, l=(i%5===0)?tickLen*1.8:tickLen; v.push(Math.cos(a)*r,0,Math.sin(a)*r, Math.cos(a)*(r+l),0,Math.sin(a)*(r+l)); }
+    const g=new THREE.BufferGeometry(); g.setAttribute("position",new THREE.Float32BufferAttribute(v,3)); return g; }
+  const mkRing=(r,segs,dash,ticks,tl,o)=>{ const l=new THREE.LineSegments(ringGeo(r,segs,dash,ticks,tl),lineMat(o)); l.frustumCulled=false; return l; };
+  const floorG=new THREE.Group(); hud.add(floorG);
+  const fr=[mkRing(0.42,128,null,0,0,0.55), mkRing(0.47,128,[8,5],72,0.018,0.45), mkRing(0.62,160,null,0,0,0.3), mkRing(0.66,96,[12,3],0,0,0.4), mkRing(0.3,64,[4,2],0,0,0.35)];
+  fr.forEach(x=>floorG.add(x));
+  const cross=new THREE.BufferGeometry(); cross.setAttribute("position",new THREE.Float32BufferAttribute([-0.72,0,0,-0.5,0,0, 0.5,0,0,0.72,0,0, 0,0,-0.72,0,0,-0.5, 0,0,0.5,0,0,0.72],3)); floorG.add(new THREE.LineSegments(cross,lineMat(0.5)));
+  const waistR=mkRing(0.3,96,[6,4],48,0.012,0.45), chestR=mkRing(0.26,96,[3,2],0,0,0.3), headR=mkRing(0.17,72,[5,3],36,0.01,0.55), headR2=mkRing(0.2,96,null,0,0,0.25);
+  for(const x of [waistR,chestR,headR,headR2]) hud.add(x);
 
   /* ---- decode meshes ---- */
   await ADD.MeshoptDecoder.ready;
@@ -1562,18 +1648,20 @@ async function create(canvas,PACK,onProgress){
   function nearestSeg(p,set){ let best=0,bd=1e9; for(const k of set){ const d=capDist(p,CAP[k],k); if(d<bd){ bd=d; best=k; } } return best; }
   const ALL=[...Array(15).keys()], TORSO=[0,1,2], VERT=/(vertebra|atlas|axis|sacrum|coccyx|intervertebral)/;
   const pool=[]; /* bone + muscle samples for skin weight transfer */
+  const PARTS=[];
   const built={}; const labelAnch=[];
   const order=["skeleton","skull","hands","muscles","musFront",...ORG,...BRN,"eyes","hair","shell"];
   let gi=0;
   for(const gname of order){
     const list=groups[gname]; if(!list) continue;
     let nv=0, ni=0; for(const it of list){ nv+=it.geo.attributes.position.count; ni+=it.geo.index?it.geo.index.count:it.geo.attributes.position.count; }
-    const pos=new Float32Array(nv*3), nor=new Float32Array(nv*3), col=new Float32Array(nv*3), idx=new Uint32Array(ni), si=new Uint16Array(nv*4), sw=new Float32Array(nv*4);
+    const pos=new Float32Array(nv*3), nor=new Float32Array(nv*3), col=new Float32Array(nv*3), idx=new Uint32Array(ni), si=new Uint16Array(nv*4), sw=new Float32Array(nv*4), pid=new Uint16Array(nv), mgr=new Float32Array(nv);
     let vo=0, io=0; const c=new THREE.Color(), nm3=new THREE.Matrix3(), pi=[0,0];
     for(const it of list){
       const P=it.geo.attributes.position, Nn=it.geo.attributes.normal, ix=it.geo.index, n=P.count; nm3.getNormalMatrix(it.M);
       c.setStyle(it.inf.col); if(gname==="muscles"||gname==="musFront"){ const j=0.9+0.2*((it.id.charCodeAt(it.id.length-1)*37)%10)/10; c.multiplyScalar(j); }
-      let cx=0,cy=0,cz=0;
+      let cx=0,cy=0,cz=0; const partIx=PARTS.length; PARTS.push({ en:it.inf.en||"", g:gname, lab:it.inf.lab||0 }); const mgv=(gname==="muscles"||gname==="musFront")?mgOf(it.inf.en||""):0;
+      pid.fill(partIx,vo,vo+n); if(mgv) mgr.fill(mgv,vo,vo+n);
       for(let i=0;i<n;i++){ tmp.fromBufferAttribute(P,i).applyMatrix4(it.M); pos[(vo+i)*3]=tmp.x; pos[(vo+i)*3+1]=tmp.y; pos[(vo+i)*3+2]=tmp.z; cx+=tmp.x; cy+=tmp.y; cz+=tmp.z;
         if(Nn){ tmp.fromBufferAttribute(Nn,i).applyMatrix3(nm3).normalize(); nor[(vo+i)*3]=tmp.x; nor[(vo+i)*3+1]=tmp.y; nor[(vo+i)*3+2]=tmp.z; }
         col[(vo+i)*3]=c.r; col[(vo+i)*3+1]=c.g; col[(vo+i)*3+2]=c.b; }
@@ -1625,8 +1713,9 @@ async function create(canvas,PACK,onProgress){
     const geo=new THREE.BufferGeometry();
     geo.setAttribute("position",new THREE.BufferAttribute(pos,3)); geo.setAttribute("normal",new THREE.BufferAttribute(nor,3)); geo.setAttribute("color",new THREE.BufferAttribute(col,3));
     geo.setAttribute("skinIndex",new THREE.Uint16BufferAttribute(si,4)); geo.setAttribute("skinWeight",new THREE.BufferAttribute(sw,4)); geo.setIndex(new THREE.BufferAttribute(idx,1));
+    if(gname==="muscles"||gname==="musFront") geo.setAttribute("mgrp",new THREE.BufferAttribute(mgr,1));
     geo.computeBoundingSphere();
-    built[gname]={ geo, pos, si, sw };
+    built[gname]={ geo, pos, si, sw, pid, col0:col.slice() };
     prog(0.5+0.45*(++gi/order.length)); await new Promise(r=>setTimeout(r,0));
   }
 
@@ -1663,12 +1752,53 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
   };
   solidOpts.musFront=solidOpts.muscles; for(const g of ORG) solidOpts[g]=solidOpts.organs; for(const g of ["brainWM","brainDeep","brainCSF"]) solidOpts[g]=solidOpts.brain;
   const meshes={}, mats={};
+  const actU={ value:new Float32Array(40) }, pulseU={ value:0 }, timeU={ value:0 }, scanU={ value:0 };
+  /* hologram: rim light, fine scanlines, a scan band sweeping up the body, slight flicker */
+  const HV=`#include <common>
+#include <skinning_pars_vertex>
+#include <clipping_planes_pars_vertex>
+varying vec3 vN; varying vec3 vV; varying vec3 vW;
+void main(){
+#include <beginnormal_vertex>
+#include <skinbase_vertex>
+#include <skinnormal_vertex>
+#include <defaultnormal_vertex>
+#include <begin_vertex>
+#include <skinning_vertex>
+#include <project_vertex>
+#include <clipping_planes_vertex>
+vN=normalize(transformedNormal); vV=normalize(-mvPosition.xyz); vW=(modelMatrix*vec4(transformed,1.0)).xyz; }`;
+  const HF=`#include <common>
+#include <clipping_planes_pars_fragment>
+uniform vec3 tint; uniform float opacity; uniform float bright; uniform float uTime; uniform float uScan; varying vec3 vN; varying vec3 vV; varying vec3 vW;
+void main(){
+#include <clipping_planes_fragment>
+float f=1.0-abs(dot(normalize(vN),normalize(vV))); float rim=pow(f,2.2);
+float lines=0.6+0.4*step(0.45,fract(vW.y*140.0+uTime*0.0006));
+float band=exp(-pow((vW.y-uScan)*16.0,2.0));
+float flick=0.95+0.05*sin(uTime*0.011+vW.y*5.0);
+float a=((0.04+rim*0.9)*lines*flick*opacity + band*0.3*opacity)*bright;
+vec3 col=tint*(0.55+0.9*rim)+vec3(0.65,0.97,1.0)*band*0.9;
+/*ACT*/
+gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
+  const HVA=HV.replace("varying vec3 vN;","attribute float mgrp; uniform float uAct[40]; varying float vAct; varying vec3 vN;").replace("vN=normalize(transformedNormal);","vAct=uAct[int(mgrp+0.5)]; vN=normalize(transformedNormal);");
+  const HFA=HF.replace("varying vec3 vN;","varying float vAct; varying vec3 vN;").replace("/*ACT*/","col+=vec3(1.0,0.62,0.16)*vAct*1.6; a+=vAct*0.5*bright;");
+  const XVA=XV.replace("varying vec3 vN;","attribute float mgrp; uniform float uAct[40]; varying float vAct; varying vec3 vN;").replace("vN=normalize(transformedNormal);","vAct=uAct[int(mgrp+0.5)]; vN=normalize(transformedNormal);");
+  const XFA=XF.replace("varying vec3 vN;","varying float vAct; varying vec3 vN;").replace("gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0));","gl_FragColor=vec4(mix(tint,vColor,0.3)+vec3(1.0,0.55,0.12)*vAct*1.4,clamp(a+vAct*0.45*bright,0.0,1.0));");
   for(const g in built){
+    const isMus=(g==="muscles"||g==="musFront");
     const solid=new THREE.MeshPhysicalMaterial(Object.assign({ vertexColors:true, side:THREE.DoubleSide },solidOpts[g]||{}));
+    if(isMus){ solid.emissive=new THREE.Color(0,0,0); solid.customProgramCacheKey=()=>"mus-act";
+      solid.onBeforeCompile=(sh)=>{ sh.uniforms.uAct=actU; sh.uniforms.uPulse=pulseU;
+        sh.vertexShader="attribute float mgrp;\nuniform float uAct[40];\nvarying float vAct;\n"+sh.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\n vAct=uAct[int(mgrp+0.5)];");
+        sh.fragmentShader="varying float vAct;\nuniform float uPulse;\n"+sh.fragmentShader.replace("#include <emissivemap_fragment>","#include <emissivemap_fragment>\n totalEmissiveRadiance+=vec3(1.0,0.5,0.1)*vAct*(0.9+0.25*uPulse);"); }; }
     const t=TINT[g]||[1,1,1];
-    const xray=new THREE.ShaderMaterial({ uniforms:{ opacity:{value:XOP[g]||0.7}, bright:{value:1}, tint:{value:new THREE.Color(t[0],t[1],t[2])} }, vertexShader:XV, fragmentShader:XF,
+    const xu={ opacity:{value:XOP[g]||0.7}, bright:{value:1}, tint:{value:new THREE.Color(t[0],t[1],t[2])} }; if(isMus) xu.uAct=actU;
+    const xray=new THREE.ShaderMaterial({ uniforms:xu, vertexShader:isMus?XVA:XV, fragmentShader:isMus?XFA:XF,
       vertexColors:true, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, clipping:true });
-    mats[g]={ solid, xray };
+    const hu={ opacity:{value:HOP[g]||0.6}, bright:{value:1}, tint:{value:new THREE.Color().fromArray(HTINT[g]||[0.4,0.85,1])}, uTime:timeU, uScan:scanU }; if(isMus) hu.uAct=actU;
+    const holo=new THREE.ShaderMaterial({ uniforms:hu, vertexShader:isMus?HVA:HV, fragmentShader:isMus?HFA:HF, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, clipping:true });
+    mats[g]={ solid, xray, holo };
     const m=new THREE.SkinnedMesh(built[g].geo, solid); m.frustumCulled=false; m.userData.g=g; root.add(m); m.bind(skeleton); meshes[g]=m;
   }
   const clipKeep=(n)=>new THREE.Plane(n,0), planeMus=clipKeep(v3(-1,0,0)), planeSkin=clipKeep(v3(1,0,0));
@@ -1696,9 +1826,9 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
   const BM=bones.map(()=>new THREE.Matrix4());
 
   /* ---- camera control ---- */
-  const cam={ yaw:0, pitch:0.08, dist:2.6, mz:1, focus:"body", spin:false, idle:0, tgt:v3(0,0.9,0) };
+  const cam={ yaw:0, pitch:0.08, dist:3.0, mz:1, focus:"body", spin:false, idle:0, tgt:v3(0,0.9,0) };
   const ptr=new Map(); let lastTap=0, span0=0, dist0=0, mz0=1;
-  function resetView(){ cam.yaw=0; cam.pitch=0.08; cam.mz=1; cam.dist=cam.focus==="head"?0.7:cam.focus==="torso"?1.3:2.6; }
+  function resetView(){ cam.yaw=0; cam.pitch=0.08; cam.mz=1; cam.dist=cam.focus==="head"?0.75:cam.focus==="torso"?1.4:3.0; }
   function pointerDown(e){ ptr.set(e.pointerId,{x:e.clientX,y:e.clientY}); cam.idle=0;
     if(ptr.size===2){ const a=[...ptr.values()]; span0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); dist0=cam.dist; mz0=cam.mz; }
     const now=performance.now(); if(ptr.size===1){ if(now-lastTap<300) resetView(); lastTap=now; } }
@@ -1725,10 +1855,10 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
     root.scale.x=mirror?-1:1;
     root.updateMatrixWorld(true);
     /* look + layout */
-    if(st.look!==look){ look=st.look; for(const n in meshes) meshes[n].material=mats[n][look==="xray"?"xray":"solid"]; }
+    if(st.look!==look){ look=st.look; const k=look==="xray"?"xray":look==="holo"?"holo":"solid"; for(const n in meshes) meshes[n].material=mats[n][k]; }
     if(mode!==curMode){ curMode=mode; atlas=(mode==="atlas");
       for(const n in mats){ const planes = mode==="cut" ? [cutPlane] : (atlas && (n==="muscles"||n==="musFront")) ? [planeMus] : (atlas && n==="shell") ? [planeSkin] : null;
-        for(const m of [mats[n].solid,mats[n].xray]){ m.clippingPlanes=planes; m.needsUpdate=true; } }
+        for(const m of [mats[n].solid,mats[n].xray,mats[n].holo]){ m.clippingPlanes=planes; m.needsUpdate=true; } }
       const sm=mats.shell&&mats.shell.solid; if(sm){ sm.opacity=atlas?0.97:0.3; sm.depthWrite=atlas; sm.needsUpdate=true; }
       renderer.setClearColor(0x000000, mriActive?1:0);
       for(const g in caps){ const cm=caps[g].material; cm.depthTest=!mriActive; cm.depthWrite=!mriActive; cm.needsUpdate=true; }
@@ -1736,7 +1866,7 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
     for(const n in meshes){ const L=LAYER[n]; meshes[n].visible=!mriActive && !!st.layers[L] && !(atlas && n==="musFront"); }
     for(const x of stencilMs) x.m.visible=cutActive && (mriActive || !!st.layers[LAYER[x.g]]);
     for(const g in caps) caps[g].visible=cutActive && (mriActive || !!st.layers[LAYER[g]]);
-    grid.visible=!mriActive;
+    const holoOn=(look==="holo") && !mriActive; grid.visible=!mriActive && !holoOn; hud.visible=holoOn;
     /* cut plane */
     const pl=PL[st.plane]||PL.sagittal, s01=clamp(st.slice==null?0.5:st.slice,0,1);
     const lo=BB.min.getComponent(pl.ax), hi=BB.max.getComponent(pl.ax), cc=lo+(hi-lo)*s01;
@@ -1745,17 +1875,23 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
     cutInfo={ plane:st.plane||"sagittal", mm:Math.round((cc-(lo+hi)/2)*1000), letters:pl.o };
     if(cutActive) for(const g in caps){ const cp=caps[g]; cp.position.copy(pt); cp.quaternion.setFromUnitVectors(v3(0,0,1),nrm);
       const u=cp.material.uniforms; if(mriActive){ const q=MRI[g]; u.col.value.setRGB(q,q,q); u.noise.value=0.06; } else { const q=ANAT[g]; u.col.value.setRGB(q[0],q[1],q[2]); u.noise.value=0.025; } }
-    for(const n in mats) mats[n].xray.uniforms.bright.value=st.brightness;
+    for(const n in mats){ mats[n].xray.uniforms.bright.value=st.brightness; mats[n].holo.uniforms.bright.value=st.brightness; }
+    timeU.value=st.t||0;
     renderer.toneMappingExposure=1.05*st.brightness;
     /* section plane follows the chest */
     const o=v3().setFromMatrixPosition(bones[1].matrixWorld), ax=v3().setFromMatrixColumn(bones[1].matrixWorld,0).normalize();
     planeMus.setFromNormalAndCoplanarPoint(ax.clone().negate(),o); planeSkin.setFromNormalAndCoplanarPoint(ax,o);
     /* floor + camera */
     let fy=1e9; for(const i of [29,30,31,32]) fy=Math.min(fy,P[i].y); grid.position.set(st.mirror?-F[0].o.x:F[0].o.x,fy-0.01,F[0].o.z);
+    if(holoOn){ const tt=(st.t||0)/1000, pP=v3().setFromMatrixPosition(bones[0].matrixWorld), pC=v3().setFromMatrixPosition(bones[1].matrixWorld), pH=v3().setFromMatrixPosition(bones[2].matrixWorld).add(v3(0,0.12*g,0));
+      floorG.position.copy(grid.position); fr[1].rotation.y=tt*0.25; fr[3].rotation.y=-tt*0.12; fr[4].rotation.y=tt*0.5;
+      waistR.position.copy(pP).add(v3(0,0.05,0)); waistR.rotation.y=-tt*0.6; chestR.position.copy(pC).add(v3(0,-0.12*g,0)); chestR.rotation.y=tt*0.4;
+      headR.position.copy(pH); headR.rotation.y=tt*0.9; headR2.position.copy(pH).add(v3(0,-0.03,0)); headR2.rotation.y=-tt*0.3;
+      const top=pH.y+0.12, span=Math.max(0.5,top-fy); scanU.value=fy+span*(((st.t||0)/3600)%1.15-0.05); }
     let t;
     if(cam.focus==="head") t=v3().setFromMatrixPosition(bones[2].matrixWorld).add(v3(0,0.14*g,0));
     else if(cam.focus==="torso") t=v3().setFromMatrixPosition(bones[1].matrixWorld).add(v3(0,-0.18*g,0));
-    else t=v3().setFromMatrixPosition(bones[0].matrixWorld).add(v3(0,0.02,0));
+    else t=v3().setFromMatrixPosition(bones[0].matrixWorld).add(v3(0,0.1,0));
     cam.tgt.lerp(t,0.15);
     cam.idle+=st.dt||16; if(cam.spin && cam.idle>1500 && ptr.size===0) cam.yaw+=(st.dt||16)*0.00045;
     camera.position.set(cam.tgt.x+Math.sin(cam.yaw)*Math.cos(cam.pitch)*cam.dist, cam.tgt.y+Math.sin(cam.pitch)*cam.dist, cam.tgt.z+Math.cos(cam.yaw)*Math.cos(cam.pitch)*cam.dist);
@@ -1789,10 +1925,40 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
     return out;
   }
   function render(){ renderer.render(scene, mriActive?ocam:camera); }
+  function setActivation(a,t){ const v=actU.value; for(let i=0;i<40;i++) v[i]=a&&a[i]?a[i]:0; pulseU.value=Math.sin((t||0)*0.006); }
+  /* tap picking: CPU-skinned ray cast on visible surfaces, or nearest structure on the MRI slice */
+  const rc=new THREE.Raycaster(), ndc=new THREE.Vector2(), e1=v3(), e2=v3(), pq=v3(), tq=v3(), qq=v3(), A0=v3(), B0=v3(), C0=v3();
+  function skinV(b,vi,out){ const o=vi*4; pa.set(b.pos[vi*3],b.pos[vi*3+1],b.pos[vi*3+2]); out.copy(pa).applyMatrix4(BM[b.si[o]]).multiplyScalar(b.sw[o]); pb.copy(pa).applyMatrix4(BM[b.si[o+1]]).multiplyScalar(b.sw[o+1]); return out.add(pb); }
+  function pick(sx,sy){
+    ndc.set(sx/W_*2-1,-(sy/H_)*2+1);
+    if(mriActive){ rc.setFromCamera(ndc,ocam); const hit=v3(); if(!rc.ray.intersectPlane(cutPlane,hit)) return null;
+      let best=-1,bd=0.03*0.03,bg=null; for(const g of CAPORDER){ const b=built[g]; if(!b||g==="hair") continue; const n=b.pos.length/3;
+        for(let i=0;i<n;i+=2){ const x=b.pos[i*3],y=b.pos[i*3+1],z=b.pos[i*3+2]; if(Math.abs(cutPlane.normal.x*x+cutPlane.normal.y*y+cutPlane.normal.z*z+cutPlane.constant)>0.01) continue;
+          const d=(x-hit.x)**2+(y-hit.y)**2+(z-hit.z)**2; if(d<bd){ bd=d; best=i; bg=g; } } }
+      if(best<0) return null; const pi2=built[bg].pid[best]; return { pi:pi2, en:PARTS[pi2].en, g:bg, lab:PARTS[pi2].lab }; }
+    rc.setFromCamera(ndc,camera); const ro=rc.ray.origin, rd=rc.ray.direction; let tBest=1e9, hitPart=-1, hitG=null;
+    for(const g in meshes){ const m=meshes[g]; if(!m.visible) continue; if(g==="shell" && !atlas) continue; const b=built[g], I=b.geo.index.array, n=b.pos.length/3;
+      const sp=new Float32Array(n*3); for(let i=0;i<n;i++){ skinV(b,i,qq); sp[i*3]=qq.x; sp[i*3+1]=qq.y; sp[i*3+2]=qq.z; }
+      const clip=m.material.clippingPlanes;
+      for(let t=0;t<I.length;t+=3){ const a=I[t]*3,bb=I[t+1]*3,c2=I[t+2]*3;
+        A0.set(sp[a],sp[a+1],sp[a+2]); e1.set(sp[bb]-sp[a],sp[bb+1]-sp[a+1],sp[bb+2]-sp[a+2]); e2.set(sp[c2]-sp[a],sp[c2+1]-sp[a+1],sp[c2+2]-sp[a+2]);
+        pq.crossVectors(rd,e2); const det=e1.dot(pq); if(Math.abs(det)<1e-12) continue; const inv=1/det; tq.subVectors(ro,A0); const u=tq.dot(pq)*inv; if(u<0||u>1) continue;
+        qq.crossVectors(tq,e1); const v=rd.dot(qq)*inv; if(v<0||u+v>1) continue; const tt=e2.dot(qq)*inv; if(tt<=0||tt>=tBest) continue;
+        if(clip){ B0.copy(ro).addScaledVector(rd,tt); if(clip.some(pl=>pl.distanceToPoint(B0)<0)) continue; }
+        tBest=tt; hitPart=b.pid[I[t]]; hitG=g; } }
+    if(hitPart<0) return null; return { pi:hitPart, en:PARTS[hitPart].en, g:hitG, lab:PARTS[hitPart].lab };
+  }
+  let hl=null;
+  function highlight(pi){
+    if(hl){ const b=built[hl.g], ca=b.geo.attributes.color; ca.array.set(b.col0); ca.needsUpdate=true; hl=null; }
+    if(pi==null || pi<0) return; const g=PARTS[pi].g, b=built[g], ca=b.geo.attributes.color, a=ca.array;
+    for(let i=0;i<b.pid.length;i++) if(b.pid[i]===pi){ a[i*3]=a[i*3]*0.35+0.13; a[i*3+1]=a[i*3+1]*0.35+0.55; a[i*3+2]=a[i*3+2]*0.35+0.65; }
+    ca.needsUpdate=true; hl={ g, pi };
+  }
   function defaultPose(){ return restPose(J); }
   prog(1);
   const api={ resize, update, render, labels, defaultPose, pointerDown, pointerMove, pointerUp, wheel, resetView, setFocus, setSpin, scene, camera, ocam, root, renderer, bones, real:true, onSlice:null,
-    cutInfo:()=>cutInfo, isMri:()=>mriActive, caps, stencilMs, cutPlane,
+    cutInfo:()=>cutInfo, isMri:()=>mriActive, caps, stencilMs, cutPlane, pick, highlight, setActivation, MG:MG.map(x=>x[0]), parts:PARTS,
     normalsOk:()=>Object.values(built).every(b=>{ const a=b.geo.attributes.normal.array; let z=0; for(let i=0;i<a.length;i+=3) if(a[i]===0&&a[i+1]===0&&a[i+2]===0) z++; return z<a.length/3*0.01; }),
     stats:()=>{ let v=0,t=0; for(const n in built){ v+=built[n].geo.attributes.position.count; t+=built[n].geo.index.count/3; } return {v,t,groups:Object.keys(built),labels:anch.length}; } };
   return api;
@@ -2008,6 +2174,162 @@ G.createFaceSkin = function(){
 })(typeof window!=="undefined"?window:globalThis);
 
 </script>
+<script>
+(function(G){
+"use strict";
+/* Anatomy cards. Each entry: [regex on the BodyParts3D English name, system, Italian [name, function, typical data, vessels & nerves, common conditions], English [...]].
+   Values are typical adult figures from standard anatomy references; individual people vary. First match wins, so specific entries come first. */
+const I=[
+ /* ---- brain ---- */
+ [/thalamus/,"ner",["Talamo","Stazione di smistamento: quasi tutte le informazioni sensoriali (tranne l’olfatto) passano di qui verso la corteccia.","Circa 3 cm per lato, una coppia al centro del cervello.","Arterie cerebrali posteriori.","Ictus talamico, dolore centrale."],
+  ["Thalamus","Relay station: almost all sensory information (except smell) passes through here on its way to the cortex.","About 3 cm on each side, a pair at the centre of the brain.","Posterior cerebral arteries.","Thalamic stroke, central pain."]],
+ [/caudate|putamen|globus pallidus|lentiform|striatum|accumbens/,"ner",["Nuclei della base","Regolano l’avvio e la fluidità dei movimenti, l’apprendimento delle abitudini e la motivazione.","Gruppi di sostanza grigia in profondità negli emisferi.","Arterie lenticolo-striate (dalla cerebrale media).","Parkinson, corea di Huntington."],
+  ["Basal ganglia","Control the start and smoothness of movement, habit learning and motivation.","Clusters of grey matter deep in each hemisphere.","Lenticulostriate arteries (from the middle cerebral).","Parkinson’s disease, Huntington’s disease."]],
+ [/hippocamp|dentate gyrus|fimbria/,"ner",["Ippocampo","Forma i nuovi ricordi e aiuta l’orientamento nello spazio.","Struttura curva di circa 4–5 cm nel lobo temporale, una per lato.","Arterie cerebrali posteriori e corioidea anteriore.","Alzheimer (tra le prime zone colpite), epilessia del lobo temporale."],
+  ["Hippocampus","Forms new memories and helps spatial navigation.","Curved structure about 4–5 cm long in each temporal lobe.","Posterior cerebral and anterior choroidal arteries.","Alzheimer’s disease (affected early), temporal lobe epilepsy."]],
+ [/amygdala/,"ner",["Amigdala","Elabora le emozioni, soprattutto paura e reazioni di allarme.","Circa 1,5 cm, a forma di mandorla, nel lobo temporale.","Arteria corioidea anteriore.","Ansia, disturbo post-traumatico."],
+  ["Amygdala","Processes emotions, especially fear and alarm responses.","About 1.5 cm, almond-shaped, in the temporal lobe.","Anterior choroidal artery.","Anxiety disorders, PTSD."]],
+ [/ventricle|choroid plexus|cerebral aqueduct/,"ner",["Ventricoli cerebrali","Cavità piene di liquido cerebrospinale che ammortizza e nutre il cervello.","Circa 150 mL di liquor in tutto; se ne producono circa 500 mL al giorno.","Plessi corioidei (producono il liquor).","Idrocefalo."],
+  ["Brain ventricles","Cavities filled with cerebrospinal fluid that cushions and nourishes the brain.","About 150 mL of fluid in total; about 500 mL is produced each day.","Choroid plexuses (make the fluid).","Hydrocephalus."]],
+ [/corpus callosum/,"ner",["Corpo calloso","Il ponte che collega i due emisferi.","Circa 200 milioni di fibre nervose, lungo circa 10 cm.","Arterie pericallosali.","Agenesia del corpo calloso, sclerosi multipla."],
+  ["Corpus callosum","The bridge that connects the two hemispheres.","About 200 million nerve fibres, about 10 cm long.","Pericallosal arteries.","Agenesis of the corpus callosum, multiple sclerosis."]],
+ [/white matter/,"ner",["Sostanza bianca","Fasci di fibre nervose rivestite di mielina che collegano le aree del cervello.","Circa il 40–50% del volume del cervello adulto.","Rami profondi delle arterie cerebrali.","Sclerosi multipla, lesioni da piccoli vasi."],
+  ["White matter","Bundles of myelin-coated nerve fibres connecting brain areas.","About 40–50% of adult brain volume.","Deep branches of the cerebral arteries.","Multiple sclerosis, small-vessel disease."]],
+ [/cerebell|vermis/,"ner",["Cervelletto","Coordina i movimenti, l’equilibrio e la precisione dei gesti.","Circa il 10% del volume del cervello ma più della metà dei suoi neuroni.","Arterie cerebellari superiori e inferiori.","Atassia, vertigini da ictus cerebellare."],
+  ["Cerebellum","Coordinates movement, balance and precision.","About 10% of brain volume but more than half of its neurons.","Superior and inferior cerebellar arteries.","Ataxia, vertigo from cerebellar stroke."]],
+ [/pons|medulla|midbrain|peduncle|colliculus|brainstem|tegmentum/,"ner",["Tronco encefalico","Controlla respiro, battito cardiaco, vigilanza; da qui escono quasi tutti i nervi cranici.","Lungo circa 7–8 cm: mesencefalo, ponte, bulbo.","Arteria basilare e vertebrali.","Ictus del tronco, sindrome locked-in."],
+  ["Brainstem","Controls breathing, heart rate and alertness; most cranial nerves leave from here.","About 7–8 cm long: midbrain, pons, medulla.","Basilar and vertebral arteries.","Brainstem stroke, locked-in syndrome."]],
+ [/frontal (gyrus|lobe|pole)|precentral|orbital gyr|gyrus rectus|frontal operculum/,"ner",["Lobo frontale","Pianificazione, decisioni, autocontrollo, movimento volontario; a sinistra di solito anche la produzione del linguaggio (area di Broca).","Il lobo più grande, circa un terzo della corteccia.","Arterie cerebrali anteriore e media.","Traumi cranici, demenza frontotemporale, ictus."],
+  ["Frontal lobe","Planning, decisions, self-control and voluntary movement; on the left, usually speech production (Broca’s area).","The largest lobe, about a third of the cortex.","Anterior and middle cerebral arteries.","Head injury, frontotemporal dementia, stroke."]],
+ [/parietal|postcentral|supramarginal|angular gyrus|precuneus/,"ner",["Lobo parietale","Tatto, senso della posizione del corpo, orientamento nello spazio e calcolo.","Dietro il solco centrale, sotto il vertice del cranio.","Arterie cerebrali media e anteriore.","Neglect spaziale dopo ictus."],
+  ["Parietal lobe","Touch, body position sense, spatial orientation and calculation.","Behind the central sulcus, under the top of the skull.","Middle and anterior cerebral arteries.","Spatial neglect after stroke."]],
+ [/temporal (gyrus|lobe|pole)|transverse temporal|fusiform|parahippocampal/,"ner",["Lobo temporale","Udito, memoria, riconoscimento dei volti; a sinistra di solito la comprensione del linguaggio (area di Wernicke).","Ai lati del cervello, dietro le tempie.","Arteria cerebrale media.","Epilessia temporale, afasia."],
+  ["Temporal lobe","Hearing, memory and face recognition; on the left, usually language comprehension (Wernicke’s area).","On each side of the brain, behind the temples.","Middle cerebral artery.","Temporal lobe epilepsy, aphasia."]],
+ [/occipital (gyr|lobe|pole)|cuneus|lingual gyrus|calcarine/,"ner",["Lobo occipitale","Elabora la vista: forme, colori, movimento.","Nella parte posteriore del cervello.","Arteria cerebrale posteriore.","Cecità corticale, emianopsia dopo ictus."],
+  ["Occipital lobe","Processes vision: shape, colour and motion.","At the back of the brain.","Posterior cerebral artery.","Cortical blindness, hemianopia after stroke."]],
+ [/insula/,"ner",["Insula","Consapevolezza delle sensazioni del corpo, gusto, emozioni.","Nascosta in profondità nel solco laterale.","Arteria cerebrale media.","Ictus dell’arteria cerebrale media."],["Insula","Awareness of body sensations, taste and emotions.","Hidden deep in the lateral sulcus.","Middle cerebral artery.","Middle cerebral artery stroke."]],
+ [/gyrus|gyri|lobule|cerebral cortex/,"ner",["Corteccia cerebrale","Lo strato esterno del cervello: pensiero, linguaggio, percezione, movimento.","Spessa 2–4 mm; il cervello intero pesa circa 1,3–1,4 kg con circa 86 miliardi di neuroni.","Arterie cerebrali anteriore, media e posteriore.","Ictus, demenze, epilessia."],
+  ["Cerebral cortex","The outer layer of the brain: thought, language, perception, movement.","2–4 mm thick; the whole brain weighs about 1.3–1.4 kg with about 86 billion neurons.","Anterior, middle and posterior cerebral arteries.","Stroke, dementia, epilepsy."]],
+ [/pituitary|hypophysis/,"end",["Ipofisi","La “ghiandola maestra”: regola tiroide, surreni, crescita e riproduzione.","Circa 1 cm, pesa meno di 1 g.","Arterie ipofisarie.","Adenomi ipofisari."],["Pituitary gland","The “master gland”: regulates thyroid, adrenals, growth and reproduction.","About 1 cm, weighs under 1 g.","Hypophyseal arteries.","Pituitary adenomas."]],
+ [/eyeball|optic nerve/,"ner",["Occhio","Trasforma la luce in segnali nervosi per la vista.","Diametro circa 24 mm, peso circa 7,5 g.","Arteria oftalmica; nervo ottico (II).","Miopia, cataratta, glaucoma, degenerazione maculare."],["Eye","Turns light into nerve signals for vision.","About 24 mm across, about 7.5 g.","Ophthalmic artery; optic nerve (II).","Myopia, cataract, glaucoma, macular degeneration."]],
+ /* ---- heart & vessels ---- */
+ [/coronary/,"car",["Arterie coronarie","Portano sangue ossigenato al muscolo del cuore.","Diametro di 3–4 mm all’origine; destra e sinistra (discendente anteriore e circonflessa).","Nascono dall’aorta subito sopra la valvola aortica.","Aterosclerosi, angina, infarto."],["Coronary arteries","Carry oxygen-rich blood to the heart muscle.","3–4 mm wide at the origin; right and left (anterior descending and circumflex).","Arise from the aorta just above the aortic valve.","Atherosclerosis, angina, heart attack."]],
+ [/wall of heart|ventricle of heart|atrium|valve|papillary|heart/,"car",["Cuore","Pompa il sangue in due circuiti: ai polmoni e a tutto il corpo.","Peso 250–350 g, grande circa come un pugno; a riposo 60–100 battiti al minuto e circa 5 litri di sangue al minuto.","Arterie coronarie; nervi vago e simpatici.","Infarto, aritmie (es. fibrillazione atriale), valvulopatie, scompenso."],
+  ["Heart","Pumps blood around two circuits: to the lungs and to the whole body.","Weighs 250–350 g, about the size of a fist; at rest 60–100 beats per minute and about 5 litres of blood per minute.","Coronary arteries; vagus and sympathetic nerves.","Heart attack, arrhythmias (e.g. atrial fibrillation), valve disease, heart failure."]],
+ [/aorta|aortic/,"car",["Aorta","L’arteria principale: porta il sangue dal cuore a tutto il corpo.","Diametro di circa 2,5–3,5 cm all’origine, lunga circa 30–40 cm fino al bacino.","Dà origine a tutte le grandi arterie del corpo.","Aneurisma, dissezione, aterosclerosi."],["Aorta","The main artery: carries blood from the heart to the whole body.","About 2.5–3.5 cm wide at its root, about 30–40 cm long down to the pelvis.","Gives rise to all the body’s large arteries.","Aneurysm, dissection, atherosclerosis."]],
+ [/vena cava/,"car",["Vena cava","Riporta il sangue povero di ossigeno all’atrio destro: superiore dalla parte alta del corpo, inferiore da quella bassa.","Diametro circa 2 cm.","Raccoglie le grandi vene del corpo.","Trombosi, sindrome della vena cava superiore."],["Vena cava","Returns oxygen-poor blood to the right atrium: superior from the upper body, inferior from the lower body.","About 2 cm wide.","Collects the body’s large veins.","Thrombosis, superior vena cava syndrome."]],
+ [/pulmonary (artery|trunk)/,"car",["Arteria polmonare","Porta il sangue povero di ossigeno dal cuore ai polmoni.","Tronco di circa 3 cm di diametro.","Dal ventricolo destro.","Embolia polmonare, ipertensione polmonare."],["Pulmonary artery","Carries oxygen-poor blood from the heart to the lungs.","Trunk about 3 cm wide.","From the right ventricle.","Pulmonary embolism, pulmonary hypertension."]],
+ [/vein/,"car",["Vena","Riporta il sangue al cuore; molte vene degli arti hanno valvole che impediscono il reflusso.","Parete sottile, pressione bassa.","—","Trombosi venosa, varici."],["Vein","Carries blood back to the heart; many limb veins have valves that stop backflow.","Thin wall, low pressure.","—","Venous thrombosis, varicose veins."]],
+ [/artery|arterial|trunk/,"car",["Arteria","Porta il sangue ricco di ossigeno dal cuore agli organi.","Parete spessa ed elastica, pressione alta.","—","Aterosclerosi, aneurismi."],["Artery","Carries oxygen-rich blood from the heart to the organs.","Thick, elastic wall, high pressure.","—","Atherosclerosis, aneurysms."]],
+ /* ---- respiratory ---- */
+ [/lobe of .*lung|lung/,"res",["Polmone","Scambia i gas: l’ossigeno entra nel sangue e l’anidride carbonica esce.","Destro con 3 lobi, sinistro con 2; circa 300–500 milioni di alveoli e circa 6 L di capacità totale nell’adulto.","Arterie e vene polmonari; nervo vago.","Polmonite, asma, BPCO, tumore del polmone."],["Lung","Exchanges gases: oxygen enters the blood and carbon dioxide leaves it.","Right has 3 lobes, left 2; about 300–500 million alveoli and about 6 L total capacity in adults.","Pulmonary arteries and veins; vagus nerve.","Pneumonia, asthma, COPD, lung cancer."]],
+ [/trachea/,"res",["Trachea","Il condotto che porta l’aria dalla laringe ai bronchi.","Lunga 10–12 cm, larga circa 2 cm, con 16–20 anelli di cartilagine a C.","Arterie tiroidee inferiori; nervo vago.","Tracheite, stenosi."],["Trachea","The airway that carries air from the larynx to the bronchi.","10–12 cm long, about 2 cm wide, with 16–20 C-shaped cartilage rings.","Inferior thyroid arteries; vagus nerve.","Tracheitis, stenosis."]],
+ [/bronch/,"res",["Bronchi","Si ramificano dentro i polmoni per distribuire l’aria fino agli alveoli.","Circa 23 livelli di ramificazione.","Arterie bronchiali.","Bronchite, asma."],["Bronchi","Branch inside the lungs to deliver air to the alveoli.","About 23 levels of branching.","Bronchial arteries.","Bronchitis, asthma."]],
+ [/thyroid cartilage|cricoid|larynx|epiglott|arytenoid/,"res",["Laringe","Contiene le corde vocali; protegge le vie aeree quando si deglutisce. La cartilagine tiroidea forma il “pomo d’Adamo”.","Lunga circa 4–5 cm.","Arterie laringee; nervi laringei (rami del vago).","Laringite, noduli alle corde vocali."],["Larynx","Holds the vocal cords and protects the airway when swallowing. The thyroid cartilage forms the “Adam’s apple”.","About 4–5 cm long.","Laryngeal arteries; laryngeal nerves (branches of the vagus).","Laryngitis, vocal cord nodules."]],
+ [/nasal cartilage|nose/,"res",["Cartilagini del naso","Danno forma alla punta e alle ali del naso.","Cartilagine flessibile.","Arteria facciale.","Deviazione del setto."],["Nasal cartilages","Shape the tip and wings of the nose.","Flexible cartilage.","Facial artery.","Deviated septum."]],
+ /* ---- digestive ---- */
+ [/gallbladder|cystic duct|bile duct/,"dig",["Cistifellea","Immagazzina e concentra la bile prodotta dal fegato.","Contiene circa 30–50 mL di bile.","Arteria cistica.","Calcoli biliari, colecistite."],["Gallbladder","Stores and concentrates the bile made by the liver.","Holds about 30–50 mL of bile.","Cystic artery.","Gallstones, cholecystitis."]],
+ [/liver|hepatic/,"dig",["Fegato","L’organo interno più grande: produce la bile, regola gli zuccheri, produce proteine, elimina sostanze tossiche.","Pesa circa 1,4–1,6 kg; riceve circa il 75% del sangue dalla vena porta.","Arteria epatica e vena porta.","Fegato grasso, epatiti, cirrosi."],["Liver","The largest internal organ: makes bile, regulates sugar, makes proteins and removes toxins.","Weighs about 1.4–1.6 kg; gets about 75% of its blood from the portal vein.","Hepatic artery and portal vein.","Fatty liver, hepatitis, cirrhosis."]],
+ [/pancrea/,"dig",["Pancreas","Produce enzimi digestivi e gli ormoni insulina e glucagone.","Lungo circa 15 cm, pesa 70–100 g.","Arterie pancreaticoduodenali e splenica.","Diabete, pancreatite, tumore del pancreas."],["Pancreas","Makes digestive enzymes and the hormones insulin and glucagon.","About 15 cm long, weighs 70–100 g.","Pancreaticoduodenal and splenic arteries.","Diabetes, pancreatitis, pancreatic cancer."]],
+ [/esophag/,"dig",["Esofago","Porta il cibo dalla gola allo stomaco con onde di contrazione.","Lungo circa 25 cm.","Rami dell’aorta e arterie gastriche; nervo vago.","Reflusso gastroesofageo, esofagite."],["Esophagus","Carries food from the throat to the stomach with waves of contraction.","About 25 cm long.","Aortic branches and gastric arteries; vagus nerve.","Reflux disease, esophagitis."]],
+ [/stomach|pylor|cardia/,"dig",["Stomaco","Mescola il cibo con acido ed enzimi e lo passa lentamente all’intestino.","Capacità di circa 1–1,5 L; il succo gastrico ha pH 1,5–3,5.","Arterie gastriche; nervo vago.","Gastrite, ulcera, reflusso."],["Stomach","Mixes food with acid and enzymes and passes it slowly to the intestine.","Holds about 1–1.5 L; gastric juice has a pH of 1.5–3.5.","Gastric arteries; vagus nerve.","Gastritis, ulcer, reflux."]],
+ [/duoden|jejun|ileum|small intestine/,"dig",["Intestino tenue","Dove si assorbe la maggior parte dei nutrienti: duodeno, digiuno, ileo.","Lungo circa 6–7 m (meno nell’intestino vivo); la superficie interna, con i villi, è molto ampia.","Arteria mesenterica superiore.","Celiachia, morbo di Crohn."],["Small intestine","Where most nutrients are absorbed: duodenum, jejunum, ileum.","About 6–7 m long (shorter in the living gut); villi give a very large inner surface.","Superior mesenteric artery.","Coeliac disease, Crohn’s disease."]],
+ [/colon|cecum|caecum|rectum|appendix|large intestine|anal|taenia/,"dig",["Intestino crasso","Assorbe acqua e sali e ospita gran parte del microbiota intestinale.","Lungo circa 1,5 m.","Arterie mesenteriche superiore e inferiore.","Colon irritabile, diverticoli, appendicite, tumore del colon-retto."],["Large intestine","Absorbs water and salts and hosts most of the gut microbiota.","About 1.5 m long.","Superior and inferior mesenteric arteries.","Irritable bowel, diverticula, appendicitis, colorectal cancer."]],
+ [/tooth|incisor|canine|molar/,"dig",["Dente","Taglia e macina il cibo; lo smalto è la sostanza più dura del corpo.","32 denti nell’adulto, 20 da latte.","Arterie alveolari; nervo trigemino.","Carie, parodontite."],["Tooth","Cuts and grinds food; enamel is the hardest substance in the body.","32 adult teeth, 20 baby teeth.","Alveolar arteries; trigeminal nerve.","Tooth decay, gum disease."]],
+ [/tongue|pharyn|salivary|parotid|submandibular gland|palate|labial part of mouth|lip/,"dig",["Bocca e faringe","Masticazione, deglutizione, gusto e parola.","—","Arterie linguale e facciale.","Faringite, calcoli salivari."],["Mouth and pharynx","Chewing, swallowing, taste and speech.","—","Lingual and facial arteries.","Pharyngitis, salivary stones."]],
+ /* ---- other organs ---- */
+ [/spleen/,"lin",["Milza","Filtra il sangue, elimina i globuli rossi vecchi e aiuta le difese immunitarie.","Circa 12 cm, pesa circa 150 g.","Arteria splenica.","Splenomegalia, rottura nei traumi."],["Spleen","Filters blood, removes old red cells and supports immunity.","About 12 cm, weighs about 150 g.","Splenic artery.","Enlarged spleen, rupture in trauma."]],
+ [/thymus/,"lin",["Timo","Fa maturare i linfociti T, importanti per le difese immunitarie.","Grande nell’infanzia, si riduce dopo la pubertà.","Arterie toraciche interne.","Timoma, miastenia."],["Thymus","Matures T lymphocytes, important for immunity.","Large in childhood, shrinks after puberty.","Internal thoracic arteries.","Thymoma, myasthenia gravis."]],
+ [/adrenal|suprarenal/,"end",["Ghiandola surrenale","Produce cortisolo, aldosterone e adrenalina.","Pesa circa 4–5 g, sopra ogni rene.","Arterie surrenali.","Morbo di Addison, sindrome di Cushing."],["Adrenal gland","Makes cortisol, aldosterone and adrenaline.","Weighs about 4–5 g, on top of each kidney.","Adrenal arteries.","Addison’s disease, Cushing’s syndrome."]],
+ [/thyroid gland/,"end",["Tiroide","Produce gli ormoni che regolano il metabolismo.","Pesa circa 15–25 g.","Arterie tiroidee.","Ipotiroidismo, ipertiroidismo, noduli."],["Thyroid gland","Makes the hormones that set the metabolic rate.","Weighs about 15–25 g.","Thyroid arteries.","Hypothyroidism, hyperthyroidism, nodules."]],
+ [/kidney|renal/,"uri",["Rene","Filtra il sangue, produce l’urina e regola pressione e sali.","Lungo circa 11–12 cm, pesa circa 150 g; filtra circa 180 L di plasma al giorno e produce 1–2 L di urina.","Arteria e vena renale.","Calcoli renali, insufficienza renale, infezioni."],["Kidney","Filters the blood, makes urine and regulates blood pressure and salts.","About 11–12 cm long, about 150 g; filters about 180 L of plasma a day into 1–2 L of urine.","Renal artery and vein.","Kidney stones, kidney failure, infections."]],
+ [/ureter/,"uri",["Uretere","Porta l’urina dal rene alla vescica.","Lungo 25–30 cm, largo pochi millimetri.","Rami delle arterie renali e iliache.","Coliche da calcoli."],["Ureter","Carries urine from the kidney to the bladder.","25–30 cm long, a few millimetres wide.","Branches of the renal and iliac arteries.","Colic from stones."]],
+ [/bladder|urethra/,"uri",["Vescica","Raccoglie l’urina fino allo svuotamento.","Capacità di circa 400–600 mL; lo stimolo arriva di solito sopra i 150–300 mL.","Arterie vescicali.","Cistite, incontinenza."],["Bladder","Stores urine until it is emptied.","Holds about 400–600 mL; the urge usually starts above 150–300 mL.","Vesical arteries.","Cystitis, incontinence."]],
+ [/^skin$/,"teg",["Pelle","Protegge dal mondo esterno, regola la temperatura, percepisce tatto e dolore.","L’organo più esteso: circa 1,5–2 m², spessore 0,5–4 mm.","Rete di piccoli vasi del derma.","Acne, dermatiti, tumori della pelle."],["Skin","Protects against the outside world, regulates temperature, senses touch and pain.","The largest organ: about 1.5–2 m², 0.5–4 mm thick.","Network of small dermal vessels.","Acne, dermatitis, skin cancers."]],
+ /* ---- muscles ---- */
+ [/diaphragm/,"mus",["Diaframma","Il principale muscolo del respiro: abbassandosi fa entrare l’aria nei polmoni.","Cupola che separa torace e addome.","Nervo frenico (C3–C5).","Singhiozzo, ernia iatale."],["Diaphragm","The main breathing muscle: as it moves down, air flows into the lungs.","Dome separating chest and abdomen.","Phrenic nerve (C3–C5).","Hiccups, hiatal hernia."]],
+ [/intercostal/,"mus",["Muscoli intercostali","Tra le costole: aiutano ad alzare e abbassare la gabbia toracica nel respiro.","Tre strati in ogni spazio intercostale.","Nervi intercostali.","Strappi da tosse o sforzo."],["Intercostal muscles","Between the ribs: help raise and lower the rib cage when breathing.","Three layers in each rib space.","Intercostal nerves.","Strains from coughing or effort."]],
+ [/deltoid/,"mus",["Deltoide","Solleva il braccio di lato, in avanti e indietro; dà la forma tonda alla spalla.","Tre fasci: anteriore, medio, posteriore.","Nervo ascellare (C5–C6).","Lesioni del nervo ascellare, sovraccarico."],["Deltoid","Lifts the arm sideways, forwards and backwards; gives the shoulder its round shape.","Three parts: front, middle, back.","Axillary nerve (C5–C6).","Axillary nerve injury, overuse."]],
+ [/supraspinatus|infraspinatus|teres minor|subscapularis/,"mus",["Cuffia dei rotatori","Tiene la testa dell’omero centrata nella spalla e la ruota.","Quattro muscoli attorno alla scapola.","Nervi soprascapolare, ascellare e sottoscapolari.","Tendinite, rottura della cuffia."],["Rotator cuff","Keeps the head of the humerus centred in the shoulder and rotates it.","Four muscles around the shoulder blade.","Suprascapular, axillary and subscapular nerves.","Tendinitis, rotator cuff tear."]],
+ [/pectoralis major/,"mus",["Grande pettorale","Porta il braccio verso il petto e in avanti, e lo ruota all’interno (spinte, abbracci).","Muscolo a ventaglio del petto.","Nervi pettorali mediale e laterale.","Strappi nella panca piana."],["Pectoralis major","Brings the arm across the chest and forward and rotates it inward (pushing, hugging).","Fan-shaped chest muscle.","Medial and lateral pectoral nerves.","Tears during bench press."]],
+ [/pectoralis minor/,"mus",["Piccolo pettorale","Abbassa e porta in avanti la scapola.","Sotto il grande pettorale.","Nervo pettorale mediale.","Spalle in avanti, compressioni nervose."],["Pectoralis minor","Pulls the shoulder blade down and forward.","Under the pectoralis major.","Medial pectoral nerve.","Rounded shoulders, nerve compression."]],
+ [/biceps brachii/,"mus",["Bicipite brachiale","Piega il gomito e gira il palmo verso l’alto (supinazione).","Due capi: lungo e breve.","Nervo muscolocutaneo (C5–C6).","Tendinite, rottura del tendine."],["Biceps brachii","Bends the elbow and turns the palm up (supination).","Two heads: long and short.","Musculocutaneous nerve (C5–C6).","Tendinitis, tendon rupture."]],
+ [/brachialis|coracobrachialis/,"mus",["Brachiale","Il vero motore della flessione del gomito, sotto il bicipite.","—","Nervo muscolocutaneo.","Sovraccarico."],["Brachialis","The main elbow flexor, lying under the biceps.","—","Musculocutaneous nerve.","Overuse."]],
+ [/triceps|anconeus/,"mus",["Tricipite brachiale","Distende il gomito (spinte, flessioni).","Tre capi: lungo, laterale, mediale.","Nervo radiale.","Tendinite."],["Triceps brachii","Straightens the elbow (pushing, push-ups).","Three heads: long, lateral, medial.","Radial nerve.","Tendinitis."]],
+ [/brachioradialis/,"mus",["Brachioradiale","Piega il gomito con la mano a metà tra palmo su e giù (come reggere un bicchiere).","Lungo l’avambraccio, lato del pollice.","Nervo radiale.","Sovraccarico."],["Brachioradialis","Bends the elbow with the hand half-turned (like holding a glass).","Along the thumb side of the forearm.","Radial nerve.","Overuse."]],
+ [/flexor (carpi|digitorum|pollicis)|palmaris|pronator/,"mus",["Flessori dell’avambraccio","Piegano polso e dita e chiudono la mano (presa).","Gruppo sul lato del palmo.","Nervi mediano e ulnare.","Epicondilite mediale (gomito del golfista), tunnel carpale."],["Forearm flexors","Bend the wrist and fingers and close the hand (grip).","Group on the palm side.","Median and ulnar nerves.","Medial epicondylitis (golfer’s elbow), carpal tunnel."]],
+ [/extensor (carpi|digitorum|pollicis|indicis)|supinator|abductor pollicis longus/,"mus",["Estensori dell’avambraccio","Distendono polso e dita.","Gruppo sul dorso dell’avambraccio.","Nervo radiale.","Epicondilite laterale (gomito del tennista)."],["Forearm extensors","Straighten the wrist and fingers.","Group on the back of the forearm.","Radial nerve.","Lateral epicondylitis (tennis elbow)."]],
+ [/rectus abdominis|linea alba|rectus sheath/,"mus",["Retto dell’addome","Piega il tronco in avanti e sostiene la parete addominale; è la “tartaruga”.","Diviso da 3–4 inserzioni tendinee; linea alba al centro.","Nervi intercostali T7–T12.","Diastasi dei retti, ernie."],["Rectus abdominis","Bends the trunk forward and supports the abdominal wall; the “six-pack”.","Divided by 3–4 tendinous bands; linea alba in the middle.","Intercostal nerves T7–T12.","Diastasis recti, hernias."]],
+ [/oblique|transversus abdominis/,"mus",["Obliqui e trasverso","Ruotano e flettono il tronco di lato, stabilizzano il busto.","Tre strati della parete addominale.","Nervi intercostali e ileoipogastrico.","Strappi, ernie."],["Obliques and transversus","Twist and side-bend the trunk and stabilise the core.","Three layers of the abdominal wall.","Intercostal and iliohypogastric nerves.","Strains, hernias."]],
+ [/serratus anterior/,"mus",["Dentato anteriore","Porta la scapola in avanti e la tiene contro il torace (pugno, spinta).","Digitazioni a sega sulle costole.","Nervo toracico lungo.","Scapola alata."],["Serratus anterior","Pulls the shoulder blade forward and holds it against the chest (punching, pushing).","Saw-tooth slips on the ribs.","Long thoracic nerve.","Winged scapula."]],
+ [/latissimus|teres major/,"mus",["Gran dorsale","Porta il braccio in basso e indietro (trazioni, nuoto, remo).","Il muscolo più largo della schiena.","Nervo toracodorsale.","Strappi negli sport di trazione."],["Latissimus dorsi","Pulls the arm down and back (pull-ups, swimming, rowing).","The broadest back muscle.","Thoracodorsal nerve.","Strains in pulling sports."]],
+ [/trapezius/,"mus",["Trapezio","Muove e stabilizza la scapola, solleva le spalle, estende il collo.","Tre parti: superiore, media, inferiore.","Nervo accessorio (XI).","Tensione cervicale, cefalea muscolo-tensiva."],["Trapezius","Moves and stabilises the shoulder blade, shrugs the shoulders, extends the neck.","Three parts: upper, middle, lower.","Accessory nerve (XI).","Neck tension, tension headache."]],
+ [/rhomboid|levator scapulae/,"mus",["Romboidi ed elevatore della scapola","Avvicinano e sollevano la scapola.","Sotto il trapezio.","Nervo dorsale della scapola.","Dolore tra le scapole."],["Rhomboids and levator scapulae","Draw the shoulder blade in and up.","Under the trapezius.","Dorsal scapular nerve.","Pain between the shoulder blades."]],
+ [/sternocleidomastoid/,"mus",["Sternocleidomastoideo","Gira la testa dal lato opposto e la piega in avanti.","Dallo sterno e clavicola fino all’osso dietro l’orecchio.","Nervo accessorio (XI).","Torcicollo."],["Sternocleidomastoid","Turns the head to the opposite side and bends it forward.","From breastbone and collarbone to the bone behind the ear.","Accessory nerve (XI).","Wry neck (torticollis)."]],
+ [/scalen|longus (colli|capitis)|splenius|semispinalis capitis|sternothyroid|sternohyoid|omohyoid|thyrohyoid|digastric|mylohyoid|geniohyoid|platysma|stylohyoid|rectus capitis|obliquus capitis/,"mus",["Muscoli del collo","Muovono e sostengono testa e collo; gli scaleni aiutano il respiro profondo.","—","Nervi cervicali.","Cervicalgia."],["Neck muscles","Move and support head and neck; the scalenes help deep breathing.","—","Cervical nerves.","Neck pain."]],
+ [/iliocostalis|longissimus|spinalis|multifidus|erector/,"mus",["Erettori della colonna","Tengono dritta la schiena e la estendono.","Colonne muscolari ai lati della spina dorsale.","Rami posteriori dei nervi spinali.","Lombalgia, contratture."],["Erector spinae","Hold the back upright and extend it.","Muscle columns on each side of the spine.","Posterior branches of the spinal nerves.","Low back pain, spasms."]],
+ [/quadratus lumborum/,"mus",["Quadrato dei lombi","Inclina il tronco di lato e stabilizza il bacino.","—","Nervi T12–L4.","Lombalgia."],["Quadratus lumborum","Bends the trunk sideways and steadies the pelvis.","—","T12–L4 nerves.","Low back pain."]],
+ [/gluteus maximus/,"mus",["Grande gluteo","Estende l’anca: alzarsi dalla sedia, salire le scale, correre.","Il muscolo più voluminoso del corpo.","Nervo gluteo inferiore.","Debolezza, dolore gluteo."],["Gluteus maximus","Extends the hip: standing up, climbing stairs, running.","The bulkiest muscle in the body.","Inferior gluteal nerve.","Weakness, buttock pain."]],
+ [/gluteus (medius|minimus)|tensor fasciae/,"mus",["Medio e piccolo gluteo","Tengono il bacino orizzontale quando si sta su una gamba sola (camminata).","Sotto il grande gluteo.","Nervo gluteo superiore.","Andatura di Trendelenburg, tendinopatia."],["Gluteus medius and minimus","Keep the pelvis level when standing on one leg (walking).","Under the gluteus maximus.","Superior gluteal nerve.","Trendelenburg gait, tendinopathy."]],
+ [/piriformis|obturator|gemellus|quadratus femoris/,"mus",["Extrarotatori dell’anca","Ruotano la coscia verso l’esterno.","Piccoli muscoli profondi dietro l’anca.","Rami del plesso sacrale.","Sindrome del piriforme."],["Hip external rotators","Turn the thigh outwards.","Small deep muscles behind the hip.","Sacral plexus branches.","Piriformis syndrome."]],
+ [/iliacus|psoas/,"mus",["Ileopsoas","Il principale flessore dell’anca: porta la coscia in alto (camminare, salire).","Dalla colonna lombare e dal bacino al femore.","Nervo femorale e rami lombari.","Tendinite, contratture."],["Iliopsoas","The main hip flexor: lifts the thigh (walking, climbing).","From the lumbar spine and pelvis to the femur.","Femoral nerve and lumbar branches.","Tendinitis, tightness."]],
+ [/rectus femoris|vastus|quadriceps/,"mus",["Quadricipite","Distende il ginocchio: alzarsi, salire, calciare, frenare in discesa.","Quattro capi: retto femorale e tre vasti.","Nervo femorale (L2–L4).","Contratture, tendinopatia rotulea."],["Quadriceps","Straightens the knee: standing up, climbing, kicking, braking downhill.","Four heads: rectus femoris and three vasti.","Femoral nerve (L2–L4).","Strains, patellar tendinopathy."]],
+ [/biceps femoris|semitendinosus|semimembranosus/,"mus",["Ischiocrurali","Piegano il ginocchio ed estendono l’anca.","Tre muscoli dietro la coscia.","Nervo sciatico.","Strappi (frequenti negli scatti)."],["Hamstrings","Bend the knee and extend the hip.","Three muscles at the back of the thigh.","Sciatic nerve.","Strains (common in sprinting)."]],
+ [/adductor|gracilis|pectineus/,"mus",["Adduttori","Avvicinano la coscia all’altra gamba e stabilizzano l’anca.","Gruppo all’interno della coscia.","Nervo otturatorio.","Pubalgia, stiramenti all’inguine."],["Adductors","Bring the thigh toward the other leg and steady the hip.","Group on the inner thigh.","Obturator nerve.","Groin strain, athletic pubalgia."]],
+ [/sartorius/,"mus",["Sartorio","Flette e ruota l’anca e piega il ginocchio (sedersi a gambe incrociate).","Il muscolo più lungo del corpo.","Nervo femorale.","Raramente leso."],["Sartorius","Flexes and rotates the hip and bends the knee (sitting cross-legged).","The longest muscle in the body.","Femoral nerve.","Rarely injured."]],
+ [/gastrocnemius|soleus|plantaris/,"mus",["Polpaccio (gastrocnemio e soleo)","Alza il tallone: camminare, saltare, stare in punta di piedi.","Si inserisce sul calcagno con il tendine d’Achille.","Nervo tibiale.","Crampi, strappi, tendinopatia achillea."],["Calf (gastrocnemius and soleus)","Lifts the heel: walking, jumping, standing on tiptoe.","Inserts on the heel bone through the Achilles tendon.","Tibial nerve.","Cramps, strains, Achilles tendinopathy."]],
+ [/calcaneal tendon|achilles/,"mus",["Tendine d’Achille","Collega il polpaccio al calcagno; il tendine più robusto del corpo.","Lungo circa 15 cm.","Nervo tibiale (muscoli).","Tendinopatia, rottura."],["Achilles tendon","Links the calf to the heel bone; the strongest tendon in the body.","About 15 cm long.","Tibial nerve (muscles).","Tendinopathy, rupture."]],
+ [/tibialis anterior|extensor (digitorum|hallucis) longus|fibularis tertius/,"mus",["Tibiale anteriore","Solleva la punta del piede ad ogni passo.","Davanti alla tibia.","Nervo peroneo profondo.","Piede cadente, periostite tibiale."],["Tibialis anterior","Lifts the front of the foot at every step.","In front of the shin.","Deep fibular nerve.","Foot drop, shin splints."]],
+ [/fibularis|peroneus/,"mus",["Peronei","Ruotano la pianta del piede verso l’esterno e proteggono dalle distorsioni.","Sul lato esterno della gamba.","Nervo peroneo superficiale.","Distorsioni di caviglia."],["Fibularis (peroneal) muscles","Turn the sole outwards and protect against ankle sprains.","On the outer side of the leg.","Superficial fibular nerve.","Ankle sprains."]],
+ [/masseter/,"mus",["Massetere","Chiude la mandibola: masticazione.","Tra i muscoli più potenti del corpo per forza rispetto alla dimensione.","Nervo trigemino (V3).","Bruxismo, disturbi dell’articolazione temporo-mandibolare."],["Masseter","Closes the jaw: chewing.","One of the strongest muscles for its size.","Trigeminal nerve (V3).","Teeth grinding, jaw joint disorders."]],
+ [/temporalis/,"mus",["Muscolo temporale","Chiude e tira indietro la mandibola.","A ventaglio sulla tempia.","Nervo trigemino (V3).","Cefalea muscolo-tensiva, bruxismo."],["Temporalis","Closes and retracts the jaw.","Fan-shaped over the temple.","Trigeminal nerve (V3).","Tension headache, teeth grinding."]],
+ [/frontalis|occipitofrontalis|epicranius/,"mus",["Muscolo frontale","Alza le sopracciglia e forma le rughe orizzontali della fronte.","Collegato alla galea aponeurotica.","Nervo facciale (VII).","Paralisi del facciale."],["Frontalis","Raises the eyebrows and makes horizontal forehead lines.","Joined to the galea aponeurotica.","Facial nerve (VII).","Facial nerve palsy."]],
+ [/orbicularis oculi/,"mus",["Orbicolare dell’occhio","Chiude le palpebre; con l’età forma le zampe di gallina.","Anello attorno all’occhio.","Nervo facciale (VII).","Blefarospasmo, paralisi del facciale."],["Orbicularis oculi","Closes the eyelids; with age it forms crow’s feet.","Ring around the eye.","Facial nerve (VII).","Blepharospasm, facial palsy."]],
+ [/orbicularis oris/,"mus",["Orbicolare della bocca","Chiude e arrotonda le labbra (bacio, fischio).","Anello attorno alla bocca.","Nervo facciale (VII).","Paralisi del facciale."],["Orbicularis oris","Closes and purses the lips (kissing, whistling).","Ring around the mouth.","Facial nerve (VII).","Facial palsy."]],
+ [/zygomaticus|risorius|levator labii|depressor|buccinator|mentalis|nasalis|procerus|corrugator/,"mus",["Muscoli mimici","Creano le espressioni del viso: sorriso, smorfie, aggrottare.","Piccoli muscoli inseriti nella pelle.","Nervo facciale (VII).","Paralisi del facciale."],["Facial expression muscles","Create facial expressions: smiling, grimacing, frowning.","Small muscles attached to the skin.","Facial nerve (VII).","Facial palsy."]],
+ [/rectus (superior|inferior|medialis|lateralis)|oblique of eyeball|superior oblique|inferior oblique|levator palpebrae/,"mus",["Muscoli dell’occhio","Muovono l’occhio e sollevano la palpebra.","Sei muscoli per occhio più l’elevatore della palpebra.","Nervi cranici III, IV, VI.","Strabismo, ptosi."],["Eye muscles","Move the eye and lift the eyelid.","Six muscles per eye plus the eyelid lifter.","Cranial nerves III, IV, VI.","Squint, drooping eyelid."]],
+ [/muscle|tendon|aponeurosis|fascia/,"mus",["Muscolo scheletrico","Muove le ossa contraendosi; produce anche calore.","Nel corpo ci sono più di 600 muscoli, circa il 40% del peso.","—","Strappi, crampi, contratture."],["Skeletal muscle","Moves the bones by contracting; also produces heat.","The body has more than 600 muscles, about 40% of body weight.","—","Strains, cramps, spasms."]],
+ /* ---- skeleton ---- */
+ [/mandible/,"esq",["Mandibola","L’unico osso mobile del cranio: masticazione e parola.","Si articola con il temporale (articolazione temporo-mandibolare).","Arteria alveolare inferiore; nervo trigemino.","Fratture, disturbi temporo-mandibolari."],["Mandible","The only movable skull bone: chewing and speech.","Hinges on the temporal bone (jaw joint).","Inferior alveolar artery; trigeminal nerve.","Fractures, jaw joint disorders."]],
+ [/frontal bone|parietal bone|occipital bone|temporal bone|sphenoid|ethmoid/,"esq",["Cranio","Protegge il cervello come una scatola rigida.","8 ossa del cranio e 14 della faccia, saldate da suture.","Arterie meningee.","Fratture, craniosinostosi nei neonati."],["Skull","Protects the brain like a rigid box.","8 cranial and 14 facial bones, joined by sutures.","Meningeal arteries.","Fractures, craniosynostosis in infants."]],
+ [/zygomatic|maxilla|nasal bone|lacrimal|palatine|vomer|nasal concha/,"esq",["Ossa della faccia","Formano zigomi, mascella, naso e orbite.","14 ossa facciali.","Arterie mascellare e facciale.","Fratture facciali, sinusite (seni mascellari)."],["Facial bones","Form the cheekbones, upper jaw, nose and eye sockets.","14 facial bones.","Maxillary and facial arteries.","Facial fractures, sinusitis (maxillary sinuses)."]],
+ [/hyoid/,"esq",["Osso ioide","Sostiene la lingua e la laringe; l’unico osso che non si articola con altre ossa.","A forma di U, nel collo.","—","Fratture rare."],["Hyoid bone","Supports the tongue and larynx; the only bone not jointed to another bone.","U-shaped, in the neck.","—","Rare fractures."]],
+ [/atlas|axis|cervical vertebra/,"esq",["Vertebre cervicali","Sostengono e muovono la testa; C1 (atlante) e C2 (epistrofeo) permettono di annuire e ruotare.","7 vertebre.","Arterie vertebrali; nervi cervicali.","Colpo di frusta, ernie cervicali, artrosi."],["Cervical vertebrae","Support and move the head; C1 (atlas) and C2 (axis) allow nodding and turning.","7 vertebrae.","Vertebral arteries; cervical nerves.","Whiplash, cervical disc herniation, arthritis."]],
+ [/thoracic vertebra/,"esq",["Vertebre toraciche","Sostengono il torace e si articolano con le costole.","12 vertebre.","Arterie intercostali; nervi toracici.","Cifosi, scoliosi, fratture da osteoporosi."],["Thoracic vertebrae","Support the chest and join the ribs.","12 vertebrae.","Intercostal arteries; thoracic nerves.","Kyphosis, scoliosis, osteoporotic fractures."]],
+ [/lumbar vertebra/,"esq",["Vertebre lombari","Portano gran parte del peso del corpo; sono le vertebre più grandi.","5 vertebre.","Arterie lombari; nervi lombari.","Lombalgia, ernia del disco (spesso L4–L5 o L5–S1)."],["Lumbar vertebrae","Carry most of the body’s weight; the largest vertebrae.","5 vertebrae.","Lumbar arteries; lumbar nerves.","Low back pain, disc herniation (often L4–L5 or L5–S1)."]],
+ [/intervertebral|disc/,"esq",["Disco intervertebrale","Cuscinetto tra le vertebre che assorbe gli urti.","Anello fibroso esterno e nucleo gelatinoso interno.","Nutrito per diffusione (quasi senza vasi).","Ernia del disco, degenerazione."],["Intervertebral disc","Shock-absorbing cushion between vertebrae.","Tough outer ring and jelly-like core.","Fed by diffusion (almost no vessels).","Disc herniation, degeneration."]],
+ [/sacrum|coccyx/,"esq",["Sacro e coccige","Collegano la colonna al bacino.","Sacro: 5 vertebre fuse; coccige: 3–5.","Arterie sacrali.","Coccigodinia, dolore sacroiliaco."],["Sacrum and coccyx","Connect the spine to the pelvis.","Sacrum: 5 fused vertebrae; coccyx: 3–5.","Sacral arteries.","Tailbone pain, sacroiliac pain."]],
+ [/costal cartilage/,"esq",["Cartilagine costale","Collega le costole allo sterno e rende elastica la gabbia toracica.","—","—","Costocondrite."],["Costal cartilage","Joins the ribs to the breastbone and makes the rib cage flexible.","—","—","Costochondritis."]],
+ [/rib/,"esq",["Costola","Protegge cuore e polmoni e si muove con il respiro.","12 paia: 7 vere, 3 false, 2 fluttuanti.","Arterie e nervi intercostali.","Fratture costali."],["Rib","Protects the heart and lungs and moves with breathing.","12 pairs: 7 true, 3 false, 2 floating.","Intercostal arteries and nerves.","Rib fractures."]],
+ [/sternum|manubrium|xiphoid/,"esq",["Sterno","Al centro del petto: unisce le costole e protegge il cuore.","Lungo circa 15–17 cm: manubrio, corpo, processo xifoideo.","Arterie toraciche interne.","Fratture da trauma."],["Sternum","In the middle of the chest: joins the ribs and shields the heart.","About 15–17 cm long: manubrium, body, xiphoid.","Internal thoracic arteries.","Fractures from trauma."]],
+ [/clavicle/,"esq",["Clavicola","Collega il braccio al tronco e tiene la spalla in posizione.","Lunga circa 15 cm, a forma di S.","Arteria succlavia passa sotto.","Una delle ossa che si fratturano più spesso."],["Clavicle","Links the arm to the trunk and holds the shoulder out.","About 15 cm long, S-shaped.","The subclavian artery passes beneath.","One of the most often broken bones."]],
+ [/scapula/,"esq",["Scapola","La base mobile della spalla, su cui si attaccano 17 muscoli.","Osso piatto triangolare sulla schiena.","Arterie soprascapolare e circonflessa.","Fratture rare, discinesia scapolare."],["Scapula","The mobile base of the shoulder, where 17 muscles attach.","Flat triangular bone on the back.","Suprascapular and circumflex arteries.","Rare fractures, scapular dyskinesis."]],
+ [/humerus/,"esq",["Omero","L’osso del braccio, dalla spalla al gomito.","Lungo circa 30–35 cm nell’adulto.","Arteria brachiale; il nervo radiale gira attorno all’osso.","Fratture del collo dell’omero negli anziani."],["Humerus","The upper arm bone, from shoulder to elbow.","About 30–35 cm long in adults.","Brachial artery; the radial nerve winds around the bone.","Fractures of the humeral neck in older people."]],
+ [/radius|ulna/,"esq",["Radio e ulna","Le due ossa dell’avambraccio; ruotando l’una sull’altra girano il palmo.","Lunghe circa 25 cm.","Arterie radiale e ulnare.","Frattura del polso (radio distale), tra le più comuni."],["Radius and ulna","The two forearm bones; rotating around each other they turn the palm.","About 25 cm long.","Radial and ulnar arteries.","Wrist fracture (distal radius), among the most common."]],
+ [/metacarpal|phalanx of .*(finger|thumb)|scaphoid|lunate|triquetr|pisiform|trapezium|trapezoid|capitate|hamate/,"esq",["Ossa della mano","Danno alla mano forza e precisione.","27 ossa: 8 del carpo, 5 metacarpi, 14 falangi.","Arcate palmari; nervi mediano, ulnare, radiale.","Frattura dello scafoide, tunnel carpale, artrosi."],["Hand bones","Give the hand strength and precision.","27 bones: 8 carpals, 5 metacarpals, 14 phalanges.","Palmar arches; median, ulnar and radial nerves.","Scaphoid fracture, carpal tunnel, arthritis."]],
+ [/hip bone|ilium|ischium|pubis|pubic/,"esq",["Osso dell’anca","Forma il bacino con il sacro: sostiene il tronco e protegge gli organi pelvici.","Tre ossa fuse: ileo, ischio, pube.","Arterie iliache.","Fratture del bacino, artrosi dell’anca."],["Hip bone","Forms the pelvis with the sacrum: supports the trunk and shields the pelvic organs.","Three fused bones: ilium, ischium, pubis.","Iliac arteries.","Pelvic fractures, hip arthritis."]],
+ [/femur/,"esq",["Femore","L’osso più lungo e robusto del corpo.","Circa un quarto dell’altezza (in media 45 cm).","Arteria femorale profonda.","Frattura del collo del femore negli anziani."],["Femur","The longest and strongest bone in the body.","About a quarter of body height (about 45 cm on average).","Deep femoral artery.","Hip (femoral neck) fracture in older people."]],
+ [/patella/,"esq",["Rotula","Protegge il ginocchio e aumenta la leva del quadricipite.","Il più grande osso sesamoide.","Rete arteriosa del ginocchio.","Dolore femoro-rotuleo, lussazione."],["Patella","Shields the knee and improves the quadriceps’ leverage.","The largest sesamoid bone.","Knee arterial network.","Patellofemoral pain, dislocation."]],
+ [/tibia/,"esq",["Tibia","Porta il peso del corpo dal ginocchio alla caviglia: lo “stinco”.","Lunga circa 36–40 cm.","Arterie tibiali.","Fratture, periostite (shin splints)."],["Tibia","Carries body weight from knee to ankle: the shin bone.","About 36–40 cm long.","Tibial arteries.","Fractures, shin splints."]],
+ [/fibula/,"esq",["Perone","Osso sottile della gamba: stabilizza la caviglia e porta poco peso.","Circa il 10–15% del carico della gamba.","Arteria peroniera.","Fratture della caviglia."],["Fibula","Slim leg bone: steadies the ankle and carries little weight.","About 10–15% of the leg’s load.","Fibular artery.","Ankle fractures."]],
+ [/talus|calcaneus|navicular|cuboid|cuneiform|metatarsal|phalanx of .*toe|sesamoid/,"esq",["Ossa del piede","Sostengono il peso e funzionano da leva e ammortizzatore nel cammino.","26 ossa per piede.","Arterie dorsale del piede e plantari.","Fascite plantare, alluce valgo, fratture da stress."],["Foot bones","Bear weight and act as lever and shock absorber when walking.","26 bones in each foot.","Dorsalis pedis and plantar arteries.","Plantar fasciitis, bunion, stress fractures."]],
+ [/bone|vertebra|cartilage/,"esq",["Osso","Sostiene il corpo, protegge gli organi, produce le cellule del sangue nel midollo.","Lo scheletro adulto ha 206 ossa.","—","Fratture, osteoporosi."],["Bone","Supports the body, protects organs and makes blood cells in the marrow.","The adult skeleton has 206 bones.","—","Fractures, osteoporosis."]]
+];
+const SYS={ ner:["Sistema nervoso","Nervous system"], car:["Apparato cardiovascolare","Cardiovascular system"], res:["Apparato respiratorio","Respiratory system"], dig:["Apparato digerente","Digestive system"],
+  lin:["Sistema linfatico","Lymphatic system"], end:["Sistema endocrino","Endocrine system"], uri:["Apparato urinario","Urinary system"], teg:["Pelle","Skin"], mus:["Apparato muscolare","Muscular system"], esq:["Scheletro","Skeleton"] };
+const FALLBACK={ muscles:"muscle", musFront:"muscle", skeleton:"bone", skull:"frontal bone", hands:"metacarpal", vessels:"artery", heart:"heart", brain:"gyrus", brainWM:"white matter", brainDeep:"thalamus", brainCSF:"ventricle", eyes:"eyeball", lungs:"lung", airway:"trachea", kidney:"kidney", shell:"skin" };
+G.anatomyInfo=function(en,lang,group){
+  const k=lang==="it"?2:3, li=lang==="it"?0:1, e0=(en||"").toLowerCase();
+  const tryRow=(e)=>I.find(row=>row[0].test(e));
+  let row=tryRow(e0), generic=false; if(!row && group && FALLBACK[group]){ row=tryRow(FALLBACK[group]); generic=true; }
+  const e=e0;
+  if(row){ const d=row[k]; const side=/\bleft\b/.test(e)?(li?"left side":"lato sinistro"):/\bright\b/.test(e)?(li?"right side":"lato destro"):"";
+    return { title:d[0], fn:d[1], data:d[2], vn:d[3], cond:d[4], sys:SYS[row[1]][li], part:en, side, generic }; }
+  return null;
+};
+})(typeof window!=="undefined"?window:globalThis);
+
+</script>
 <script type="module">
 import { FilesetResolver, PoseLandmarker, HandLandmarker, FaceLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 
@@ -2034,8 +2356,10 @@ const T = {
     loading:"Loading AI models…", looking:"Looking for a person…", tracking:"Tracking", faceOnly:"Face only",
     camErr:"Camera not available. Allow camera access for this site, then reload.", modelErr:"AI models didn’t load. Check your connection, then reload.",
     credit3d:"3D model: BodyParts3D © DBCLS (CC BY-SA 4.0), via Anatomía en capas", packMissing:"Realistic model not found: upload anatomia-3d.js next to index.html. Showing the simple model.",
+    theme:"Style", tHud:"Holographic", tClassic:"Classic", holo:"Hologram", hudTitle:"ANATOMICAL SCAN", hudLock:"TARGET LOCK", hudFace:"FACE LOCK",
+    cardFn:"Function", cardData:"Typical data", cardVN:"Vessels and nerves", cardCond:"Common conditions", cardGeneric:"General card for this type of tissue.", actTitle:"Active muscles", actNote:"Estimated from your movement, not an electrical measurement.", rightS:"right", leftS:"left",
     view3d:"3D view", section:"Layout", sFull:"Full", sAtlas:"Atlas", sCut:"Section", sMri:"MRI", plane:"Plane", pAx:"Axial", pCor:"Coronal", pSag:"Sagittal", slice:"Slice position", sliceHint:"MRI: drag up or down on the image to move through the slices, pinch to zoom. Use Focus to frame head, torso or body.", shell:"Skin silhouette", pose3d:"Pose", live:"Live", freeze:"Freeze", focus:"Focus", fBody:"Body", fTorso:"Torso", fHead:"Head", spin:"Auto-spin", on:"On", off:"Off", inset:"Camera inset",
-    hint3d:"Atlas = skin on the right half, muscles on the left, open chest showing ribs and organs (Solid look). Drag to rotate, pinch to zoom, double-tap to reset. “Freeze” keeps the last pose so you can walk around it.",
+    hint3d:"Tap any structure to open its card. With a live pose, working muscles glow orange. Atlas = skin on the right half, muscles on the left, open chest showing ribs and organs (Solid look). Drag to rotate, pinch to zoom, double-tap to reset. “Freeze” keeps the last pose so you can walk around it.",
     explore3d:"Explore in 3D (no camera)", load3d:"Loading 3D…", s3dLive:"3D · live pose", s3dFrozen:"3D · pose frozen", s3dDemo:"3D · sample pose", err3d:"3D view didn’t load. Check your connection." },
   it:{ title:"Lente Anatomica", subtitle:"Anatomia dal vivo", all:"Tutto", bones:"Ossa", muscles:"Muscoli", organs:"Organi", skinChip:"Pelle",
     reveal:"Mostra", lens:"Lente", whole:"Corpo intero", follow:"La lente segue", finger:"Dito", touch:"Tocco",
@@ -2050,8 +2374,10 @@ const T = {
     loading:"Caricamento modelli AI…", looking:"Cerco una persona…", tracking:"Tracciamento", faceOnly:"Solo viso",
     camErr:"Fotocamera non disponibile. Consenti l’accesso alla fotocamera per questo sito, poi ricarica.", modelErr:"I modelli AI non si sono caricati. Controlla la connessione, poi ricarica.",
     credit3d:"Modello 3D: BodyParts3D © DBCLS (CC BY-SA 4.0), tramite Anatomía en capas", packMissing:"Modello realistico non trovato: carica anatomia-3d.js accanto a index.html. Mostro il modello semplice.",
+    theme:"Stile grafico", tHud:"Olografico", tClassic:"Classico", holo:"Ologramma", hudTitle:"SCANSIONE ANATOMICA", hudLock:"BERSAGLIO AGGANCIATO", hudFace:"VISO AGGANCIATO",
+    cardFn:"Funzione", cardData:"Dati tipici", cardVN:"Vasi e nervi", cardCond:"Disturbi comuni", cardGeneric:"Scheda generale per questo tipo di tessuto.", actTitle:"Muscoli attivi", actNote:"Stima dal movimento, non una misura elettrica.", rightS:"dx", leftS:"sx",
     view3d:"Vista 3D", section:"Composizione", sFull:"Completa", sAtlas:"Tavola", sCut:"Sezione", sMri:"RM", plane:"Piano", pAx:"Assiale", pCor:"Coronale", pSag:"Sagittale", slice:"Posizione della sezione", sliceHint:"RM: trascina su o giù sull’immagine per scorrere le sezioni, pizzica per lo zoom. Con Inquadra scegli testa, busto o corpo.", shell:"Sagoma pelle", pose3d:"Posa", live:"Dal vivo", freeze:"Blocca", focus:"Inquadra", fBody:"Corpo", fTorso:"Busto", fHead:"Testa", spin:"Rotazione auto", on:"Sì", off:"No", inset:"Riquadro camera",
-    hint3d:"Tavola = pelle a destra, muscoli a sinistra e torace aperto su costole e organi (aspetto Solido). Trascina per ruotare, pizzica per lo zoom, doppio tocco per ripristinare. “Blocca” mantiene l’ultima posa così puoi girarci intorno.",
+    hint3d:"Tocca una struttura per aprire la sua scheda. Con la posa dal vivo i muscoli al lavoro si illuminano di arancione. Tavola = pelle a destra, muscoli a sinistra e torace aperto su costole e organi (aspetto Solido). Trascina per ruotare, pizzica per lo zoom, doppio tocco per ripristinare. “Blocca” mantiene l’ultima posa così puoi girarci intorno.",
     explore3d:"Esplora in 3D (senza fotocamera)", load3d:"Caricamento 3D…", s3dLive:"3D · posa dal vivo", s3dFrozen:"3D · posa bloccata", s3dDemo:"3D · posa di esempio", err3d:"La vista 3D non si è caricata. Controlla la connessione." }
 };
 const N = {
@@ -2087,7 +2413,7 @@ const ESSENTIAL = new Set(["cranium","mandible","teeth","frontal","eye","cervica
 const S = {
   layers:{ skeleton:true, skull:true, hands:true, muscles:true, organs:true, brain:true, skin:true, shell:false, labels:true },
   look:"xray", brightness:1, real:0.55, reveal:"all", follow:"touch", lensSize:0.3, zoom:1.5,
-  quality:"high", density:"key", view:"ar", section:"full", plane:"sagittal", slices:{ axial:0.94, coronal:0.45, sagittal:0.5 }, seen3d:false, pose3d:"live", focus:"body", spin:"off", inset:"on",
+  quality:"high", density:"key", theme:"hud", hudInit:false, view:"ar", section:"full", plane:"sagittal", slices:{ axial:0.94, coronal:0.45, sagittal:0.5 }, seen3d:false, pose3d:"live", focus:"body", spin:"off", inset:"on",
   facing:"environment", lang:(navigator.language||"en").toLowerCase().startsWith("it") ? "it" : "en", touch:null
 };
 const PRESETS = {
@@ -2099,8 +2425,9 @@ const PRESETS = {
 };
 
 const $ = (s) => document.querySelector(s);
-const SAVE_KEYS = ["plane","slices","layers","look","brightness","real","reveal","follow","lensSize","zoom","quality","density","section","pose3d","focus","spin","inset","lang","seen3d"];
+const SAVE_KEYS = ["theme","hudInit","plane","slices","layers","look","brightness","real","reveal","follow","lensSize","zoom","quality","density","section","pose3d","focus","spin","inset","lang","seen3d"];
 try { const sv = JSON.parse(localStorage.getItem("anatomyLens.v1") || "null"); if (sv) for (const k of SAVE_KEYS) if (sv[k]!==undefined) S[k] = k==="layers" ? Object.assign(S.layers, sv.layers) : k==="slices" ? Object.assign(S.slices, sv.slices) : sv[k]; } catch(e){}
+if (!S.hudInit){ S.hudInit=true; S.theme="hud"; S.look="holo"; }
 function saveSettings(){ try { const o={}; for (const k of SAVE_KEYS) o[k]=S[k]; localStorage.setItem("anatomyLens.v1", JSON.stringify(o)); } catch(e){} }
 const video = $("#video"), canvas = $("#view"), ctx = canvas.getContext("2d");
 const scene = document.createElement("canvas"), sctx = scene.getContext("2d");
@@ -2264,15 +2591,15 @@ function updateLabels(cands, lens, now){
 }
 function drawLabels(c, lens){
   if (!S.layers.labels || !LST.size) return;
-  const li = S.lang==="it" ? 1 : 0;
-  base(c); c.font="500 12px 'IBM Plex Sans Condensed', system-ui, sans-serif"; c.textBaseline="middle";
-  const cx = lens ? lens.x : W/2, top = 100, lh = 19, items=[];
+  const li = S.lang==="it" ? 1 : 0, hud = S.theme==="hud";
+  base(c); c.font = hud ? "600 12.5px 'Rajdhani', 'IBM Plex Sans Condensed', system-ui, sans-serif" : "500 12px 'IBM Plex Sans Condensed', system-ui, sans-serif"; c.textBaseline="middle";
+  const cx = lens ? lens.x : W/2, top = (S.view==="3d" && document.body.classList.contains("real3d")) ? 152 : 100, lh = 19, items=[];
   for (const [k,st] of LST){
     let x=st.x, y=st.y; if (lens){ x=lens.x+(x-lens.x)*S.zoom; y=lens.y+(y-lens.y)*S.zoom; }
     if (!st.side) st.side = x<cx ? "L" : "R";
     else if (st.side==="L" && x>cx+40) st.side="R";
     else if (st.side==="R" && x<cx-40) st.side="L";
-    items.push({ st, x, y, text:N[k][li] });
+    items.push({ st, x, y, text: hud ? N[k][li].toUpperCase() : N[k][li] });
   }
   for (const side of ["L","R"]){
     const arr = items.filter(it=>it.st.side===side).sort((a,b)=>a.y-b.y);
@@ -2287,12 +2614,23 @@ function drawLabels(c, lens){
       last = target;
       const ty=it.st.ty;
       c.globalAlpha = Math.max(0, Math.min(1, it.st.a));
+      if (hud){
+        const ex = side==="L" ? tx+16 : tx-16;
+        c.strokeStyle="rgba(0,229,255,.75)"; c.lineWidth=1; c.beginPath(); c.moveTo(it.x,it.y); c.lineTo(ex,ty); c.lineTo(tx,ty); c.stroke();
+        c.fillStyle="#7ff3ff"; c.beginPath(); c.moveTo(it.x,it.y-3.2); c.lineTo(it.x+3.2,it.y); c.lineTo(it.x,it.y+3.2); c.lineTo(it.x-3.2,it.y); c.closePath(); c.fill();
+        const bx = side==="L" ? tx-tw-12 : tx;
+        c.fillStyle="rgba(2,18,28,.78)"; c.fillRect(bx,ty-9,tw+12,18);
+        c.fillStyle="#00e5ff"; c.fillRect(side==="L" ? tx-2 : tx, ty-9, 2, 18);
+        c.fillStyle="#d9fbff"; c.textAlign = side==="L" ? "right" : "left";
+        c.fillText(it.text, side==="L" ? tx-7 : tx+7, ty+0.5);
+      } else {
       c.strokeStyle="rgba(215,238,255,.7)"; c.lineWidth=1; c.beginPath(); c.moveTo(it.x,it.y); c.lineTo(tx,ty); c.stroke();
       c.fillStyle="rgba(235,248,255,.95)"; c.beginPath(); c.arc(it.x,it.y,2.4,0,TAU); c.fill();
       const bx = side==="L" ? tx-tw-10 : tx+2;
       c.fillStyle="rgba(4,14,24,.66)"; c.fillRect(bx,ty-9,tw+8,18);
       c.fillStyle="#eaf6ff"; c.textAlign = side==="L" ? "right" : "left";
       c.fillText(it.text, side==="L" ? tx-6 : tx+6, ty);
+      }
     }
   }
   c.globalAlpha=1;
@@ -2321,6 +2659,40 @@ function drawRing(c,L){
   c.restore();
 }
 
+/* ---------- holographic HUD overlay ---------- */
+let sheetTop=0, sheetT=0;
+function hudBottom(now){ if (now-sheetT>500){ sheetT=now; const r=$("#sheet").getBoundingClientRect(); sheetTop=r.top; } return Math.min(H-20, sheetTop-12); }
+function arcs(c, x, y, r, t, n, span, lw, col){ c.strokeStyle=col; c.lineWidth=lw; for (let k=0;k<n;k++){ const a=t+k*TAU/n; c.beginPath(); c.arc(x,y,r,a,a+span); c.stroke(); } }
+function drawHUD(c, now, focus, label){
+  if (S.theme!=="hud") return;
+  const t=now/1000, top=104, bot=hudBottom(now), Lx=10, Rx=W-10, k=20; base(c); c.save();
+  c.strokeStyle="rgba(0,229,255,.6)"; c.lineWidth=1.5; c.beginPath();
+  c.moveTo(Lx,top+k); c.lineTo(Lx,top); c.lineTo(Lx+k,top); c.moveTo(Rx-k,top); c.lineTo(Rx,top); c.lineTo(Rx,top+k);
+  c.moveTo(Lx,bot-k); c.lineTo(Lx,bot); c.lineTo(Lx+k,bot); c.moveTo(Rx-k,bot); c.lineTo(Rx,bot); c.lineTo(Rx,bot-k); c.stroke();
+  c.strokeStyle="rgba(0,229,255,.28)"; c.lineWidth=1; c.beginPath();
+  for (let y=top+30; y<bot-24; y+=14){ const l=((y-top)/14|0)%5===0?9:4; c.moveTo(Rx,y); c.lineTo(Rx-l,y); } c.stroke();
+  if (focus){
+    const {x,y,r}=focus;
+    arcs(c,x,y,r,t*0.5,4,TAU/7,1.4,"rgba(0,229,255,.55)");
+    arcs(c,x,y,r*1.09,-t*0.8,3,TAU/10,1,"rgba(0,229,255,.35)");
+    c.strokeStyle="rgba(0,229,255,.22)"; c.setLineDash([2,6]); c.beginPath(); c.arc(x,y,r*0.92,0,TAU); c.stroke(); c.setLineDash([]);
+    c.fillStyle="rgba(0,229,255,.8)"; for (let q=0;q<4;q++){ const a=q*Math.PI/2+t*0.5; const px=x+Math.cos(a)*r*1.17, py=y+Math.sin(a)*r*1.17; c.save(); c.translate(px,py); c.rotate(a); c.beginPath(); c.moveTo(-5,-3); c.lineTo(0,0); c.lineTo(-5,3); c.closePath(); c.fill(); c.restore(); }
+    if (label){ c.font="600 11px 'Share Tech Mono', ui-monospace, monospace"; c.textAlign="center"; c.fillStyle="rgba(127,243,255,.9)"; c.fillText(label, x, y-r*1.17-10); }
+  }
+  const d=new Date(), hh=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")+":"+String(d.getSeconds()).padStart(2,"0");
+  const lines=[ T[S.lang].hudTitle, ($("#stext").textContent||"").toUpperCase(), hh ];
+  c.font="500 10.5px 'Share Tech Mono', ui-monospace, monospace"; c.textAlign="left"; c.textBaseline="alphabetic";
+  lines.forEach((s,i)=>{ c.fillStyle= i===0 ? "rgba(0,229,255,.95)" : "rgba(160,235,245,.75)"; c.fillText((i===0?"▸ ":"  ")+s, Lx+8, bot-10-(lines.length-1-i)*13); });
+  const bw=Math.min(120,W*0.28), bx=Rx-bw-8, by=bot-14; c.strokeStyle="rgba(0,229,255,.4)"; c.strokeRect(bx,by,bw,5);
+  c.fillStyle="rgba(0,229,255,.75)"; c.fillRect(bx,by,bw*(0.55+0.45*Math.abs(Math.sin(t*0.7))),5);
+  c.restore();
+}
+function focusAR(P,F){
+  if (F){ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for (const p of F){ if(p.x<x0)x0=p.x; if(p.x>x1)x1=p.x; if(p.y<y0)y0=p.y; if(p.y>y1)y1=p.y; } return { x:(x0+x1)/2, y:(y0+y1)/2, r:Math.max(x1-x0,y1-y0)*0.62, face:true }; }
+  if (P){ const s=mid3(P[11],P[12]); const sw=Math.hypot(P[11].x-P[12].x,P[11].y-P[12].y); if (sw>20) return { x:s.x, y:s.y+sw*0.4, r:sw*1.1 }; }
+  return null;
+}
+
 /* ---------- render ---------- */
 const labelsOut = [];
 function render(now){
@@ -2333,7 +2705,7 @@ function render(now){
   const F = TR.face.lm && TR.face.fade>0.02 ? TR.face.lm.map(mp) : null;
   const hands = TR.hands.filter(h=>h.lm && h.fade>0.02).map(h=>({ pts:h.lm.map(mp), fade:h.fade }));
   const d0=performance.now();
-  LIB.draw(sctx, { dpr:sdpr, look:S.look, brightness:S.brightness, layers:S.layers, pose:P, poseFade:TR.pose.fade,
+  LIB.draw(sctx, { dpr:sdpr, look:S.look==="holo"?"xray":S.look, hud:S.look==="holo", brightness:S.brightness, layers:S.layers, pose:P, poseFade:TR.pose.fade,
     face:F, faceFade:TR.face.fade, hands, t:now, labels:labelsOut, skinDraw:(FSK && S.layers.skin) ? (c,d,f,M)=>FSK.draw(c,d,f,M) : null });
   adapt(performance.now()-d0, now);
   base(ctx); ctx.clearRect(0,0,W,H);
@@ -2346,6 +2718,7 @@ function render(now){
     ctx.drawImage(scene,0,0,W,H); ctx.restore(); drawRing(ctx,lens);
   }
   updateLabels(labelsOut, lens, now); drawLabels(ctx, lens);
+  const fo = focusAR(P,F); drawHUD(ctx, now, fo, fo ? (fo.face ? T[S.lang].hudFace : T[S.lang].hudLock) : null);
 }
 
 /* ---------- 3D view ---------- */
@@ -2385,12 +2758,12 @@ async function ensure3D(){
 }
 async function setView(v){
   if (v==="3d"){
-    if (!S.seen3d){ S.seen3d=true; S.look="solid"; }
+    if (!S.seen3d){ S.seen3d=true; S.look = S.theme==="hud" ? "holo" : "solid"; }
     S.view="3d"; document.body.classList.add("v3d"); LST.clear(); syncUI(); if (!E3) $("#stext").textContent=T[S.lang].load3d; $("#status").hidden=false;
     try { await ensure3D(); } catch(e){ console.error(e); $("#stext").textContent=T[S.lang].err3d; S.view="ar"; document.body.classList.remove("v3d"); syncUI(); return; }
     updateStatus();
   } else {
-    S.view="ar"; document.body.classList.remove("v3d"); LST.clear(); syncUI();
+    S.view="ar"; document.body.classList.remove("v3d"); LST.clear(); closeCard(); $("#actP").hidden=true; syncUI();
     if (!stream){ $("#start").hidden=false; return; }
     updateStatus();
   }
@@ -2413,7 +2786,12 @@ function render3d(now){
     }
   }
   const dt = lastNow ? Math.min(100, now-lastNow) : 16; lastNow = now;
-  E3.update({ pose:P3cur, hands:H3, mirror:mirror(), layers:S.layers, section:S.section, plane:S.plane, slice:S.slices[S.plane], look:S.look, brightness:S.brightness, t:now, dt });
+  const liveAct = E3.setActivation && live && TR.pose.tracked && TR.pose.world && S.layers.muscles && (S.section==="full" || S.section==="atlas");
+  const act = liveAct ? estimateActivation(P3cur, now) : null;
+  if (E3.setActivation) E3.setActivation(act, now);
+  if (!act){ ACT.prev=null; ACT.t=0; ACT.sm.fill(0); }
+  if ((now|0)%6===0 || !act) renderActPanel(act);
+  E3.update({ pose:P3cur, hands:H3, mirror:mirror(), layers:S.layers, section:S.section, plane:S.plane, slice:S.slices[S.plane], look:(E3.real||S.look!=="holo")?S.look:"xray", brightness:S.brightness, t:now, dt });
   E3.render();
   base(ctx); ctx.clearRect(0,0,W,H);
   const sectionView = E3.real && (S.section==="mri" || S.section==="cut");
@@ -2425,6 +2803,7 @@ function render3d(now){
   }
   E3.labels(labelsOut, S.layers);
   updateLabels(labelsOut, null, now); drawLabels(ctx, null);
+  if (S.section!=="mri") drawHUD(ctx, now, { x:W/2, y:H*0.5, r:Math.min(W,H)*0.44 }, null);
   if (E3.real && S.section==="mri"){
     const L=E3.cutInfo().letters, oc=E3.ocam; base(ctx);
     ctx.font="600 15px 'IBM Plex Sans Condensed', system-ui, sans-serif"; ctx.fillStyle="rgba(235,245,255,.85)"; ctx.textAlign="center"; ctx.textBaseline="middle";
@@ -2433,6 +2812,93 @@ function render3d(now){
     ctx.strokeStyle="rgba(235,245,255,.85)"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x0+bar,y0); ctx.moveTo(x0,y0-4); ctx.lineTo(x0,y0+4); ctx.moveTo(x0+bar,y0-4); ctx.lineTo(x0+bar,y0+4); ctx.stroke();
     ctx.font="500 11px 'IBM Plex Sans Condensed', system-ui, sans-serif"; ctx.textAlign="left"; ctx.fillText("5 cm", x0, y0-12);
   }
+}
+
+/* ---------- anatomy card on tap ---------- */
+let cardSel=null, tapStart=null, tapTimer=0;
+function esc(t){ return String(t==null?"":t).replace(/[&<>"]/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
+function showCard(sel){
+  cardSel=sel; const tx=T[S.lang]; if (!sel){ $("#card3d").hidden=true; return; }
+  const inf = window.anatomyInfo ? window.anatomyInfo(sel.en, S.lang, sel.g) : null;
+  const part = sel.en ? sel.en.charAt(0).toUpperCase()+sel.en.slice(1) : "";
+  if (!inf){ $("#cardSys").textContent=""; $("#cardT").textContent=part; $("#cardP").textContent=""; $("#cardD").innerHTML=""; $("#card3d").hidden=false; return; }
+  $("#cardSys").textContent = inf.sys; $("#cardT").textContent = inf.title + (inf.side ? ` · ${inf.side}` : "");
+  $("#cardP").textContent = part + (inf.generic ? ` — ${tx.cardGeneric}` : "");
+  const rows=[[tx.cardFn,inf.fn],[tx.cardData,inf.data],[tx.cardVN,inf.vn],[tx.cardCond,inf.cond]].filter(r=>r[1] && r[1]!=="—");
+  $("#cardD").innerHTML = rows.map(r=>`<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join("");
+  $("#card3d").hidden=false;
+}
+function doPick(x,y){
+  if (!E3 || !E3.pick) return;
+  let r=null; try { r=E3.pick(x,y); } catch(e){ console.warn(e); }
+  if (!r){ showCard(null); if (E3.highlight) E3.highlight(null); return; }
+  if (E3.highlight) E3.highlight(E3.isMri && E3.isMri() ? null : r.pi);
+  showCard(r);
+}
+function closeCard(){ showCard(null); if (E3 && E3.highlight) E3.highlight(null); }
+
+/* ---------- muscles at work: estimated from joint angles and their speed ---------- */
+const MGN={ deltoid:["Deltoide","Deltoid"], pecs:["Pettorale","Pectoralis"], biceps:["Bicipite","Biceps"], triceps:["Tricipite","Triceps"], fFlex:["Flessori avambraccio","Forearm flexors"], fExt:["Estensori avambraccio","Forearm extensors"],
+  lats:["Gran dorsale","Latissimus dorsi"], trap:["Trapezio","Trapezius"], quads:["Quadricipite","Quadriceps"], hams:["Ischiocrurali","Hamstrings"], glutes:["Glutei","Glutes"], add:["Adduttori","Adductors"], calf:["Polpaccio","Calf"],
+  tibAnt:["Tibiale anteriore","Tibialis anterior"], hipFlex:["Flessori dell’anca","Hip flexors"], scm:["Sternocleidomastoideo","Sternocleidomastoid"], obliq:["Obliqui","Obliques"], abs:["Addominali","Abdominals"], erector:["Erettori della colonna","Erector spinae"] };
+const ACT={ prev:null, vel:{}, out:new Float32Array(40), sm:new Float32Array(40), t:0, hrBase:[null,null] };
+const cl01=(v)=>Math.max(0,Math.min(1,v));
+function angAt(a,b,c){ const ux=a.x-b.x,uy=a.y-b.y,uz=a.z-b.z,vx=c.x-b.x,vy=c.y-b.y,vz=c.z-b.z; const d=Math.hypot(ux,uy,uz)*Math.hypot(vx,vy,vz)||1; return Math.acos(Math.max(-1,Math.min(1,(ux*vx+uy*vy+uz*vz)/d))); }
+function angBetween(u,v){ const d=Math.hypot(u.x,u.y,u.z)*Math.hypot(v.x,v.y,v.z)||1; return Math.acos(Math.max(-1,Math.min(1,(u.x*v.x+u.y*v.y+u.z*v.z)/d))); }
+const sub3=(a,b)=>({ x:a.x-b.x, y:a.y-b.y, z:a.z-b.z }), mid3=(a,b)=>({ x:(a.x+b.x)/2, y:(a.y+b.y)/2, z:(a.z+b.z)/2 });
+function estimateActivation(P, now){
+  const names=E3.MG; if (!names) return null;
+  const dt=ACT.t ? Math.max(0.016,Math.min(0.2,(now-ACT.t)/1000)) : 0.033; ACT.t=now;
+  const shM=mid3(P[11],P[12]), hipM=mid3(P[23],P[24]), up=sub3(shM,hipM), down={ x:-up.x, y:-up.y, z:-up.z };
+  const shAx=sub3(P[11],P[12]), fwd={ x:shAx.y*up.z-shAx.z*up.y, y:shAx.z*up.x-shAx.x*up.z, z:shAx.x*up.y-shAx.y*up.x }; const fl=Math.hypot(fwd.x,fwd.y,fwd.z)||1; fwd.x/=fl; fwd.y/=fl; fwd.z/=fl;
+  const q={};
+  q.tf=angBetween(up,{x:0,y:1,z:0});
+  const hipAx=sub3(P[23],P[24]); q.rot=Math.atan2(shAx.z,shAx.x)-Math.atan2(hipAx.z,hipAx.x);
+  const earAx=sub3(P[7],P[8]); q.yaw=Math.atan2(earAx.z,earAx.x)-Math.atan2(shAx.z,shAx.x);
+  const sides=[{ k:0, sh:11, el:13, wr:15, hp:23, kn:25, an:27, he:29, ft:31, oa:28 },{ k:1, sh:12, el:14, wr:16, hp:24, kn:26, an:28, he:30, ft:32, oa:27 }];
+  for (const s of sides){
+    const ua=sub3(P[s.el],P[s.sh]), fo=sub3(P[s.wr],P[s.el]), ful=Math.hypot(fo.x,fo.y,fo.z)||1;
+    q["fe"+s.k]=Math.PI-angAt(P[s.sh],P[s.el],P[s.wr]); q["hz"+s.k]=Math.sqrt(Math.max(0,1-(fo.y/ful)**2));
+    q["el"+s.k]=angBetween(ua,down); const ul=Math.hypot(ua.x,ua.y,ua.z)||1; q["fw"+s.k]=(ua.x*fwd.x+ua.y*fwd.y+ua.z*fwd.z)/ul;
+    q["fk"+s.k]=Math.PI-angAt(P[s.hp],P[s.kn],P[s.an]); q["fh"+s.k]=angBetween(sub3(P[s.kn],P[s.hp]),down);
+    const hr=P[s.he].y-P[s.ft].y; ACT.hrBase[s.k] = ACT.hrBase[s.k]==null ? hr : ACT.hrBase[s.k] + (hr-ACT.hrBase[s.k])*0.01;
+    q["hr"+s.k]=hr-ACT.hrBase[s.k]; q["lift"+s.k]=P[s.an].y-P[s.oa].y; q["seat"+s.k]=(P[s.hp].y-P[s.kn].y<0.08 && angBetween(up,{x:0,y:1,z:0})<0.35)?1:0;
+  }
+  const v={}; if (ACT.prev) for (const k in q){ const raw=(q[k]-ACT.prev[k])/dt; v[k]=(ACT.vel[k]||0)*0.6+raw*0.4; } ACT.vel=v; ACT.prev=q;
+  const V=(k)=>v[k]||0, a=new Float32Array(40), set=(name,side,val)=>{ const i=names.indexOf(name); if (i>=0) a[1+2*i+side]=cl01(val); };
+  for (const s of [0,1]){
+    const el=q["el"+s], fe=q["fe"+s], hz=q["hz"+s], fk=q["fk"+s], fh=q["fh"+s];
+    set("deltoid",s, 0.95*Math.sin(Math.min(el,Math.PI/2)) + (el>Math.PI/2?0.25:0) + 0.35*Math.max(0,V("el"+s)));
+    set("trap",s, 0.8*Math.max(0,(el-1.3)/1.2) + 0.2*Math.sin(Math.min(el,Math.PI/2)));
+    set("pecs",s, 0.55*Math.max(0,q["fw"+s])*Math.sin(Math.min(el,Math.PI/2)) + 0.45*Math.max(0,-V("el"+s)));
+    set("lats",s, 0.6*Math.max(0,-V("el"+s)));
+    const bi=0.65*hz*(fe>0.4?1:0.45) + 0.45*Math.max(0,V("fe"+s)); set("biceps",s, bi);
+    set("triceps",s, 0.55*Math.max(0,-V("fe"+s)) + (el>2.0?0.4*Math.sin(Math.min(fe,Math.PI/2)):0));
+    set("fFlex",s, 0.35*bi); set("fExt",s, 0.25*hz);
+    const load=q["seat"+s] ? 0.12 : 1;   /* seated: the chair carries the weight */
+    const qd=1.05*Math.sin(Math.min(fk,1.57))*load + 0.25*Math.abs(V("fk"+s)); set("quads",s, qd);
+    const gl=0.6*Math.sin(Math.min(fh,1.57))*load + 0.55*Math.max(0,-V("fh"+s)); set("glutes",s, gl);
+    set("hams",s, 0.45*Math.max(0,V("fk"+s)) + 0.35*gl + 0.35*Math.sin(Math.min(q.tf,1.2)));
+    set("hipFlex",s, 0.5*Math.max(0,V("fh"+s)) + 0.9*cl01(q["lift"+s]/0.15)*(q["seat"+s]?0.3:1));
+    set("add",s, 0.25*qd);
+    set("calf",s, (q["hr"+s]-0.015)/0.04 + 0.2*qd);
+    set("tibAnt",s, (-q["hr"+s]-0.015)/0.03);
+    set("scm",s, 0.9*Math.max(0,(s===1?1:-1)*q.yaw) + 0.3*Math.abs(V("yaw")));
+    set("obliq",s, 0.5*Math.abs(V("rot")) + 0.7*Math.abs(q.rot));
+    set("abs",s, 0.7*Math.max(0,V("tf")));
+    set("erector",s, 0.9*Math.sin(Math.min(q.tf,1.2)) + 0.5*Math.max(0,-V("tf")));
+  }
+  for (let i=0;i<40;i++){ const t=cl01((a[i]-0.08)/0.92); ACT.sm[i]+= (t-ACT.sm[i])*0.25; }
+  return ACT.sm;
+}
+function renderActPanel(act){
+  const box=$("#actP"); if (!act){ box.hidden=true; return; }
+  const names=E3.MG, list=[];
+  for (let i=1;i<40;i++){ if (act[i]<0.15) continue; const k=Math.floor((i-1)/2), side=(i-1)%2; const nm=MGN[names[k]]; if (!nm) continue; list.push({ v:act[i], t:`${nm[S.lang==="it"?0:1]} (${side? T[S.lang].rightS : T[S.lang].leftS})` }); }
+  list.sort((p,q)=>q.v-p.v);
+  if (!list.length){ box.hidden=true; return; }
+  $("#actL").innerHTML = list.slice(0,5).map(e=>`<div class="arow"><span>${esc(e.t)}</span><b style="--w:${Math.round(e.v*100)}%"></b><i>${Math.round(e.v*100)}%</i></div>`).join("");
+  box.hidden=false;
 }
 
 /* ---------- detection loop ---------- */
@@ -2536,6 +3002,7 @@ function syncUI(){
   $("#v3d").textContent = S.view==="3d" ? "AR" : "3D"; $("#v3d").classList.toggle("on", S.view==="3d");
   $("#slice").value=Math.round(S.slices[S.plane]*1000);
   document.body.classList.toggle("secview", S.section==="mri" || S.section==="cut");
+  document.body.classList.toggle("hud", S.theme==="hud");
   if (typeof updateStatus==="function" && S.view==="3d") try { updateStatus(); } catch(e){}
   $("#real").value=Math.round(S.real*100); $("#brightness").value=Math.round(S.brightness*100);
   $("#lensSize").value=Math.round(S.lensSize*100); $("#zoom").value=Math.round(S.zoom*10);
@@ -2550,7 +3017,7 @@ document.querySelectorAll("[data-seg]").forEach(seg=>seg.addEventListener("click
   if (E3 && key==="spin") E3.setSpin(S.spin==="on");
   if (key==="pose3d" || key==="section" || key==="plane") updateStatus();
   if (key==="plane") $("#slice").value=Math.round(S.slices[S.plane]*1000);
-  if (key==="section") LST.clear();
+  if (key==="section"){ LST.clear(); closeCard(); }
   if (key==="quality" && prev!==S.quality && fileset){ updateStatus(); loadPose().then(updateStatus).catch(console.error); }
 }));
 $("#real").addEventListener("input",e=>{ S.real=e.target.value/100; saveSettings(); });
@@ -2559,7 +3026,8 @@ $("#lensSize").addEventListener("input",e=>{ S.lensSize=e.target.value/100; save
 $("#zoom").addEventListener("input",e=>{ S.zoom=e.target.value/10; saveSettings(); });
 $("#slice").addEventListener("input",e=>{ S.slices[S.plane]=e.target.value/1000; saveSettings(); updateStatus(); });
 $("#more").addEventListener("click",()=>{ const open=$("#sheet").classList.toggle("open"); $("#more").setAttribute("aria-expanded",String(open)); });
-for (const b of [$("#lang"),$("#lang2")]) b.addEventListener("click",()=>{ S.lang = S.lang==="it" ? "en" : "it"; applyLang(); saveSettings(); });
+for (const b of [$("#lang"),$("#lang2")]) b.addEventListener("click",()=>{ S.lang = S.lang==="it" ? "en" : "it"; applyLang(); saveSettings(); if (cardSel) showCard(cardSel); });
+$("#cardX").addEventListener("click", closeCard);
 $("#flip").addEventListener("click", async ()=>{
   S.facing = S.facing==="user" ? "environment" : "user";
   for (const tr of [TR.pose, TR.face, ...TR.hands]){ tr.tracked=false; tr.lm=null; tr.good=0; tr.fade=0; }
@@ -2580,9 +3048,11 @@ $("#snap").addEventListener("click",()=>{
   },"image/png");
 });
 let dragging=false;
-canvas.addEventListener("pointerdown",e=>{ if (S.view==="3d" && E3){ canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId); E3.pointerDown(e); return; } dragging=true; S.touch={ x:e.clientX, y:e.clientY }; });
+canvas.addEventListener("pointerdown",e=>{ if (S.view==="3d" && E3){ canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId); clearTimeout(tapTimer); tapStart={ x:e.clientX, y:e.clientY, t:performance.now(), id:e.pointerId, n:(tapStart&&tapStart.down||0) }; E3.pointerDown(e); return; } dragging=true; S.touch={ x:e.clientX, y:e.clientY }; });
 canvas.addEventListener("pointermove",e=>{ if (S.view==="3d" && E3){ E3.pointerMove(e); return; } if (dragging) S.touch={ x:e.clientX, y:e.clientY }; });
-window.addEventListener("pointerup",e=>{ dragging=false; if (E3) E3.pointerUp(e); });
+window.addEventListener("pointerup",e=>{ dragging=false; if (E3) E3.pointerUp(e);
+  if (S.view==="3d" && E3 && tapStart && tapStart.id===e.pointerId){ const moved=Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y), dtp=performance.now()-tapStart.t, x=e.clientX, y=e.clientY;
+    if (moved<9 && dtp<320){ clearTimeout(tapTimer); tapTimer=setTimeout(()=>doPick(x,y),280); } tapStart=null; } });
 window.addEventListener("pointercancel",e=>{ dragging=false; if (E3) E3.pointerUp(e); });
 canvas.addEventListener("wheel",e=>{ if (S.view==="3d" && E3){ e.preventDefault(); E3.wheel(e); } },{ passive:false });
 
