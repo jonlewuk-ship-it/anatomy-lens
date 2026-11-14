@@ -41,6 +41,7 @@ body.v3d{ background:radial-gradient(120% 75% at 50% 35%, #12304a 0%, #061019 72
 body.v3d #gl{ display:block; }
 body.v3d #view{ background:transparent; }
 body:not(.v3d) .only3d, body.v3d .onlyAR{ display:none; }
+body:not(.secview) .secOnly{ display:none; }
 .credit{ position:fixed; left:16px; right:16px; top:calc(env(safe-area-inset-top,0px) + 112px); z-index:4; font-size:11px; line-height:1.35; color:#9fb9cc; pointer-events:none; display:none; max-width:46ch; }
 body.v3d.real3d .credit{ display:block; }
 .iconbtn.on{ background:var(--film); color:var(--film-ink); border-color:transparent; }
@@ -137,7 +138,10 @@ body.v3d.real3d .credit{ display:block; }
   <div class="sheet-body">
     <div class="group only3d">
       <h4 data-i="view3d">3D view</h4>
-      <div style="margin-bottom:10px"><h4 data-i="section">Layout</h4><div class="seg" data-seg="section"><button data-v="atlas" data-i="sAtlas">Atlas</button><button data-v="full" data-i="sFull">Full</button></div></div>
+      <div style="margin-bottom:10px"><h4 data-i="section">Layout</h4><div class="seg" data-seg="section"><button data-v="full" data-i="sFull">Full</button><button data-v="atlas" data-i="sAtlas">Atlas</button><button data-v="cut" data-i="sCut">Section</button><button data-v="mri" data-i="sMri">MRI</button></div></div>
+      <div class="secOnly" style="margin-bottom:10px"><h4 data-i="plane">Plane</h4><div class="seg" data-seg="plane"><button data-v="axial" data-i="pAx">Axial</button><button data-v="coronal" data-i="pCor">Coronal</button><button data-v="sagittal" data-i="pSag">Sagittal</button></div>
+        <label class="range"><span data-i="slice">Slice position</span><input type="range" id="slice" min="0" max="1000"></label>
+        <p class="hint" data-i="sliceHint"></p></div>
       <div class="row2">
         <div><h4 data-i="pose3d">Pose</h4><div class="seg" data-seg="pose3d"><button data-v="live" data-i="live">Live</button><button data-v="freeze" data-i="freeze">Freeze</button></div></div>
         <div><h4 data-i="spin">Auto-spin</h4><div class="seg" data-seg="spin"><button data-v="off" data-i="off">Off</button><button data-v="on" data-i="on">On</button></div></div>
@@ -1452,9 +1456,20 @@ const v3=(x,y,z)=>new THREE.Vector3(x,y,z), A=(a)=>v3(a[0],a[1],a[2]);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const SEG=["pelvis","chest","head","uarmL","farmL","handL","uarmR","farmR","handR","thighL","shinL","footL","thighR","shinR","footR"];
 const RAD=[0.15,0.15,0.1,0.05,0.04,0.04,0.05,0.04,0.04,0.08,0.055,0.04,0.08,0.055,0.04];
-const LAYER={ skeleton:"skeleton", skull:"skull", hands:"hands", muscles:"muscles", musFront:"muscles", organs:"organs", eyes:"organs", brain:"brain", shell:"shell", hair:"shell" };
-const TINT={ skeleton:[0.8,0.92,1], skull:[0.8,0.92,1], hands:[0.8,0.92,1], muscles:[0.95,0.36,0.38], musFront:[0.95,0.36,0.38], organs:[0.98,0.6,0.7], eyes:[1,0.95,0.75], brain:[0.8,0.6,1], shell:[0.6,0.8,0.95], hair:[0.6,0.8,0.95] };
-const XOP={ skeleton:0.8, skull:0.8, hands:0.8, muscles:0.55, musFront:0.55, organs:0.85, eyes:0.9, brain:0.8, shell:0.25, hair:0.2 };
+const ORG=["lungs","airway","heart","vessels","solid","gut","kidney"], BRN=["brain","brainWM","brainDeep","brainCSF"];
+const LAYER={ skeleton:"skeleton", skull:"skull", hands:"hands", muscles:"muscles", musFront:"muscles", eyes:"organs", shell:"shell", hair:"shell" };
+for(const g of ORG) LAYER[g]="organs"; for(const g of BRN) LAYER[g]="brain";
+const TINT={ skeleton:[0.8,0.92,1], skull:[0.8,0.92,1], hands:[0.8,0.92,1], muscles:[0.95,0.36,0.38], musFront:[0.95,0.36,0.38], eyes:[1,0.95,0.75], shell:[0.6,0.8,0.95], hair:[0.6,0.8,0.95],
+  lungs:[1,0.7,0.8], airway:[0.75,0.9,1], heart:[1,0.35,0.4], vessels:[1,0.4,0.45], solid:[0.95,0.55,0.5], gut:[1,0.75,0.6], kidney:[0.95,0.5,0.6], brain:[0.8,0.6,1], brainWM:[0.85,0.8,1], brainDeep:[0.75,0.55,1], brainCSF:[0.5,0.75,1] };
+const XOP={ skeleton:0.8, skull:0.8, hands:0.8, muscles:0.55, musFront:0.55, eyes:0.9, shell:0.25, hair:0.2, lungs:0.7, airway:0.8, heart:0.85, vessels:0.85, solid:0.85, gut:0.8, kidney:0.85, brain:0.75, brainWM:0.25, brainDeep:0.5, brainCSF:0.6 };
+/* cross-section tones: MRI (T1-like grey levels) and anatomical colours */
+const MRI={ shell:0.8, muscles:0.3, musFront:0.3, skeleton:0.6, skull:0.56, hands:0.6, lungs:0.04, airway:0.02, heart:0.34, vessels:0.12, solid:0.46, gut:0.4, kidney:0.42, brain:0.42, brainWM:0.72, brainDeep:0.52, brainCSF:0.06, eyes:0.12 };
+const ANAT={ shell:[0.95,0.83,0.6], muscles:[0.62,0.14,0.16], musFront:[0.62,0.14,0.16], skeleton:[0.93,0.89,0.79], skull:[0.93,0.89,0.79], hands:[0.93,0.89,0.79], lungs:[0.86,0.56,0.62], airway:[0.92,0.86,0.82],
+  heart:[0.56,0.1,0.13], vessels:[0.65,0.08,0.11], solid:[0.52,0.2,0.15], gut:[0.86,0.62,0.52], kidney:[0.6,0.2,0.22], brain:[0.74,0.62,0.6], brainWM:[0.94,0.9,0.86], brainDeep:[0.7,0.58,0.56], brainCSF:[0.56,0.68,0.82], eyes:[0.9,0.9,0.86] };
+const CAPORDER=["shell","muscles","musFront","skeleton","skull","hands","lungs","airway","heart","vessels","solid","gut","kidney","brain","brainWM","brainDeep","brainCSF","eyes"];
+const PL={ axial:{ n:[0,1,0], ax:1, view:[0,1,0], up:[0,0,1], o:["A","P","R","L"] }, coronal:{ n:[0,0,-1], ax:2, view:[0,0,-1], up:[0,1,0], o:["S","I","R","L"] }, sagittal:{ n:[-1,0,0], ax:0, view:[-1,0,0], up:[0,1,0], o:["S","I","A","P"] } };
+/* MRI framing per focus: [centre y, needed height, needed width] for coronal/sagittal; [needed AP, needed width] for axial */
+const FRAME={ head:{ y:1.56, h:0.3, wc:0.26, ws:0.27, ap:0.26, wa:0.22 }, torso:{ y:1.12, h:0.82, wc:0.62, ws:0.42, ap:0.36, wa:0.66 }, body:{ y:0.84, h:1.8, wc:0.75, ws:0.45, ap:0.4, wa:0.8 } };
 
 function perpTo(v,u,fb){ const r=v.clone().addScaledVector(u,-v.dot(u)); if(r.lengthSq()<1e-9) return fb?fb.clone():v3(0,0,1); return r.normalize(); }
 function basis(Y,Zref){ const y=Y.clone().normalize(), z=perpTo(Zref,y,Math.abs(y.z)<0.9?v3(0,0,1):v3(1,0,0)), x=y.clone().cross(z).normalize(); return new THREE.Matrix4().makeBasis(x,y,z); }
@@ -1510,7 +1525,7 @@ function b64(s){ const bin=atob(s), u=new Uint8Array(bin.length); for(let i=0;i<
 
 async function create(canvas,PACK,onProgress){
   const prog=onProgress||(()=>{});
-  const renderer=new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, preserveDrawingBuffer:true });
+  const renderer=new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, stencil:true, preserveDrawingBuffer:true });
   renderer.setClearColor(0x000000,0); renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05; renderer.localClippingEnabled=true;
   const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(36,1,0.03,50); scene.add(camera);
   const hemi=new THREE.HemisphereLight(0xeef6ff,0x3a2a24,0.7); scene.add(hemi);
@@ -1548,7 +1563,7 @@ async function create(canvas,PACK,onProgress){
   const ALL=[...Array(15).keys()], TORSO=[0,1,2], VERT=/(vertebra|atlas|axis|sacrum|coccyx|intervertebral)/;
   const pool=[]; /* bone + muscle samples for skin weight transfer */
   const built={}; const labelAnch=[];
-  const order=["skeleton","skull","hands","muscles","musFront","organs","brain","eyes","hair","shell"];
+  const order=["skeleton","skull","hands","muscles","musFront",...ORG,...BRN,"eyes","hair","shell"];
   let gi=0;
   for(const gname of order){
     const list=groups[gname]; if(!list) continue;
@@ -1567,9 +1582,9 @@ async function create(canvas,PACK,onProgress){
       /* segment policy */
       let allowed=null, rigid=-1;
       const isBoneG=(gname==="skeleton"||gname==="skull"||gname==="hands");
-      if(gname==="skull"||gname==="brain"||gname==="eyes"||gname==="hair") rigid=2;
+      if(gname==="skull"||BRN.includes(gname)||gname==="eyes"||gname==="hair") rigid=2;
       else if(isBoneG){ allowed=VERT.test(it.inf.en||"")?TORSO:null; if(!allowed) rigid=nearestSeg(cen,ALL); }
-      else if(gname==="organs"){ allowed=cen.y>RF[1].o.y+0.02?[1,2]:[0,1]; }
+      else if(ORG.includes(gname)){ allowed=cen.y>RF[1].o.y+0.02?[1,2]:[0,1]; }
       else if(gname==="muscles"||gname==="musFront"){
         const cnt=new Array(15).fill(0); const step=Math.max(1,Math.floor(n/300));
         for(let i=0;i<n;i+=step){ const q=v3(pos[(vo+i)*3],pos[(vo+i)*3+1],pos[(vo+i)*3+2]); cnt[nearestSeg(q,ALL)]++; }
@@ -1584,7 +1599,8 @@ async function create(canvas,PACK,onProgress){
         }
       }
       if(it.inf.lab){ let bi=0,bd=1e9; for(let i=0;i<n;i++){ const dx=pos[(vo+i)*3]-cen.x, dy=pos[(vo+i)*3+1]-cen.y, dz=pos[(vo+i)*3+2]-cen.z, d=dx*dx+dy*dy+dz*dz; if(d<bd){ bd=d; bi=i; } }
-        labelAnch.push({ key:it.inf.lab, g:gname, vi:vo+bi }); }
+        const samp=[], st2=Math.max(1,Math.floor(n/160)); for(let i=0;i<n;i+=st2) samp.push(vo+i);
+        labelAnch.push({ key:it.inf.lab, g:gname, vi:vo+bi, samp }); }
       vo+=n;
     }
     /* the compressed meshes carry no normals: rebuild smooth ones so lighting works */
@@ -1642,10 +1658,10 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
   const solidOpts={
     skeleton:{ roughness:0.62, metalness:0, clearcoat:0.1 }, skull:{ roughness:0.55, metalness:0, clearcoat:0.15 }, hands:{ roughness:0.62, metalness:0, clearcoat:0.1 },
     muscles:{ roughness:0.42, metalness:0, clearcoat:0.35, clearcoatRoughness:0.35, sheen:0.5, sheenColor:new THREE.Color(1,0.62,0.58) },
-    organs:{ roughness:0.3, metalness:0, clearcoat:0.8, clearcoatRoughness:0.2 }, brain:{ roughness:0.45, metalness:0, clearcoat:0.4 }, eyes:{ roughness:0.08, metalness:0, clearcoat:1 },
+    organs:{ roughness:0.3, metalness:0, clearcoat:0.8, clearcoatRoughness:0.2 }, brain:{ roughness:0.42, metalness:0, clearcoat:0.45, clearcoatRoughness:0.3 }, eyes:{ roughness:0.08, metalness:0, clearcoat:1 },
     shell:{ roughness:0.6, metalness:0, sheen:0.35, sheenColor:new THREE.Color(1,0.85,0.78), transparent:true, opacity:0.95 }, hair:{ roughness:0.8, metalness:0 }
   };
-  solidOpts.musFront=solidOpts.muscles;
+  solidOpts.musFront=solidOpts.muscles; for(const g of ORG) solidOpts[g]=solidOpts.organs; for(const g of ["brainWM","brainDeep","brainCSF"]) solidOpts[g]=solidOpts.brain;
   const meshes={}, mats={};
   for(const g in built){
     const solid=new THREE.MeshPhysicalMaterial(Object.assign({ vertexColors:true, side:THREE.DoubleSide },solidOpts[g]||{}));
@@ -1657,23 +1673,41 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
   }
   const clipKeep=(n)=>new THREE.Plane(n,0), planeMus=clipKeep(v3(-1,0,0)), planeSkin=clipKeep(v3(1,0,0));
 
+  /* ---- cross-sections: stencil-capped cut plane (solid filled sections, MRI-style slices) ---- */
+  const cutPlane=new THREE.Plane(v3(0,0,-1),0);
+  const CV="void main(){ gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }";
+  const CF="uniform vec3 col; uniform float noise; void main(){ float h=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453); gl_FragColor=vec4(col+(h-0.5)*noise,1.0); }";
+  const caps={}, stencilMs=[];
+  CAPORDER.forEach((g,i)=>{ if(!built[g]) return;
+    const sten=(side,op)=>{ const mt=new THREE.MeshBasicMaterial({ side, colorWrite:false, depthWrite:false, depthTest:false, clippingPlanes:[cutPlane],
+        stencilWrite:true, stencilFunc:THREE.AlwaysStencilFunc, stencilFail:op, stencilZFail:op, stencilZPass:op });
+      const sm=new THREE.SkinnedMesh(built[g].geo, mt); sm.frustumCulled=false; sm.renderOrder=100+i*3; sm.visible=false; root.add(sm); sm.bind(skeleton); stencilMs.push({ m:sm, g }); };
+    sten(THREE.BackSide,THREE.IncrementWrapStencilOp); sten(THREE.FrontSide,THREE.DecrementWrapStencilOp);
+    const cm=new THREE.ShaderMaterial({ uniforms:{ col:{value:new THREE.Color()}, noise:{value:0.04} }, vertexShader:CV, fragmentShader:CF, side:THREE.DoubleSide, toneMapped:false,
+      stencilWrite:true, stencilRef:0, stencilFunc:THREE.NotEqualStencilFunc, stencilFail:THREE.ReplaceStencilOp, stencilZFail:THREE.ReplaceStencilOp, stencilZPass:THREE.ReplaceStencilOp });
+    const cap=new THREE.Mesh(new THREE.PlaneGeometry(4,4), cm); cap.renderOrder=100+i*3+2; cap.visible=false; cap.frustumCulled=false; scene.add(cap); caps[g]=cap; });
+  const BB=new THREE.Box3(); for(const g of ["shell","skeleton","skull"]) if(built[g]){ built[g].geo.computeBoundingBox(); BB.union(built[g].geo.boundingBox); }
+  const BBc=BB.getCenter(v3());
+  const ocam=new THREE.OrthographicCamera(-1,1,1,-1,0.01,6);
+  let curMode=null, cutActive=false, mriActive=false, cutInfo={ plane:"sagittal", mm:0 };
+
   /* ---- labels: skin anchor vertices on the CPU ---- */
-  const anch=labelAnch.map(a=>{ const b=built[a.g], o=a.vi*4; return { key:a.key, g:a.g, p:v3(b.pos[a.vi*3],b.pos[a.vi*3+1],b.pos[a.vi*3+2]), i0:b.si[o], i1:b.si[o+1], w0:b.sw[o], w1:b.sw[o+1] }; });
+  const anch=labelAnch.map(a=>{ const b=built[a.g], o=a.vi*4, N=b.geo.attributes.normal.array; return { key:a.key, g:a.g, p:v3(b.pos[a.vi*3],b.pos[a.vi*3+1],b.pos[a.vi*3+2]), n:v3(N[a.vi*3],N[a.vi*3+1],N[a.vi*3+2]), samp:a.samp, i0:b.si[o], i1:b.si[o+1], w0:b.sw[o], w1:b.sw[o+1] }; });
   const BM=bones.map(()=>new THREE.Matrix4());
 
   /* ---- camera control ---- */
-  const cam={ yaw:0, pitch:0.08, dist:2.6, focus:"body", spin:false, idle:0, tgt:v3(0,0.9,0) };
-  const ptr=new Map(); let lastTap=0, span0=0, dist0=0;
-  function resetView(){ cam.yaw=0; cam.pitch=0.08; cam.dist=cam.focus==="head"?0.7:cam.focus==="torso"?1.3:2.6; }
+  const cam={ yaw:0, pitch:0.08, dist:2.6, mz:1, focus:"body", spin:false, idle:0, tgt:v3(0,0.9,0) };
+  const ptr=new Map(); let lastTap=0, span0=0, dist0=0, mz0=1;
+  function resetView(){ cam.yaw=0; cam.pitch=0.08; cam.mz=1; cam.dist=cam.focus==="head"?0.7:cam.focus==="torso"?1.3:2.6; }
   function pointerDown(e){ ptr.set(e.pointerId,{x:e.clientX,y:e.clientY}); cam.idle=0;
-    if(ptr.size===2){ const a=[...ptr.values()]; span0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); dist0=cam.dist; }
+    if(ptr.size===2){ const a=[...ptr.values()]; span0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); dist0=cam.dist; mz0=cam.mz; }
     const now=performance.now(); if(ptr.size===1){ if(now-lastTap<300) resetView(); lastTap=now; } }
   function pointerMove(e){ const p=ptr.get(e.pointerId); if(!p) return; cam.idle=0;
-    if(ptr.size===1){ cam.yaw-=(e.clientX-p.x)*0.009; cam.pitch=clamp(cam.pitch+(e.clientY-p.y)*0.007,-1.35,1.35); }
+    if(ptr.size===1){ if(mriActive){ if(api.onSlice) api.onSlice(-(e.clientY-p.y)/Math.max(200,H_)*0.5); } else { cam.yaw-=(e.clientX-p.x)*0.009; cam.pitch=clamp(cam.pitch+(e.clientY-p.y)*0.007,-1.35,1.35); } }
     p.x=e.clientX; p.y=e.clientY;
-    if(ptr.size===2){ const a=[...ptr.values()]; const sp=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); if(span0>10) cam.dist=clamp(dist0*span0/sp,0.25,6); } }
+    if(ptr.size===2){ const a=[...ptr.values()]; const sp=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); if(span0>10){ if(mriActive) cam.mz=clamp(mz0*sp/span0,0.6,6); else cam.dist=clamp(dist0*span0/sp,0.25,6); } } }
   function pointerUp(e){ ptr.delete(e.pointerId); }
-  function wheel(e){ cam.dist=clamp(cam.dist*Math.exp(e.deltaY*0.001),0.25,6); }
+  function wheel(e){ if(mriActive) cam.mz=clamp(cam.mz*Math.exp(-e.deltaY*0.001),0.6,6); else cam.dist=clamp(cam.dist*Math.exp(e.deltaY*0.001),0.25,6); }
   function setFocus(f){ cam.focus=f; resetView(); }
   function setSpin(b){ cam.spin=!!b; }
 
@@ -1682,22 +1716,35 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
   function resize(w,h,pr){ W_=w; H_=h; renderer.setPixelRatio(pr); renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
   const S3=v3(), Q=new THREE.Quaternion();
   function update(st){
-    const P=st.pose; const F=frames(P);
+    const mode=st.section||"full"; cutActive=(mode==="cut"||mode==="mri"); mriActive=(mode==="mri");
+    const mirror=cutActive?false:!!st.mirror, P=cutActive?RP:st.pose; const F=frames(P);
     const g=clamp(F[0].L/RF[0].L,0.7,1.4);
     for(let k=0;k<15;k++){ const b=bones[k]; b.position.copy(F[k].o); b.quaternion.setFromRotationMatrix(F[k].B);
       let ky=k<=1?F[k].L/RF[k].L : k===2?1 : F[k].L/RF[k].L; ky=clamp(ky, k===5||k===8||k===11||k===14?0.6:0.7, k===5||k===8||k===11||k===14?1.6:1.4);
       if(k===2) b.scale.set(g,g,g); else b.scale.set(g,ky,g); }
-    root.scale.x=st.mirror?-1:1;
+    root.scale.x=mirror?-1:1;
     root.updateMatrixWorld(true);
     /* look + layout */
     if(st.look!==look){ look=st.look; for(const n in meshes) meshes[n].material=mats[n][look==="xray"?"xray":"solid"]; }
-    const at=st.section==="atlas";
-    if(at!==atlas){ atlas=at;
-      for(const n of ["muscles","musFront"]) for(const m of [mats[n].solid,mats[n].xray]){ m.clippingPlanes=atlas?[planeMus]:null; m.needsUpdate=true; }
-      for(const n of ["shell"]) for(const m of [mats[n].solid,mats[n].xray]){ m.clippingPlanes=atlas?[planeSkin]:null; m.needsUpdate=true; }
+    if(mode!==curMode){ curMode=mode; atlas=(mode==="atlas");
+      for(const n in mats){ const planes = mode==="cut" ? [cutPlane] : (atlas && (n==="muscles"||n==="musFront")) ? [planeMus] : (atlas && n==="shell") ? [planeSkin] : null;
+        for(const m of [mats[n].solid,mats[n].xray]){ m.clippingPlanes=planes; m.needsUpdate=true; } }
       const sm=mats.shell&&mats.shell.solid; if(sm){ sm.opacity=atlas?0.97:0.3; sm.depthWrite=atlas; sm.needsUpdate=true; }
+      renderer.setClearColor(0x000000, mriActive?1:0);
+      for(const g in caps){ const cm=caps[g].material; cm.depthTest=!mriActive; cm.depthWrite=!mriActive; cm.needsUpdate=true; }
     }
-    for(const n in meshes){ const L=LAYER[n]; meshes[n].visible=!!st.layers[L] && !(atlas && n==="musFront"); }
+    for(const n in meshes){ const L=LAYER[n]; meshes[n].visible=!mriActive && !!st.layers[L] && !(atlas && n==="musFront"); }
+    for(const x of stencilMs) x.m.visible=cutActive && (mriActive || !!st.layers[LAYER[x.g]]);
+    for(const g in caps) caps[g].visible=cutActive && (mriActive || !!st.layers[LAYER[g]]);
+    grid.visible=!mriActive;
+    /* cut plane */
+    const pl=PL[st.plane]||PL.sagittal, s01=clamp(st.slice==null?0.5:st.slice,0,1);
+    const lo=BB.min.getComponent(pl.ax), hi=BB.max.getComponent(pl.ax), cc=lo+(hi-lo)*s01;
+    const pt=v3(0,BBc.y,BBc.z); pt.setComponent(pl.ax,cc); const nrm=A(pl.n);
+    cutPlane.setFromNormalAndCoplanarPoint(nrm,pt);
+    cutInfo={ plane:st.plane||"sagittal", mm:Math.round((cc-(lo+hi)/2)*1000), letters:pl.o };
+    if(cutActive) for(const g in caps){ const cp=caps[g]; cp.position.copy(pt); cp.quaternion.setFromUnitVectors(v3(0,0,1),nrm);
+      const u=cp.material.uniforms; if(mriActive){ const q=MRI[g]; u.col.value.setRGB(q,q,q); u.noise.value=0.06; } else { const q=ANAT[g]; u.col.value.setRGB(q[0],q[1],q[2]); u.noise.value=0.025; } }
     for(const n in mats) mats[n].xray.uniforms.bright.value=st.brightness;
     renderer.toneMappingExposure=1.05*st.brightness;
     /* section plane follows the chest */
@@ -1713,24 +1760,42 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
     cam.idle+=st.dt||16; if(cam.spin && cam.idle>1500 && ptr.size===0) cam.yaw+=(st.dt||16)*0.00045;
     camera.position.set(cam.tgt.x+Math.sin(cam.yaw)*Math.cos(cam.pitch)*cam.dist, cam.tgt.y+Math.sin(cam.pitch)*cam.dist, cam.tgt.z+Math.cos(cam.yaw)*Math.cos(cam.pitch)*cam.dist);
     camera.lookAt(cam.tgt); scene.updateMatrixWorld(); camera.updateMatrixWorld();
+    if(mriActive){ const fr=FRAME[cam.focus]||FRAME.body, asp=W_/Math.max(1,H_), ax=st.plane==="axial";
+      const needH=ax?fr.ap:fr.h, needW=ax?fr.wa:(st.plane==="coronal"?fr.wc:fr.ws), win=Math.max(needH,needW/asp)*1.08/cam.mz;
+      const ctr=ax?v3(0,cc,BBc.z):st.plane==="coronal"?v3(0,fr.y,cc):v3(cc,fr.y,BBc.z);
+      ocam.up.copy(A(pl.up)); ocam.position.copy(ctr).addScaledVector(A(pl.view),-2); ocam.lookAt(ctr);
+      ocam.top=win/2; ocam.bottom=-win/2; ocam.left=-win/2*asp; ocam.right=win/2*asp; ocam.near=0.01; ocam.far=5; ocam.updateProjectionMatrix(); ocam.updateMatrixWorld(); }
     for(let k=0;k<15;k++) BM[k].multiplyMatrices(bones[k].matrixWorld, skeleton.boneInverses[k]);
   }
-  const pv=v3(), pa=v3(), pb=v3();
+  const pv=v3(), pa=v3(), pb=v3(), na=v3(), toCam=v3();
   function labels(out,layers){
     out.length=0;
-    for(const a of anch){ const m=meshes[a.g]; if(!m || !m.visible || !layers[LAYER[a.g]]) continue;
-      pa.copy(a.p).applyMatrix4(BM[a.i0]).multiplyScalar(a.w0); pb.copy(a.p).applyMatrix4(BM[a.i1]).multiplyScalar(a.w1); pv.copy(pa).add(pb);
-      if(atlas && a.g==="shell") continue;
-      pv.project(camera); if(pv.z>1||pv.z<-1) continue;
+    for(const a of anch){
+      if(cutActive){
+        if(!mriActive && !layers[LAYER[a.g]]) continue;
+        const b=built[a.g]; let best=-1, bd=1e9;
+        for(const vi of a.samp){ pv.set(b.pos[vi*3],b.pos[vi*3+1],b.pos[vi*3+2]); const d=Math.abs(cutPlane.distanceToPoint(pv)); if(d<bd){ bd=d; best=vi; } }
+        if(best<0 || bd>0.007) continue;
+        pv.set(b.pos[best*3],b.pos[best*3+1],b.pos[best*3+2]); cutPlane.projectPoint(pv,pa); pv.copy(pa).project(mriActive?ocam:camera);
+      } else {
+        const m=meshes[a.g]; if(!m || !m.visible || !layers[LAYER[a.g]] || (atlas && a.g==="shell")) continue;
+        pa.copy(a.p).applyMatrix4(BM[a.i0]).multiplyScalar(a.w0); pb.copy(a.p).applyMatrix4(BM[a.i1]).multiplyScalar(a.w1); pv.copy(pa).add(pb);
+        na.copy(a.n).transformDirection(BM[a.w0>=a.w1?a.i0:a.i1]); toCam.copy(camera.position).sub(pv);
+        if(na.lengthSq()>0.5 && na.dot(toCam)<0) continue;
+        pv.project(camera);
+      }
+      if(pv.z>1||pv.z<-1) continue;
       out.push({ key:a.key, x:(pv.x+1)/2*W_, y:(1-pv.y)/2*H_ }); }
     return out;
   }
-  function render(){ renderer.render(scene,camera); }
+  function render(){ renderer.render(scene, mriActive?ocam:camera); }
   function defaultPose(){ return restPose(J); }
   prog(1);
-  return { resize, update, render, labels, defaultPose, pointerDown, pointerMove, pointerUp, wheel, resetView, setFocus, setSpin, scene, camera, root, renderer, bones, real:true,
+  const api={ resize, update, render, labels, defaultPose, pointerDown, pointerMove, pointerUp, wheel, resetView, setFocus, setSpin, scene, camera, ocam, root, renderer, bones, real:true, onSlice:null,
+    cutInfo:()=>cutInfo, isMri:()=>mriActive, caps, stencilMs, cutPlane,
     normalsOk:()=>Object.values(built).every(b=>{ const a=b.geo.attributes.normal.array; let z=0; for(let i=0;i<a.length;i+=3) if(a[i]===0&&a[i+1]===0&&a[i+2]===0) z++; return z<a.length/3*0.01; }),
     stats:()=>{ let v=0,t=0; for(const n in built){ v+=built[n].geo.attributes.position.count; t+=built[n].geo.index.count/3; } return {v,t,groups:Object.keys(built),labels:anch.length}; } };
+  return api;
 }
 return { create };
 };
@@ -1763,7 +1828,7 @@ const T = {
     loading:"Loading AI models…", looking:"Looking for a person…", tracking:"Tracking", faceOnly:"Face only",
     camErr:"Camera not available. Allow camera access for this site, then reload.", modelErr:"AI models didn’t load. Check your connection, then reload.",
     credit3d:"3D model: BodyParts3D © DBCLS (CC BY-SA 4.0), via Anatomía en capas", packMissing:"Realistic model not found: upload anatomia-3d.js next to index.html. Showing the simple model.",
-    view3d:"3D view", section:"Layout", sFull:"Full", sAtlas:"Atlas", shell:"Skin silhouette", pose3d:"Pose", live:"Live", freeze:"Freeze", focus:"Focus", fBody:"Body", fTorso:"Torso", fHead:"Head", spin:"Auto-spin", on:"On", off:"Off", inset:"Camera inset",
+    view3d:"3D view", section:"Layout", sFull:"Full", sAtlas:"Atlas", sCut:"Section", sMri:"MRI", plane:"Plane", pAx:"Axial", pCor:"Coronal", pSag:"Sagittal", slice:"Slice position", sliceHint:"MRI: drag up or down on the image to move through the slices, pinch to zoom. Use Focus to frame head, torso or body.", shell:"Skin silhouette", pose3d:"Pose", live:"Live", freeze:"Freeze", focus:"Focus", fBody:"Body", fTorso:"Torso", fHead:"Head", spin:"Auto-spin", on:"On", off:"Off", inset:"Camera inset",
     hint3d:"Atlas = skin on the right half, muscles on the left, open chest showing ribs and organs (Solid look). Drag to rotate, pinch to zoom, double-tap to reset. “Freeze” keeps the last pose so you can walk around it.",
     explore3d:"Explore in 3D (no camera)", load3d:"Loading 3D…", s3dLive:"3D · live pose", s3dFrozen:"3D · pose frozen", s3dDemo:"3D · sample pose", err3d:"3D view didn’t load. Check your connection." },
   it:{ title:"Lente Anatomica", subtitle:"Anatomia dal vivo", all:"Tutto", bones:"Ossa", muscles:"Muscoli", organs:"Organi", skinChip:"Pelle",
@@ -1779,7 +1844,7 @@ const T = {
     loading:"Caricamento modelli AI…", looking:"Cerco una persona…", tracking:"Tracciamento", faceOnly:"Solo viso",
     camErr:"Fotocamera non disponibile. Consenti l’accesso alla fotocamera per questo sito, poi ricarica.", modelErr:"I modelli AI non si sono caricati. Controlla la connessione, poi ricarica.",
     credit3d:"Modello 3D: BodyParts3D © DBCLS (CC BY-SA 4.0), tramite Anatomía en capas", packMissing:"Modello realistico non trovato: carica anatomia-3d.js accanto a index.html. Mostro il modello semplice.",
-    view3d:"Vista 3D", section:"Composizione", sFull:"Completa", sAtlas:"Tavola", shell:"Sagoma pelle", pose3d:"Posa", live:"Dal vivo", freeze:"Blocca", focus:"Inquadra", fBody:"Corpo", fTorso:"Busto", fHead:"Testa", spin:"Rotazione auto", on:"Sì", off:"No", inset:"Riquadro camera",
+    view3d:"Vista 3D", section:"Composizione", sFull:"Completa", sAtlas:"Tavola", sCut:"Sezione", sMri:"RM", plane:"Piano", pAx:"Assiale", pCor:"Coronale", pSag:"Sagittale", slice:"Posizione della sezione", sliceHint:"RM: trascina su o giù sull’immagine per scorrere le sezioni, pizzica per lo zoom. Con Inquadra scegli testa, busto o corpo.", shell:"Sagoma pelle", pose3d:"Posa", live:"Dal vivo", freeze:"Blocca", focus:"Inquadra", fBody:"Corpo", fTorso:"Busto", fHead:"Testa", spin:"Rotazione auto", on:"Sì", off:"No", inset:"Riquadro camera",
     hint3d:"Tavola = pelle a destra, muscoli a sinistra e torace aperto su costole e organi (aspetto Solido). Trascina per ruotare, pizzica per lo zoom, doppio tocco per ripristinare. “Blocca” mantiene l’ultima posa così puoi girarci intorno.",
     explore3d:"Esplora in 3D (senza fotocamera)", load3d:"Caricamento 3D…", s3dLive:"3D · posa dal vivo", s3dFrozen:"3D · posa bloccata", s3dDemo:"3D · posa di esempio", err3d:"La vista 3D non si è caricata. Controlla la connessione." }
 };
@@ -1799,7 +1864,7 @@ const N = {
   forearm:["Forearm flexors","Flessori avambraccio"], pecs:["Pectoralis major","Grande pettorale"], abs:["Rectus abdominis","Retto dell’addome"],
   obliques:["External oblique","Obliquo esterno"], serratus:["Serratus anterior","Dentato anteriore"], quads:["Quadriceps","Quadricipite"],
   sartorius:["Sartorius","Sartorio"], adductors:["Adductors","Adduttori"], calf:["Gastrocnemius","Gastrocnemio"], tibialis:["Tibialis anterior","Tibiale anteriore"],
-  scm:["Sternocleidomastoid","Sternocleidomastoideo"], trapezius:["Trapezius","Trapezio"], masseter:["Masseter","Massetere"], temporalis:["Temporalis","Muscolo temporale"],
+  scm:["Sternocleidomastoid","Sternocleidomastoideo"], lvent:["Lateral ventricle","Ventricolo laterale"], trapezius:["Trapezius","Trapezio"], masseter:["Masseter","Massetere"], temporalis:["Temporalis","Muscolo temporale"],
   frontalis:["Frontalis","Muscolo frontale"], oculi:["Orbicularis oculi","Orbicolare dell’occhio"], oris:["Orbicularis oris","Orbicolare della bocca"], zygomaticus:["Zygomaticus major","Grande zigomatico"],
   occipital:["Occipital lobe","Lobo occipitale"], cerebellum:["Cerebellum","Cervelletto"], esophagus:["Esophagus","Esofago"], hamstrings:["Hamstrings","Ischiocrurali"],
   gluteus:["Gluteus maximus","Grande gluteo"], latissimus:["Latissimus dorsi","Gran dorsale"], erector:["Erector spinae","Erettori della colonna"],
@@ -1815,7 +1880,7 @@ const ESSENTIAL = new Set(["cranium","mandible","teeth","frontal","eye","cervica
 const S = {
   layers:{ skeleton:true, skull:true, hands:true, muscles:true, organs:true, brain:true, skin:true, shell:false, labels:true },
   look:"xray", brightness:1, real:0.55, reveal:"all", follow:"touch", lensSize:0.3, zoom:1.5,
-  quality:"high", density:"key", view:"ar", section:"full", seen3d:false, pose3d:"live", focus:"body", spin:"off", inset:"on",
+  quality:"high", density:"key", view:"ar", section:"full", plane:"sagittal", slices:{ axial:0.94, coronal:0.45, sagittal:0.5 }, seen3d:false, pose3d:"live", focus:"body", spin:"off", inset:"on",
   facing:"environment", lang:(navigator.language||"en").toLowerCase().startsWith("it") ? "it" : "en", touch:null
 };
 const PRESETS = {
@@ -1827,8 +1892,8 @@ const PRESETS = {
 };
 
 const $ = (s) => document.querySelector(s);
-const SAVE_KEYS = ["layers","look","brightness","real","reveal","follow","lensSize","zoom","quality","density","section","pose3d","focus","spin","inset","lang","seen3d"];
-try { const sv = JSON.parse(localStorage.getItem("anatomyLens.v1") || "null"); if (sv) for (const k of SAVE_KEYS) if (sv[k]!==undefined) S[k] = k==="layers" ? Object.assign(S.layers, sv.layers) : sv[k]; } catch(e){}
+const SAVE_KEYS = ["plane","slices","layers","look","brightness","real","reveal","follow","lensSize","zoom","quality","density","section","pose3d","focus","spin","inset","lang","seen3d"];
+try { const sv = JSON.parse(localStorage.getItem("anatomyLens.v1") || "null"); if (sv) for (const k of SAVE_KEYS) if (sv[k]!==undefined) S[k] = k==="layers" ? Object.assign(S.layers, sv.layers) : k==="slices" ? Object.assign(S.slices, sv.slices) : sv[k]; } catch(e){}
 function saveSettings(){ try { const o={}; for (const k of SAVE_KEYS) o[k]=S[k]; localStorage.setItem("anatomyLens.v1", JSON.stringify(o)); } catch(e){} }
 const video = $("#video"), canvas = $("#view"), ctx = canvas.getContext("2d");
 const scene = document.createElement("canvas"), sctx = scene.getContext("2d");
@@ -2108,6 +2173,7 @@ async function ensure3D(){
       const [gm, mo, PACK] = await Promise.all([ import(GLTF_SPEC), import(MESHOPT_SPEC), loadPack(p=>setLoad(p*0.55)) ]);
       E3 = await window.AnatomyRealFactory(THREE, { RoomEnvironment:ADD.RoomEnvironment, GLTFLoader:gm.GLTFLoader, MeshoptDecoder:mo.MeshoptDecoder }).create($("#gl"), PACK, p=>setLoad(0.55+p*0.45));
       document.body.classList.add("real3d");
+      E3.onSlice = (d)=>{ S.slices[S.plane]=Math.max(0,Math.min(1,S.slices[S.plane]+d)); $("#slice").value=Math.round(S.slices[S.plane]*1000); saveSettings(); updateStatus(); };
     } catch(e){
       console.warn("Realistic model unavailable, using the simple one:", e);
       noteUntil = performance.now()+7000; $("#stext").textContent = T[S.lang].packMissing;
@@ -2148,10 +2214,11 @@ function render3d(now){
     }
   }
   const dt = lastNow ? Math.min(100, now-lastNow) : 16; lastNow = now;
-  E3.update({ pose:P3cur, hands:H3, mirror:mirror(), layers:S.layers, section:S.section, look:S.look, brightness:S.brightness, t:now, dt });
+  E3.update({ pose:P3cur, hands:H3, mirror:mirror(), layers:S.layers, section:S.section, plane:S.plane, slice:S.slices[S.plane], look:S.look, brightness:S.brightness, t:now, dt });
   E3.render();
   base(ctx); ctx.clearRect(0,0,W,H);
-  if (S.inset==="on" && stream && video.videoWidth){
+  const sectionView = E3.real && (S.section==="mri" || S.section==="cut");
+  if (S.inset==="on" && stream && video.videoWidth && !sectionView){
     const iw = Math.min(W*0.3, 150), ih = iw*video.videoHeight/video.videoWidth, x = W-iw-14, y = 116;
     ctx.save(); ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,iw,ih,12) : ctx.rect(x,y,iw,ih); ctx.clip();
     if (mirror()){ ctx.translate(x+iw,y); ctx.scale(-1,1); ctx.drawImage(video,0,0,iw,ih); } else ctx.drawImage(video,x,y,iw,ih);
@@ -2159,6 +2226,14 @@ function render3d(now){
   }
   E3.labels(labelsOut, S.layers);
   updateLabels(labelsOut, null, now); drawLabels(ctx, null);
+  if (E3.real && S.section==="mri"){
+    const L=E3.cutInfo().letters, oc=E3.ocam; base(ctx);
+    ctx.font="600 15px 'IBM Plex Sans Condensed', system-ui, sans-serif"; ctx.fillStyle="rgba(235,245,255,.85)"; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillText(L[0], W/2, 132); ctx.fillText(L[1], W/2, H-150); ctx.fillText(L[2], 16, H/2); ctx.fillText(L[3], W-16, H/2);
+    const pxm = H/(oc.top-oc.bottom), bar = 0.05*pxm, x0 = 18, y0 = H-150;
+    ctx.strokeStyle="rgba(235,245,255,.85)"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x0+bar,y0); ctx.moveTo(x0,y0-4); ctx.lineTo(x0,y0+4); ctx.moveTo(x0+bar,y0-4); ctx.lineTo(x0+bar,y0+4); ctx.stroke();
+    ctx.font="500 11px 'IBM Plex Sans Condensed', system-ui, sans-serif"; ctx.textAlign="left"; ctx.fillText("5 cm", x0, y0-12);
+  }
 }
 
 /* ---------- detection loop ---------- */
@@ -2220,6 +2295,7 @@ function updateStatus(){
   if (S.view==="3d"){
     if (performance.now() < noteUntil){ $("#stext").textContent=tx.packMissing; $("#sdot").classList.remove("ok"); return; }
     if (!E3) msg = loadPct ? `${tx.load3d} ${Math.round(loadPct*100)}%` : tx.load3d;
+    else if (E3.real && (S.section==="mri" || S.section==="cut")){ const ci=E3.cutInfo(); msg=`${S.section==="mri"?tx.sMri:tx.sCut} · ${tx[{axial:"pAx",coronal:"pCor",sagittal:"pSag"}[ci.plane]]} · ${ci.mm>0?"+":""}${ci.mm} mm`; ok=true; }
     else if (S.pose3d==="freeze"){ msg=tx.s3dFrozen; ok=true; }
     else if (TR.pose.tracked){ msg=`${tx.s3dLive} · ${fps} fps`; ok=true; }
     else msg = stream ? tx.looking : tx.s3dDemo;
@@ -2258,6 +2334,9 @@ function syncUI(){
   document.querySelectorAll("[data-seg]").forEach(seg=>{ seg.querySelectorAll("button").forEach(b=>b.classList.toggle("on", S[seg.dataset.seg]===b.dataset.v)); });
   document.querySelectorAll("[data-preset]").forEach(b=>{ const p=PRESETS[b.dataset.preset]; b.classList.toggle("on", Object.keys(p).every(k=>!!p[k]===!!S.layers[k])); });
   $("#v3d").textContent = S.view==="3d" ? "AR" : "3D"; $("#v3d").classList.toggle("on", S.view==="3d");
+  $("#slice").value=Math.round(S.slices[S.plane]*1000);
+  document.body.classList.toggle("secview", S.section==="mri" || S.section==="cut");
+  if (typeof updateStatus==="function" && S.view==="3d") try { updateStatus(); } catch(e){}
   $("#real").value=Math.round(S.real*100); $("#brightness").value=Math.round(S.brightness*100);
   $("#lensSize").value=Math.round(S.lensSize*100); $("#zoom").value=Math.round(S.zoom*10);
 }
@@ -2269,13 +2348,16 @@ document.querySelectorAll("[data-seg]").forEach(seg=>seg.addEventListener("click
   if (key==="reveal" || key==="density") LST.clear();
   if (E3 && key==="focus") E3.setFocus(S.focus);
   if (E3 && key==="spin") E3.setSpin(S.spin==="on");
-  if (key==="pose3d") updateStatus();
+  if (key==="pose3d" || key==="section" || key==="plane") updateStatus();
+  if (key==="plane") $("#slice").value=Math.round(S.slices[S.plane]*1000);
+  if (key==="section") LST.clear();
   if (key==="quality" && prev!==S.quality && fileset){ updateStatus(); loadPose().then(updateStatus).catch(console.error); }
 }));
 $("#real").addEventListener("input",e=>{ S.real=e.target.value/100; saveSettings(); });
 $("#brightness").addEventListener("input",e=>{ S.brightness=e.target.value/100; saveSettings(); });
 $("#lensSize").addEventListener("input",e=>{ S.lensSize=e.target.value/100; saveSettings(); });
 $("#zoom").addEventListener("input",e=>{ S.zoom=e.target.value/10; saveSettings(); });
+$("#slice").addEventListener("input",e=>{ S.slices[S.plane]=e.target.value/1000; saveSettings(); updateStatus(); });
 $("#more").addEventListener("click",()=>{ const open=$("#sheet").classList.toggle("open"); $("#more").setAttribute("aria-expanded",String(open)); });
 for (const b of [$("#lang"),$("#lang2")]) b.addEventListener("click",()=>{ S.lang = S.lang==="it" ? "en" : "it"; applyLang(); saveSettings(); });
 $("#flip").addEventListener("click", async ()=>{
