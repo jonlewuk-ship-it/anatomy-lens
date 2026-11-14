@@ -1587,9 +1587,11 @@ async function create(canvas,PACK,onProgress){
         labelAnch.push({ key:it.inf.lab, g:gname, vi:vo+bi }); }
       vo+=n;
     }
+    /* the compressed meshes carry no normals: rebuild smooth ones so lighting works */
+    { let has=false; for(let i=0;i<nor.length;i+=97){ if(nor[i]!==0){ has=true; break; } }
+      if(!has){ const tg=new THREE.BufferGeometry(); tg.setAttribute("position",new THREE.BufferAttribute(pos,3)); tg.setIndex(new THREE.BufferAttribute(idx,1)); tg.computeVertexNormals(); nor.set(tg.attributes.normal.array); } }
     if(gname==="shell"){
       /* skin inherits weights of the tissue underneath it: nearest bone/muscle sample, penalised when it lies beside or outside the skin normal */
-      { const tg=new THREE.BufferGeometry(); tg.setAttribute("position",new THREE.BufferAttribute(pos,3)); tg.setIndex(new THREE.BufferAttribute(idx,1)); tg.computeVertexNormals(); nor.set(tg.attributes.normal.array); }
       const cell=0.03, H=new Map(), K=(x,y,z)=>x+","+y+","+z;
       for(let i=0;i<pool.length;i+=6){ const k=K(Math.floor(pool[i]/cell),Math.floor(pool[i+1]/cell),Math.floor(pool[i+2]/cell)); let a=H.get(k); if(!a){ a=[]; H.set(k,a); } a.push(i); }
       for(let v=0;v<nv;v++){ const x=pos[v*3],y=pos[v*3+1],z=pos[v*3+2], nx=nor[v*3],ny=nor[v*3+1],nz=nor[v*3+2], cx=Math.floor(x/cell), cy=Math.floor(y/cell), cz=Math.floor(z/cell); let best=-1, bd=1e9;
@@ -1641,7 +1643,7 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
     skeleton:{ roughness:0.62, metalness:0, clearcoat:0.1 }, skull:{ roughness:0.55, metalness:0, clearcoat:0.15 }, hands:{ roughness:0.62, metalness:0, clearcoat:0.1 },
     muscles:{ roughness:0.42, metalness:0, clearcoat:0.35, clearcoatRoughness:0.35, sheen:0.5, sheenColor:new THREE.Color(1,0.62,0.58) },
     organs:{ roughness:0.3, metalness:0, clearcoat:0.8, clearcoatRoughness:0.2 }, brain:{ roughness:0.45, metalness:0, clearcoat:0.4 }, eyes:{ roughness:0.08, metalness:0, clearcoat:1 },
-    shell:{ roughness:0.55, metalness:0, sheen:0.45, sheenColor:new THREE.Color(1,0.85,0.78), transparent:true, opacity:0.95 }, hair:{ roughness:0.8, metalness:0 }
+    shell:{ roughness:0.6, metalness:0, sheen:0.35, sheenColor:new THREE.Color(1,0.85,0.78), transparent:true, opacity:0.95 }, hair:{ roughness:0.8, metalness:0 }
   };
   solidOpts.musFront=solidOpts.muscles;
   const meshes={}, mats={};
@@ -1727,6 +1729,7 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
   function defaultPose(){ return restPose(J); }
   prog(1);
   return { resize, update, render, labels, defaultPose, pointerDown, pointerMove, pointerUp, wheel, resetView, setFocus, setSpin, scene, camera, root, renderer, bones, real:true,
+    normalsOk:()=>Object.values(built).every(b=>{ const a=b.geo.attributes.normal.array; let z=0; for(let i=0;i<a.length;i+=3) if(a[i]===0&&a[i+1]===0&&a[i+2]===0) z++; return z<a.length/3*0.01; }),
     stats:()=>{ let v=0,t=0; for(const n in built){ v+=built[n].geo.attributes.position.count; t+=built[n].geo.index.count/3; } return {v,t,groups:Object.keys(built),labels:anch.length}; } };
 }
 return { create };
@@ -1810,13 +1813,13 @@ const ESSENTIAL = new Set(["cranium","mandible","teeth","frontal","eye","cervica
 
 /* ---------- state ---------- */
 const S = {
-  layers:{ skeleton:true, skull:true, hands:true, muscles:true, organs:true, brain:true, skin:true, shell:true, labels:true },
-  look:"xray", brightness:1, real:0.55, reveal:"lens", follow:"finger", lensSize:0.3, zoom:1.5,
-  quality:"high", density:"key", view:"ar", section:"atlas", seen3d:false, pose3d:"live", focus:"body", spin:"off", inset:"on",
+  layers:{ skeleton:true, skull:true, hands:true, muscles:true, organs:true, brain:true, skin:true, shell:false, labels:true },
+  look:"xray", brightness:1, real:0.55, reveal:"all", follow:"touch", lensSize:0.3, zoom:1.5,
+  quality:"high", density:"key", view:"ar", section:"full", seen3d:false, pose3d:"live", focus:"body", spin:"off", inset:"on",
   facing:"environment", lang:(navigator.language||"en").toLowerCase().startsWith("it") ? "it" : "en", touch:null
 };
 const PRESETS = {
-  all:{ skeleton:1, skull:1, hands:1, muscles:1, organs:1, brain:1, skin:1, shell:1 },
+  all:{ skeleton:1, skull:1, hands:1, muscles:1, organs:1, brain:1, skin:1, shell:0 },
   bones:{ skeleton:1, skull:1, hands:1, muscles:0, organs:0, brain:0, skin:0, shell:0 },
   muscles:{ skeleton:0, skull:0, hands:0, muscles:1, organs:0, brain:0, skin:0, shell:0 },
   organs:{ skeleton:0, skull:0, hands:0, muscles:0, organs:1, brain:1, skin:0, shell:0 },
@@ -1824,6 +1827,9 @@ const PRESETS = {
 };
 
 const $ = (s) => document.querySelector(s);
+const SAVE_KEYS = ["layers","look","brightness","real","reveal","follow","lensSize","zoom","quality","density","section","pose3d","focus","spin","inset","lang","seen3d"];
+try { const sv = JSON.parse(localStorage.getItem("anatomyLens.v1") || "null"); if (sv) for (const k of SAVE_KEYS) if (sv[k]!==undefined) S[k] = k==="layers" ? Object.assign(S.layers, sv.layers) : sv[k]; } catch(e){}
+function saveSettings(){ try { const o={}; for (const k of SAVE_KEYS) o[k]=S[k]; localStorage.setItem("anatomyLens.v1", JSON.stringify(o)); } catch(e){} }
 const video = $("#video"), canvas = $("#view"), ctx = canvas.getContext("2d");
 const scene = document.createElement("canvas"), sctx = scene.getContext("2d");
 const acv = document.createElement("canvas"); acv.width = acv.height = 160;
@@ -2247,6 +2253,7 @@ function applyLang(){
   document.title=tx.title; if (models.pose) updateStatus();
 }
 function syncUI(){
+  saveSettings();
   document.querySelectorAll("[data-layer]").forEach(el=>{ el.checked=!!S.layers[el.dataset.layer]; });
   document.querySelectorAll("[data-seg]").forEach(seg=>{ seg.querySelectorAll("button").forEach(b=>b.classList.toggle("on", S[seg.dataset.seg]===b.dataset.v)); });
   document.querySelectorAll("[data-preset]").forEach(b=>{ const p=PRESETS[b.dataset.preset]; b.classList.toggle("on", Object.keys(p).every(k=>!!p[k]===!!S.layers[k])); });
@@ -2265,12 +2272,12 @@ document.querySelectorAll("[data-seg]").forEach(seg=>seg.addEventListener("click
   if (key==="pose3d") updateStatus();
   if (key==="quality" && prev!==S.quality && fileset){ updateStatus(); loadPose().then(updateStatus).catch(console.error); }
 }));
-$("#real").addEventListener("input",e=>S.real=e.target.value/100);
-$("#brightness").addEventListener("input",e=>S.brightness=e.target.value/100);
-$("#lensSize").addEventListener("input",e=>S.lensSize=e.target.value/100);
-$("#zoom").addEventListener("input",e=>S.zoom=e.target.value/10);
+$("#real").addEventListener("input",e=>{ S.real=e.target.value/100; saveSettings(); });
+$("#brightness").addEventListener("input",e=>{ S.brightness=e.target.value/100; saveSettings(); });
+$("#lensSize").addEventListener("input",e=>{ S.lensSize=e.target.value/100; saveSettings(); });
+$("#zoom").addEventListener("input",e=>{ S.zoom=e.target.value/10; saveSettings(); });
 $("#more").addEventListener("click",()=>{ const open=$("#sheet").classList.toggle("open"); $("#more").setAttribute("aria-expanded",String(open)); });
-for (const b of [$("#lang"),$("#lang2")]) b.addEventListener("click",()=>{ S.lang = S.lang==="it" ? "en" : "it"; applyLang(); });
+for (const b of [$("#lang"),$("#lang2")]) b.addEventListener("click",()=>{ S.lang = S.lang==="it" ? "en" : "it"; applyLang(); saveSettings(); });
 $("#flip").addEventListener("click", async ()=>{
   S.facing = S.facing==="user" ? "environment" : "user";
   for (const tr of [TR.pose, TR.face, ...TR.hands]){ tr.tracked=false; tr.lm=null; tr.good=0; tr.fade=0; }
