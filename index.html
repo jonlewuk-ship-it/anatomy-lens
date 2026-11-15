@@ -1605,7 +1605,7 @@ function frames(P){
   let hy=earM.clone().sub(shM); if(hy.lengthSq()<1e-6) hy=up.clone();
   const headB=basis(hy,earAx.clone().cross(hy.clone().normalize()));
   const F=[];
-  F[0]={o:hipM,B:pelvB,L:tl}; F[1]={o:shM,B:chestB,L:tl}; F[2]={o:shM,B:headB,L:Math.max(1e-3,hy.length())};
+  F[0]={o:hipM,B:pelvB,L:tl}; F[1]={o:shM,B:chestB,L:tl}; F[2]={o:shM,B:headB,L:Math.max(1e-3,hy.length()),earM,earW:earAx.length()};
   const arm=(s,e,w,pk,ix,k)=>{ const pn=ix.clone().sub(w).cross(pk.clone().sub(w)); const hd=mid(ix,pk).sub(w);
     F[k]={o:s,B:basis(e.clone().sub(s),fwd),L:s.distanceTo(e)};
     F[k+1]={o:e,B:basis(w.clone().sub(e),pn),L:e.distanceTo(w)};
@@ -1902,12 +1902,15 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
     const g=clamp(F[0].L/RF[0].L,0.7,1.4);
     for(let k=0;k<15;k++){ const b=bones[k]; b.position.copy(F[k].o); b.quaternion.setFromRotationMatrix(F[k].B);
       let ky=k<=1?F[k].L/RF[k].L : k===2?1 : F[k].L/RF[k].L; ky=clamp(ky, k===5||k===8||k===11||k===14?0.6:0.7, k===5||k===8||k===11||k===14?1.6:1.4);
-      if(k===2) b.scale.set(g,g,g); else b.scale.set(g,ky,g); }
+      if(k===2){ if(st.ar && RF[2].earW>1e-3){ /* AR: the skull takes its size from the ear width seen in the picture and sits centred on the ears */
+          const gh=clamp(F[2].earW/RF[2].earW,0.6,2.2); b.scale.set(gh,gh,gh);
+          const yax=v3().setFromMatrixColumn(F[2].B,1).normalize(); b.position.copy(F[2].earM).addScaledVector(yax,-RF[2].L*gh); }
+        else b.scale.set(g,g,g); } else b.scale.set(g,ky,g); }
     root.scale.x=mirror?-1:1;
     root.updateMatrixWorld(true);
     /* look + layout */
     if(st.look!==look){ look=st.look; const hc=look==="holoc", k=look==="xray"?"xray":(look==="holo"||hc)?"holo":"solid";
-      for(const n in meshes){ meshes[n].material=mats[n][k]; const u=mats[n].holo.uniforms; u.tint.value.fromArray((hc?CTINT[n]:HTINT[n])||[0.4,0.85,1]); u.opacity.value=Math.min(1,(HOP[n]||0.6)*(hc?1.15:1)); const hm=mats[n].holo, bl=hc?THREE.NormalBlending:THREE.AdditiveBlending; if(hm.blending!==bl){ hm.blending=bl; hm.needsUpdate=true; } } }
+      for(const n in meshes){ meshes[n].material=mats[n][k]; const u=mats[n].holo.uniforms; u.tint.value.fromArray((hc?CTINT[n]:HTINT[n])||[0.4,0.85,1]); u.opacity.value=Math.min(1,(HOP[n]||0.6)*(hc?(LAYER[n]==="brain"?0.55:1.15):1)); const hm=mats[n].holo, bl=hc?THREE.NormalBlending:THREE.AdditiveBlending; if(hm.blending!==bl){ hm.blending=bl; hm.needsUpdate=true; } } }
     if(mode!==curMode){ curMode=mode; atlas=(mode==="atlas");
       for(const n in mats){ const planes = mode==="cut" ? [cutPlane] : (atlas && (n==="muscles"||n==="musFront")) ? [planeMus] : (atlas && n==="shell") ? [planeSkin] : null;
         for(const m of [mats[n].solid,mats[n].xray,mats[n].holo]){ m.clippingPlanes=planes; m.needsUpdate=true; } }
@@ -1928,7 +1931,7 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
     if(cutActive) for(const g in caps){ const cp=caps[g]; cp.position.copy(pt); cp.quaternion.setFromUnitVectors(v3(0,0,1),nrm);
       const u=cp.material.uniforms; if(mriActive){ const q=MRI[g]; u.col.value.setRGB(q,q,q); u.noise.value=0.06; } else { const q=ANAT[g]; u.col.value.setRGB(q[0],q[1],q[2]); u.noise.value=0.025; } }
     { const hc=look==="holoc", crowd=!!st.layers.muscles; for(const n in mats){ mats[n].xray.uniforms.bright.value=st.brightness; const u=mats[n].holo.uniforms; u.bright.value=st.brightness*(hc?1.25:1);
-      const L=LAYER[n], inner=(L==="organs"||L==="brain"); u.uBase.value=(HBASE[n]||0.04)*(hc?1.6:1)*(inner&&crowd&&!hc?0.35:1)*((n==="muscles"||n==="musFront")&&hc&&st.layers.organs?0.4:1); } }
+      const L=LAYER[n], inner=(L==="organs"||L==="brain"); u.uBase.value=(HBASE[n]||0.04)*(hc?1.6:1)*(inner&&crowd&&!hc?0.6:1)*((n==="muscles"||n==="musFront")&&hc&&st.layers.organs?0.4:1); } }
     timeU.value=st.t||0;
     renderer.toneMappingExposure=1.05*st.brightness;
     /* section plane follows the chest */
@@ -2786,7 +2789,7 @@ function drawHUD(c, now, focus, label){
     arcs(c,x,y,r*1.09,-t*0.8,3,TAU/10,1,"rgba(0,229,255,.35)");
     c.strokeStyle="rgba(0,229,255,.22)"; c.setLineDash([2,6]); c.beginPath(); c.arc(x,y,r*0.92,0,TAU); c.stroke(); c.setLineDash([]);
     c.fillStyle="rgba(0,229,255,.8)"; for (let q=0;q<4;q++){ const a=q*Math.PI/2+t*0.5; const px=x+Math.cos(a)*r*1.17, py=y+Math.sin(a)*r*1.17; c.save(); c.translate(px,py); c.rotate(a); c.beginPath(); c.moveTo(-5,-3); c.lineTo(0,0); c.lineTo(-5,3); c.closePath(); c.fill(); c.restore(); }
-    if (label){ c.font="600 11px 'Share Tech Mono', ui-monospace, monospace"; c.textAlign="center"; c.fillStyle="rgba(127,243,255,.9)"; c.fillText(label, x, y-r*1.17-10); }
+    if (label){ c.font="600 11px 'Share Tech Mono', ui-monospace, monospace"; c.textAlign="center"; c.fillStyle="rgba(127,243,255,.9)"; const ly=y-r*1.17-10; c.fillText(label, x, ly>top+24 ? ly : Math.min(bot-60, y+r*1.17+18)); }
   }
   const d=new Date(), hh=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")+":"+String(d.getSeconds()).padStart(2,"0");
   const lines=[ T[S.lang].hudTitle, ($("#stext").textContent||"").toUpperCase(), hh ];
@@ -2806,21 +2809,41 @@ function focusAR(P,F){
 const lab3 = [], FIT = { s:0, tx:0, ty:0, ok:false, t:0 };
 const FITJ = [0,11,12,13,14,15,16,23,24,25,26,27,28];
 const bodyLayers = () => S.layers.skeleton || S.layers.skull || S.layers.hands || S.layers.muscles || S.layers.organs || S.layers.brain;
-function arHolo(P, now){
+/* face-mesh points that stand in for the pose head joints (nose, eyes, ears, mouth) */
+const FACEJ = { 0:1, 2:473, 5:468, 7:454, 8:234, 9:291, 10:61 };
+const PARJ = { 1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0,10:0, 13:11,15:13,17:15,19:15,21:15, 14:12,16:14,18:16,20:16,22:16, 25:23,27:25,29:27,31:27, 26:24,28:26,30:28,32:28 };
+function arHolo(P, F, now){
   if (S.arMode!=="holo" || !P || !TR.pose.tracked || !TR.pose.world || !bodyLayers()) { FIT.ok=false; return false; }
   if (!E3){ if (!E3load) ensure3D().then(updateStatus).catch(e=>{ console.warn(e); }); return false; }
   if (!E3.real) return false;
-  const Wd=TR.pose.world, m=mirror()?-1:1; let sw=0,cX=0,cY=0,cx=0,cy=0;
-  const wt=(i)=> (P[i].on===false ? 0 : 1) * ((LEGS.off && i>=25) ? 0 : 1) * (i===0 ? 0.5 : 1);
-  for (const i of FITJ){ const w=wt(i); sw+=w; cX+=w*Wd[i].x; cY+=w*-Wd[i].y; cx+=w*P[i].x; cy+=w*P[i].y; }
-  if (sw<3){ FIT.ok=false; return false; }
+  const Wd=TR.pose.world, lm=TR.pose.lm, m=mirror()?-1:1;
+  /* 2D anchors: the face mesh is far more precise than the pose for the head */
+  const Q=P.map(p=>({ x:p.x, y:p.y })), wv=new Float32Array(33);
+  for (let i=0;i<33;i++){ const v=lm[i].visibility ?? lm[i].v ?? 1; wv[i]=Math.max(0, Math.min(1, (v-0.5)/0.35)); wv[i]*=wv[i]; if (LEGS.off && i>=25) wv[i]=0; }
+  const useFace = F && F.length>=474 && TR.face.tracked;
+  if (useFace){ for (const k in FACEJ){ const f=F[FACEJ[k]]; if (f){ Q[k].x=f.x; Q[k].y=f.y; wv[k]=1; } }
+    /* the face contour sits a little in front of the ears: push the ear anchors outward */
+    const ex=F[454].x-F[234].x, ey=F[454].y-F[234].y; Q[7].x+=ex*0.1; Q[7].y+=ey*0.1; Q[8].x-=ex*0.1; Q[8].y-=ey*0.1; }
+  const fitJ=[0,7,8,11,12,13,14,15,16,23,24,25,26,27,28];
+  let sw=0,cX=0,cY=0,cx=0,cy=0;
+  for (const i of fitJ){ const w=wv[i]; sw+=w; cX+=w*Wd[i].x; cY+=w*-Wd[i].y; cx+=w*Q[i].x; cy+=w*Q[i].y; }
+  if (sw<2.5){ FIT.ok=false; return false; }
   cX/=sw; cY/=sw; cx/=sw; cy/=sw; let num=0, den=0;
-  for (const i of FITJ){ const w=wt(i), dX=Wd[i].x-cX, dY=-Wd[i].y-cY; num+=w*(m*dX*(P[i].x-cx) - dY*(P[i].y-cy)); den+=w*(dX*dX+dY*dY); }
+  for (const i of fitJ){ const w=wv[i], dX=Wd[i].x-cX, dY=-Wd[i].y-cY; num+=w*(m*dX*(Q[i].x-cx) - dY*(Q[i].y-cy)); den+=w*(dX*dX+dY*dY); }
   const s=num/Math.max(1e-6,den); if (!(s>20) || !isFinite(s)){ FIT.ok=false; return false; }
   const tx=cx-m*s*cX, ty=cy+s*cY, k=(FIT.ok && now-FIT.t<400) ? 0.55 : 1;
   FIT.s+=(s-FIT.s)*k; FIT.tx+=(tx-FIT.tx)*k; FIT.ty+=(ty-FIT.ty)*k; FIT.ok=true; FIT.t=now;
   livePose3();
-  const ms=m*FIT.s, dt = lastNow ? Math.min(100, now-lastNow) : 16; lastNow=now;
+  /* retarget: every joint the camera really sees is pinned to its 2D position (depth from the 3D estimate);
+     joints out of frame follow their parent, so the limbs keep their shape instead of being guessed */
+  const ms=m*FIT.s, V3=P3cur[0].constructor, dx=new Float32Array(33), dy=new Float32Array(33);
+  const roots=[0,11,12,23,24]; let rx=0, ry=0, rn=0;
+  for (let i=0;i<33;i++){ if (wv[i]>0.5){ dx[i]=(Q[i].x-FIT.tx)/ms - P3cur[i].x; dy[i]=(FIT.ty-Q[i].y)/FIT.s - P3cur[i].y; if (roots.includes(i)){ rx+=dx[i]; ry+=dy[i]; rn++; } } }
+  if (rn){ rx/=rn; ry/=rn; }
+  for (let i=0;i<33;i++){ if (wv[i]>0.5) continue; const p=PARJ[i]; if (p==null){ dx[i]=rx; dy[i]=ry; } else { dx[i]=dx[p]; dy[i]=dy[p]; } }
+  for (let i=0;i<33;i++) P3cur[i]=new V3(P3cur[i].x+dx[i], P3cur[i].y+dy[i], P3cur[i].z);
+  if (H3) for (const sd of ["L","R"]){ const h=H3[sd]; if (!h) continue; const wi=sd==="L"?15:16; for (let i=0;i<h.length;i++) h[i]=new V3(h[i].x+dx[wi], h[i].y+dy[wi], h[i].z); }
+  const dt = lastNow ? Math.min(100, now-lastNow) : 16; lastNow=now;
   if (E3.setActivation) E3.setActivation(null, now);
   E3.update({ pose:P3cur, hands:H3, mirror:false, layers:S.layers, section:"full", plane:S.plane, slice:0.5, look:S.look, brightness:S.brightness, t:now, dt,
     ar:{ l:-FIT.tx/ms, r:(W-FIT.tx)/ms, t:FIT.ty/FIT.s, b:(FIT.ty-H)/FIT.s } });
@@ -2840,7 +2863,7 @@ function render(now){
   const F = TR.face.lm && TR.face.fade>0.02 ? TR.face.lm.map(mp) : null;
   const hands = TR.hands.filter(h=>h.lm && h.fade>0.02).map(h=>({ pts:h.lm.map(mp), fade:h.fade }));
   const d0=performance.now();
-  const use3 = arHolo(P, now);
+  const use3 = arHolo(P, F, now);
   if (use3){ base(sctx,sdpr); sctx.globalAlpha=Math.min(1,TR.pose.fade*1.2); sctx.drawImage($("#gl"),0,0,W,H); sctx.globalAlpha=1; }
   const L2 = use3 ? Object.assign({}, S.layers, { skeleton:false, skull:false, hands:false, muscles:false, organs:false, brain:false }) : S.layers;
   LIB.draw(sctx, { dpr:sdpr, look:(S.look==="holo"||S.look==="holoc")?"xray":S.look, hud:S.look==="holo", brightness:S.brightness, layers:L2, pose:use3?null:P, poseFade:TR.pose.fade,
@@ -3261,7 +3284,8 @@ const GUIDE = {
     ["Settings ⚙︎","Look: Hologram, Colour holo, X-ray, Solid. “Max” tracking is more precise but slower. In 3D you also get Section and MRI."],
     ["Limits","This is an illustration, not an X-ray and not a diagnosis. For any doubt, a doctor’s opinion is what counts."]]
 };
-function renderGuide(){ $("#guideL").innerHTML = GUIDE[S.lang].map(g=>`<li><b>${esc(g[0])}</b>${esc(g[1])}</li>`).join(""); }
+const APP_VER="v6 · 15/11";
+function renderGuide(){ $("#guide h2").textContent=T[S.lang].gTitle+" · "+APP_VER; $("#guideL").innerHTML = GUIDE[S.lang].map(g=>`<li><b>${esc(g[0])}</b>${esc(g[1])}</li>`).join(""); }
 function firstGuide(){ if (!S.guideSeen){ S.guideSeen=true; saveSettings(); $("#guide").hidden=false; } }
 for (const b of [$("#guideBtn"),$("#guideBtn2")]) b.addEventListener("click",()=>{ S.guideSeen=true; saveSettings(); $("#guide").hidden=false; });
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{ $("#"+b.dataset.close).hidden=true; }));
