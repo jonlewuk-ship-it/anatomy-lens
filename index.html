@@ -64,6 +64,33 @@ body.v3d.real3d .credit{ display:block; }
 .iconbtn.on{ background:var(--film); color:var(--film-ink); border-color:transparent; }
 .secondary{ width:100%; height:50px; margin-top:10px; border-radius:25px; border:1px solid rgba(159,216,255,.45); background:transparent; color:#cfe8fa; font-size:16px; font-weight:600; cursor:pointer; }
 #video{ position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+.fabs{ position:fixed; right:12px; bottom:calc(env(safe-area-inset-bottom,0px) + 88px); z-index:6; display:flex; flex-direction:column; gap:8px; }
+.fabs .iconbtn{ width:46px; height:46px; min-width:46px; padding:0; font-size:19px; }
+.fabs .iconbtn.txt{ font-size:12px; font-weight:700; letter-spacing:.04em; }
+body:not(.skinon) #moleBtn, body.started0 .fabs{ display:none; }
+.toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 150px); z-index:9; max-width:86vw; padding:10px 16px; background:var(--panel); border:1px solid var(--line); border-radius:12px; font-size:14px; text-align:center; }
+.toast[hidden]{ display:none; }
+.over{ position:fixed; inset:0; z-index:12; background:rgba(3,10,18,.94); overflow:auto; padding:calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 24px); }
+.over[hidden]{ display:none; }
+.over .in{ max-width:560px; margin:0 auto; }
+.over h2{ margin:0 44px 12px 0; font-size:22px; font-weight:600; }
+.over .x{ position:fixed; right:14px; top:calc(env(safe-area-inset-top,0px) + 12px); }
+.over ol{ margin:0; padding:0; list-style:none; counter-reset:g; }
+.over ol li{ counter-increment:g; position:relative; padding:10px 0 10px 40px; border-top:1px solid var(--line); font-size:15px; line-height:1.45; }
+.over ol li::before{ content:counter(g); position:absolute; left:0; top:10px; width:28px; height:28px; border:1px solid var(--line); display:grid; place-items:center; font-size:13px; font-weight:700; color:#7ff3ff; }
+.over ol li b{ display:block; font-size:15.5px; }
+.over .rowf{ display:flex; gap:8px; margin:8px 0; }
+.over select, .over input[type=text]{ flex:1; min-width:0; height:44px; padding:0 12px; background:rgba(255,255,255,.06); color:inherit; border:1px solid var(--line); border-radius:8px; font:inherit; font-size:16px; }
+.over .btn{ height:44px; padding:0 14px; border-radius:8px; border:1px solid rgba(0,229,255,.5); background:rgba(0,229,255,.12); color:#d9fbff; font:inherit; font-weight:600; cursor:pointer; white-space:nowrap; }
+.over .btn.warn{ border-color:rgba(255,120,120,.5); background:rgba(255,90,90,.1); color:#ffd0d0; }
+.over .note{ font-size:12.5px; line-height:1.45; color:var(--muted); margin:8px 0 14px; }
+.scan{ border:1px solid var(--line); padding:12px; margin:12px 0; }
+.scan h3{ margin:0 0 8px; font-size:15px; font-weight:600; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.scan .face{ width:100%; max-width:300px; display:block; margin:0 auto 10px; }
+.moles{ display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr)); gap:8px; }
+.mole{ border:1px solid var(--line); padding:6px; font-size:12.5px; line-height:1.35; }
+.mole img{ width:100%; aspect-ratio:1; object-fit:cover; display:block; margin-bottom:4px; }
+.mole b{ color:#78ffd6; } .mole .chg{ color:#ffc454; font-weight:600; } .mole .new{ color:#7ff3ff; font-weight:600; }
 .flash{ position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:20; transition:opacity .35s; }
 .flash.on{ opacity:.8; transition:none; }
 
@@ -180,6 +207,21 @@ body.hud .secondary{ border-radius:2px; font-family:'Rajdhani',var(--font); font
 <div class="credit" id="credit3d" data-i="credit3d"></div>
 <div class="actp" id="actP" hidden><h5 data-i="actTitle">Active muscles</h5><div id="actL"></div><p data-i="actNote"></p></div>
 <section class="card3d" id="card3d" hidden aria-live="polite"><button class="cardx" id="cardX" aria-label="Close">✕</button><div class="cardsys" id="cardSys"></div><h3 id="cardT"></h3><div class="cardpart" id="cardP"></div><dl id="cardD"></dl></section>
+<div class="fabs">
+  <button class="iconbtn only3d" id="reset3d" aria-label="Reset view">⟲</button>
+  <button class="iconbtn txt onlyAR" id="moleBtn" data-i="moleBtn">MOLES</button>
+  <button class="iconbtn" id="patBtn" aria-label="Patients">👤</button>
+  <button class="iconbtn txt" id="guideBtn" aria-label="Guide">?</button>
+</div>
+<div class="toast" id="toast" hidden></div>
+<section class="over" id="guide" hidden><button class="iconbtn x" data-close="guide" aria-label="Close">✕</button><div class="in"><h2 data-i="gTitle">Quick guide</h2><ol id="guideL"></ol><p class="note" data-i="disclaimer"></p></div></section>
+<section class="over" id="pat" hidden><button class="iconbtn x" data-close="pat" aria-label="Close">✕</button><div class="in">
+  <h2 data-i="pTitle">Patients and mole history</h2>
+  <div class="rowf"><select id="patSel" aria-label="Patient"></select><button class="btn warn" id="patDel" data-i="pDel">Delete</button></div>
+  <div class="rowf"><input type="text" id="patName" maxlength="40" autocomplete="off"><button class="btn" id="patAdd" data-i="pAdd">Add</button></div>
+  <p class="note" data-i="pNote"></p>
+  <div id="patScans"></div>
+</div></section>
 <div class="status" id="status" hidden><span class="dot" id="sdot"></span><span id="stext"></span></div>
 
 <section class="sheet" id="sheet">
@@ -217,6 +259,7 @@ body.hud .secondary{ border-radius:2px; font-family:'Rajdhani',var(--font); font
         <div><h4 data-i="follow">Lens follows</h4>
           <div class="seg" data-seg="follow"><button data-v="finger" data-i="finger">Fingertip</button><button data-v="touch" data-i="touch">Touch</button></div></div>
       </div>
+      <div style="margin-top:10px"><h4 data-i="arMode">Body in AR</h4><div class="seg" data-seg="arMode"><button data-v="holo" data-i="arHolo">3D hologram</button><button data-v="draw" data-i="arDraw">Drawing</button></div></div>
       <p class="hint" data-i="hint"></p>
     </div>
     <div class="group">
@@ -236,7 +279,7 @@ body.hud .secondary{ border-radius:2px; font-family:'Rajdhani',var(--font); font
     <div class="group">
       <div class="row2">
         <div><h4 data-i="quality">Tracking</h4>
-          <div class="seg" data-seg="quality"><button data-v="high" data-i="high">Stable</button><button data-v="fast" data-i="fast">Fast</button></div></div>
+          <div class="seg" data-seg="quality"><button data-v="max" data-i="maxq">Max</button><button data-v="high" data-i="high">Stable</button><button data-v="fast" data-i="fast">Fast</button></div></div>
         <div><h4 data-i="density">Labels shown</h4>
           <div class="seg" data-seg="density"><button data-v="key" data-i="key">Main ones</button><button data-v="all" data-i="every">All</button></div></div>
       </div>
@@ -244,7 +287,7 @@ body.hud .secondary{ border-radius:2px; font-family:'Rajdhani',var(--font); font
     </div>
     <div class="group">
       <h4 data-i="look">Look</h4>
-      <div class="seg" data-seg="look"><button data-v="holo" data-i="holo">Hologram</button><button data-v="xray" data-i="xray">X-ray</button><button data-v="solid" data-i="solid">Solid</button></div>
+      <div class="seg" data-seg="look"><button data-v="holo" data-i="holo">Hologram</button><button data-v="holoc" data-i="holoc">Colour holo</button><button data-v="xray" data-i="xray">X-ray</button><button data-v="solid" data-i="solid">Solid</button></div>
       <div style="margin:10px 0 4px"><h4 data-i="theme">Style</h4><div class="seg" data-seg="theme"><button data-v="hud" data-i="tHud">Holographic</button><button data-v="classic" data-i="tClassic">Classic</button></div></div>
       <label class="range"><span data-i="real">Real me showing through</span><input type="range" id="real" min="0" max="100"></label>
       <label class="range"><span data-i="brightness">Brightness</span><input type="range" id="brightness" min="40" max="200"></label>
@@ -274,6 +317,7 @@ body.hud .secondary{ border-radius:2px; font-family:'Rajdhani',var(--font); font
     <p data-i="intro"></p>
     <button class="primary" id="go" data-i="start">Start camera</button>
     <button class="secondary" id="go3d" data-i="explore3d">Explore in 3D (no camera)</button>
+    <button class="secondary" id="guideBtn2" data-i="gTitle">Quick guide</button>
     <p class="err" id="err"></p>
     <p class="note" data-i="disclaimer"></p>
   </div>
@@ -1526,6 +1570,9 @@ const TINT={ skeleton:[0.8,0.92,1], skull:[0.8,0.92,1], hands:[0.8,0.92,1], musc
   lungs:[1,0.7,0.8], airway:[0.75,0.9,1], heart:[1,0.35,0.4], vessels:[1,0.4,0.45], solid:[0.95,0.55,0.5], gut:[1,0.75,0.6], kidney:[0.95,0.5,0.6], brain:[0.8,0.6,1], brainWM:[0.85,0.8,1], brainDeep:[0.75,0.55,1], brainCSF:[0.5,0.75,1] };
 const HTINT={ skeleton:[0.78,0.96,1], skull:[0.78,0.96,1], hands:[0.78,0.96,1], muscles:[0.18,0.82,1], musFront:[0.18,0.82,1], eyes:[0.85,1,1], shell:[0.3,0.9,1], hair:[0.3,0.9,1],
   lungs:[0.35,0.72,1], airway:[0.6,0.9,1], heart:[0.45,0.78,1], vessels:[0.32,0.62,1], solid:[0.4,0.75,1], gut:[0.45,0.8,1], kidney:[0.42,0.74,1], brain:[0.6,0.85,1], brainWM:[0.7,0.9,1], brainDeep:[0.55,0.8,1], brainCSF:[0.4,0.7,1] };
+const CTINT={ skeleton:[1,0.93,0.74], skull:[1,0.93,0.74], hands:[1,0.93,0.74], muscles:[1,0.24,0.26], musFront:[1,0.24,0.26], eyes:[0.9,1,1], shell:[0.3,0.9,1], hair:[0.3,0.9,1],
+  lungs:[1,0.5,0.72], airway:[0.35,0.95,1], heart:[1,0.16,0.2], vessels:[1,0.22,0.3], solid:[1,0.55,0.14], gut:[1,0.84,0.25], kidney:[0.8,0.3,1], brain:[0.72,0.45,1], brainWM:[0.85,0.75,1], brainDeep:[1,0.45,0.85], brainCSF:[0.3,0.75,1] };
+const HBASE={ lungs:0.16, airway:0.14, heart:0.24, vessels:0.12, solid:0.2, gut:0.16, kidney:0.2, brain:0.1, brainDeep:0.12, skeleton:0.07, skull:0.07, hands:0.07, muscles:0.05, musFront:0.05 };
 const HOP={ skeleton:0.95, skull:0.95, hands:0.95, muscles:0.5, musFront:0.5, eyes:0.9, shell:0.2, hair:0.15, lungs:0.6, airway:0.8, heart:0.8, vessels:0.8, solid:0.75, gut:0.7, kidney:0.8, brain:0.75, brainWM:0.25, brainDeep:0.5, brainCSF:0.6 };
 const XOP={ skeleton:0.8, skull:0.8, hands:0.8, muscles:0.55, musFront:0.55, eyes:0.9, shell:0.25, hair:0.2, lungs:0.7, airway:0.8, heart:0.85, vessels:0.85, solid:0.85, gut:0.8, kidney:0.85, brain:0.75, brainWM:0.25, brainDeep:0.5, brainCSF:0.6 };
 /* cross-section tones: MRI (T1-like grey levels) and anatomical colours */
@@ -1752,7 +1799,7 @@ gl_FragColor=vec4(mix(tint,vColor,0.3),clamp(a,0.0,1.0)); }`;
   };
   solidOpts.musFront=solidOpts.muscles; for(const g of ORG) solidOpts[g]=solidOpts.organs; for(const g of ["brainWM","brainDeep","brainCSF"]) solidOpts[g]=solidOpts.brain;
   const meshes={}, mats={};
-  const actU={ value:new Float32Array(40) }, pulseU={ value:0 }, timeU={ value:0 }, scanU={ value:0 };
+  const actU={ value:new Float32Array(40) }, pulseU={ value:0 }, timeU={ value:0 }, scanU={ value:0 }, bandU={ value:1 };
   /* hologram: rim light, fine scanlines, a scan band sweeping up the body, slight flicker */
   const HV=`#include <common>
 #include <skinning_pars_vertex>
@@ -1770,15 +1817,15 @@ void main(){
 vN=normalize(transformedNormal); vV=normalize(-mvPosition.xyz); vW=(modelMatrix*vec4(transformed,1.0)).xyz; }`;
   const HF=`#include <common>
 #include <clipping_planes_pars_fragment>
-uniform vec3 tint; uniform float opacity; uniform float bright; uniform float uTime; uniform float uScan; varying vec3 vN; varying vec3 vV; varying vec3 vW;
+uniform vec3 tint; uniform float opacity; uniform float bright; uniform float uTime; uniform float uScan; uniform float uBase; uniform float uBand; varying vec3 vN; varying vec3 vV; varying vec3 vW;
 void main(){
 #include <clipping_planes_fragment>
 float f=1.0-abs(dot(normalize(vN),normalize(vV))); float rim=pow(f,2.2);
 float lines=0.6+0.4*step(0.45,fract(vW.y*140.0+uTime*0.0006));
 float band=exp(-pow((vW.y-uScan)*16.0,2.0));
 float flick=0.95+0.05*sin(uTime*0.011+vW.y*5.0);
-float a=((0.04+rim*0.9)*lines*flick*opacity + band*0.3*opacity)*bright;
-vec3 col=tint*(0.55+0.9*rim)+vec3(0.65,0.97,1.0)*band*0.9;
+float a=((uBase+rim*0.9)*lines*flick*opacity + band*0.3*opacity*uBand)*bright;
+vec3 col=tint*(0.55+0.9*rim)+vec3(0.65,0.97,1.0)*band*0.9*uBand;
 /*ACT*/
 gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
   const HVA=HV.replace("varying vec3 vN;","attribute float mgrp; uniform float uAct[40]; varying float vAct; varying vec3 vN;").replace("vN=normalize(transformedNormal);","vAct=uAct[int(mgrp+0.5)]; vN=normalize(transformedNormal);");
@@ -1796,7 +1843,7 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
     const xu={ opacity:{value:XOP[g]||0.7}, bright:{value:1}, tint:{value:new THREE.Color(t[0],t[1],t[2])} }; if(isMus) xu.uAct=actU;
     const xray=new THREE.ShaderMaterial({ uniforms:xu, vertexShader:isMus?XVA:XV, fragmentShader:isMus?XFA:XF,
       vertexColors:true, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, clipping:true });
-    const hu={ opacity:{value:HOP[g]||0.6}, bright:{value:1}, tint:{value:new THREE.Color().fromArray(HTINT[g]||[0.4,0.85,1])}, uTime:timeU, uScan:scanU }; if(isMus) hu.uAct=actU;
+    const hu={ opacity:{value:HOP[g]||0.6}, bright:{value:1}, tint:{value:new THREE.Color().fromArray(HTINT[g]||[0.4,0.85,1])}, uTime:timeU, uScan:scanU, uBase:{value:HBASE[g]||0.04}, uBand:bandU }; if(isMus) hu.uAct=actU;
     const holo=new THREE.ShaderMaterial({ uniforms:hu, vertexShader:isMus?HVA:HV, fragmentShader:isMus?HFA:HF, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, clipping:true });
     mats[g]={ solid, xray, holo };
     const m=new THREE.SkinnedMesh(built[g].geo, solid); m.frustumCulled=false; m.userData.g=g; root.add(m); m.bind(skeleton); meshes[g]=m;
@@ -1826,17 +1873,21 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
   const BM=bones.map(()=>new THREE.Matrix4());
 
   /* ---- camera control ---- */
-  const cam={ yaw:0, pitch:0.08, dist:3.0, mz:1, focus:"body", spin:false, idle:0, tgt:v3(0,0.9,0) };
-  const ptr=new Map(); let lastTap=0, span0=0, dist0=0, mz0=1;
-  function resetView(){ cam.yaw=0; cam.pitch=0.08; cam.mz=1; cam.dist=cam.focus==="head"?0.75:cam.focus==="torso"?1.4:3.0; }
+  const cam={ yaw:0, pitch:0.08, dist:3.0, mz:1, focus:"body", spin:false, idle:0, tgt:v3(0,0.9,0), px:0, py:0 };
+  const acam=new THREE.OrthographicCamera(-1,1,1,-1,0.01,20); let viewCam=null;
+  const ptr=new Map(); let lastTap=0, span0=0, dist0=0, mz0=1, cx0=0, cy0=0;
+  function resetView(){ cam.yaw=0; cam.pitch=0.08; cam.mz=1; cam.px=0; cam.py=0; cam.dist=cam.focus==="head"?0.75:cam.focus==="torso"?1.4:3.0; }
   function pointerDown(e){ ptr.set(e.pointerId,{x:e.clientX,y:e.clientY}); cam.idle=0;
-    if(ptr.size===2){ const a=[...ptr.values()]; span0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); dist0=cam.dist; mz0=cam.mz; }
+    if(ptr.size===2){ const a=[...ptr.values()]; span0=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); dist0=cam.dist; mz0=cam.mz; cx0=(a[0].x+a[1].x)/2; cy0=(a[0].y+a[1].y)/2; }
     const now=performance.now(); if(ptr.size===1){ if(now-lastTap<300) resetView(); lastTap=now; } }
   function pointerMove(e){ const p=ptr.get(e.pointerId); if(!p) return; cam.idle=0;
-    if(ptr.size===1){ if(mriActive){ if(api.onSlice) api.onSlice(-(e.clientY-p.y)/Math.max(200,H_)*0.5); } else { cam.yaw-=(e.clientX-p.x)*0.009; cam.pitch=clamp(cam.pitch+(e.clientY-p.y)*0.007,-1.35,1.35); } }
+    const panBy=(dx,dy)=>{ const k=mriActive ? 1.9/cam.mz/Math.max(200,H_) : 2*cam.dist*Math.tan(camera.fov*Math.PI/360)/Math.max(200,H_); const lim=mriActive?0.9:Math.max(0.35,cam.dist*0.45)+0.6; cam.px=clamp(cam.px-dx*k,-lim,lim); cam.py=clamp(cam.py+dy*k,-lim,lim); };
+    if(ptr.size===1){ if(e.shiftKey || (e.buttons&2)) panBy(e.clientX-p.x,e.clientY-p.y);
+      else if(mriActive){ if(api.onSlice) api.onSlice(-(e.clientY-p.y)/Math.max(200,H_)*0.5); } else { cam.yaw-=(e.clientX-p.x)*0.009; cam.pitch=clamp(cam.pitch+(e.clientY-p.y)*0.007,-1.35,1.35); } }
     p.x=e.clientX; p.y=e.clientY;
+    if(ptr.size===2){ const a=[...ptr.values()], mx=(a[0].x+a[1].x)/2, my=(a[0].y+a[1].y)/2; panBy(mx-cx0,my-cy0); cx0=mx; cy0=my; }
     if(ptr.size===2){ const a=[...ptr.values()]; const sp=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); if(span0>10){ if(mriActive) cam.mz=clamp(mz0*sp/span0,0.6,6); else cam.dist=clamp(dist0*span0/sp,0.25,6); } } }
-  function pointerUp(e){ ptr.delete(e.pointerId); }
+  function pointerUp(e){ ptr.delete(e.pointerId); if(ptr.size===1){ lastTap=0; } }
   function wheel(e){ if(mriActive) cam.mz=clamp(cam.mz*Math.exp(-e.deltaY*0.001),0.6,6); else cam.dist=clamp(cam.dist*Math.exp(e.deltaY*0.001),0.25,6); }
   function setFocus(f){ cam.focus=f; resetView(); }
   function setSpin(b){ cam.spin=!!b; }
@@ -1855,7 +1906,8 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
     root.scale.x=mirror?-1:1;
     root.updateMatrixWorld(true);
     /* look + layout */
-    if(st.look!==look){ look=st.look; const k=look==="xray"?"xray":look==="holo"?"holo":"solid"; for(const n in meshes) meshes[n].material=mats[n][k]; }
+    if(st.look!==look){ look=st.look; const hc=look==="holoc", k=look==="xray"?"xray":(look==="holo"||hc)?"holo":"solid";
+      for(const n in meshes){ meshes[n].material=mats[n][k]; const u=mats[n].holo.uniforms; u.tint.value.fromArray((hc?CTINT[n]:HTINT[n])||[0.4,0.85,1]); u.opacity.value=Math.min(1,(HOP[n]||0.6)*(hc?1.15:1)); const hm=mats[n].holo, bl=hc?THREE.NormalBlending:THREE.AdditiveBlending; if(hm.blending!==bl){ hm.blending=bl; hm.needsUpdate=true; } } }
     if(mode!==curMode){ curMode=mode; atlas=(mode==="atlas");
       for(const n in mats){ const planes = mode==="cut" ? [cutPlane] : (atlas && (n==="muscles"||n==="musFront")) ? [planeMus] : (atlas && n==="shell") ? [planeSkin] : null;
         for(const m of [mats[n].solid,mats[n].xray,mats[n].holo]){ m.clippingPlanes=planes; m.needsUpdate=true; } }
@@ -1866,7 +1918,7 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
     for(const n in meshes){ const L=LAYER[n]; meshes[n].visible=!mriActive && !!st.layers[L] && !(atlas && n==="musFront"); }
     for(const x of stencilMs) x.m.visible=cutActive && (mriActive || !!st.layers[LAYER[x.g]]);
     for(const g in caps) caps[g].visible=cutActive && (mriActive || !!st.layers[LAYER[g]]);
-    const holoOn=(look==="holo") && !mriActive; grid.visible=!mriActive && !holoOn; hud.visible=holoOn;
+    const arOn=!!st.ar && !cutActive; const holoOn=(look==="holo"||look==="holoc") && !mriActive; grid.visible=!mriActive && !holoOn && !arOn; hud.visible=holoOn && !arOn; bandU.value=1;
     /* cut plane */
     const pl=PL[st.plane]||PL.sagittal, s01=clamp(st.slice==null?0.5:st.slice,0,1);
     const lo=BB.min.getComponent(pl.ax), hi=BB.max.getComponent(pl.ax), cc=lo+(hi-lo)*s01;
@@ -1875,7 +1927,8 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
     cutInfo={ plane:st.plane||"sagittal", mm:Math.round((cc-(lo+hi)/2)*1000), letters:pl.o };
     if(cutActive) for(const g in caps){ const cp=caps[g]; cp.position.copy(pt); cp.quaternion.setFromUnitVectors(v3(0,0,1),nrm);
       const u=cp.material.uniforms; if(mriActive){ const q=MRI[g]; u.col.value.setRGB(q,q,q); u.noise.value=0.06; } else { const q=ANAT[g]; u.col.value.setRGB(q[0],q[1],q[2]); u.noise.value=0.025; } }
-    for(const n in mats){ mats[n].xray.uniforms.bright.value=st.brightness; mats[n].holo.uniforms.bright.value=st.brightness; }
+    { const hc=look==="holoc", crowd=!!st.layers.muscles; for(const n in mats){ mats[n].xray.uniforms.bright.value=st.brightness; const u=mats[n].holo.uniforms; u.bright.value=st.brightness*(hc?1.25:1);
+      const L=LAYER[n], inner=(L==="organs"||L==="brain"); u.uBase.value=(HBASE[n]||0.04)*(hc?1.6:1)*(inner&&crowd&&!hc?0.35:1)*((n==="muscles"||n==="musFront")&&hc&&st.layers.organs?0.4:1); } }
     timeU.value=st.t||0;
     renderer.toneMappingExposure=1.05*st.brightness;
     /* section plane follows the chest */
@@ -1895,11 +1948,16 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
     cam.tgt.lerp(t,0.15);
     cam.idle+=st.dt||16; if(cam.spin && cam.idle>1500 && ptr.size===0) cam.yaw+=(st.dt||16)*0.00045;
     camera.position.set(cam.tgt.x+Math.sin(cam.yaw)*Math.cos(cam.pitch)*cam.dist, cam.tgt.y+Math.sin(cam.pitch)*cam.dist, cam.tgt.z+Math.cos(cam.yaw)*Math.cos(cam.pitch)*cam.dist);
-    camera.lookAt(cam.tgt); scene.updateMatrixWorld(); camera.updateMatrixWorld();
+    camera.lookAt(cam.tgt); camera.updateMatrixWorld();
+    if(cam.px||cam.py){ const rx=v3().setFromMatrixColumn(camera.matrixWorld,0), uy=v3().setFromMatrixColumn(camera.matrixWorld,1); camera.position.addScaledVector(rx,cam.px).addScaledVector(uy,cam.py); }
+    scene.updateMatrixWorld(); camera.updateMatrixWorld();
+    /* AR: flat camera fitted to the person in the picture */
+    if(arOn){ const r=st.ar; acam.left=r.l; acam.right=r.r; acam.top=r.t; acam.bottom=r.b; acam.near=0.01; acam.far=20; acam.position.set(0,0,8); acam.quaternion.identity(); acam.updateProjectionMatrix(); acam.updateMatrixWorld(); }
+    viewCam=mriActive?ocam:arOn?acam:camera;
     if(mriActive){ const fr=FRAME[cam.focus]||FRAME.body, asp=W_/Math.max(1,H_), ax=st.plane==="axial";
       const needH=ax?fr.ap:fr.h, needW=ax?fr.wa:(st.plane==="coronal"?fr.wc:fr.ws), win=Math.max(needH,needW/asp)*1.08/cam.mz;
       const ctr=ax?v3(0,cc,BBc.z):st.plane==="coronal"?v3(0,fr.y,cc):v3(cc,fr.y,BBc.z);
-      ocam.up.copy(A(pl.up)); ocam.position.copy(ctr).addScaledVector(A(pl.view),-2); ocam.lookAt(ctr);
+      ctr.addScaledVector(v3().crossVectors(A(pl.up),A(pl.view)).normalize(),-cam.px).addScaledVector(A(pl.up),cam.py); ocam.up.copy(A(pl.up)); ocam.position.copy(ctr).addScaledVector(A(pl.view),-2); ocam.lookAt(ctr);
       ocam.top=win/2; ocam.bottom=-win/2; ocam.left=-win/2*asp; ocam.right=win/2*asp; ocam.near=0.01; ocam.far=5; ocam.updateProjectionMatrix(); ocam.updateMatrixWorld(); }
     for(let k=0;k<15;k++) BM[k].multiplyMatrices(bones[k].matrixWorld, skeleton.boneInverses[k]);
   }
@@ -1916,15 +1974,15 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
       } else {
         const m=meshes[a.g]; if(!m || !m.visible || !layers[LAYER[a.g]] || (atlas && a.g==="shell")) continue;
         pa.copy(a.p).applyMatrix4(BM[a.i0]).multiplyScalar(a.w0); pb.copy(a.p).applyMatrix4(BM[a.i1]).multiplyScalar(a.w1); pv.copy(pa).add(pb);
-        na.copy(a.n).transformDirection(BM[a.w0>=a.w1?a.i0:a.i1]); toCam.copy(camera.position).sub(pv);
+        na.copy(a.n).transformDirection(BM[a.w0>=a.w1?a.i0:a.i1]); const vc=viewCam||camera; if(vc.isOrthographicCamera) toCam.set(0,0,1); else toCam.copy(vc.position).sub(pv);
         if(na.lengthSq()>0.5 && na.dot(toCam)<0) continue;
-        pv.project(camera);
+        pv.project(vc);
       }
       if(pv.z>1||pv.z<-1) continue;
       out.push({ key:a.key, x:(pv.x+1)/2*W_, y:(1-pv.y)/2*H_ }); }
     return out;
   }
-  function render(){ renderer.render(scene, mriActive?ocam:camera); }
+  function render(){ renderer.render(scene, viewCam||camera); }
   function setActivation(a,t){ const v=actU.value; for(let i=0;i<40;i++) v[i]=a&&a[i]?a[i]:0; pulseU.value=Math.sin((t||0)*0.006); }
   /* tap picking: CPU-skinned ray cast on visible surfaces, or nearest structure on the MRI slice */
   const rc=new THREE.Raycaster(), ndc=new THREE.Vector2(), e1=v3(), e2=v3(), pq=v3(), tq=v3(), qq=v3(), A0=v3(), B0=v3(), C0=v3();
@@ -1936,7 +1994,7 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
         for(let i=0;i<n;i+=2){ const x=b.pos[i*3],y=b.pos[i*3+1],z=b.pos[i*3+2]; if(Math.abs(cutPlane.normal.x*x+cutPlane.normal.y*y+cutPlane.normal.z*z+cutPlane.constant)>0.01) continue;
           const d=(x-hit.x)**2+(y-hit.y)**2+(z-hit.z)**2; if(d<bd){ bd=d; best=i; bg=g; } } }
       if(best<0) return null; const pi2=built[bg].pid[best]; return { pi:pi2, en:PARTS[pi2].en, g:bg, lab:PARTS[pi2].lab }; }
-    rc.setFromCamera(ndc,camera); const ro=rc.ray.origin, rd=rc.ray.direction; let tBest=1e9, hitPart=-1, hitG=null;
+    rc.setFromCamera(ndc,viewCam||camera); const ro=rc.ray.origin, rd=rc.ray.direction; let tBest=1e9, hitPart=-1, hitG=null;
     for(const g in meshes){ const m=meshes[g]; if(!m.visible) continue; if(g==="shell" && !atlas) continue; const b=built[g], I=b.geo.index.array, n=b.pos.length/3;
       const sp=new Float32Array(n*3); for(let i=0;i<n;i++){ skinV(b,i,qq); sp[i*3]=qq.x; sp[i*3+1]=qq.y; sp[i*3+2]=qq.z; }
       const clip=m.material.clippingPlanes;
@@ -1957,7 +2015,7 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
   }
   function defaultPose(){ return restPose(J); }
   prog(1);
-  const api={ resize, update, render, labels, defaultPose, pointerDown, pointerMove, pointerUp, wheel, resetView, setFocus, setSpin, scene, camera, ocam, root, renderer, bones, real:true, onSlice:null,
+  const api={ arCam:acam, resize, update, render, labels, defaultPose, pointerDown, pointerMove, pointerUp, wheel, resetView, setFocus, setSpin, scene, camera, ocam, root, renderer, bones, real:true, onSlice:null,
     cutInfo:()=>cutInfo, isMri:()=>mriActive, caps, stencilMs, cutPlane, pick, highlight, setActivation, MG:MG.map(x=>x[0]), parts:PARTS,
     normalsOk:()=>Object.values(built).every(b=>{ const a=b.geo.attributes.normal.array; let z=0; for(let i=0;i<a.length;i+=3) if(a[i]===0&&a[i+1]===0&&a[i+2]===0) z++; return z<a.length/3*0.01; }),
     stats:()=>{ let v=0,t=0; for(const n in built){ v+=built[n].geo.attributes.position.count; t+=built[n].geo.index.count/3; } return {v,t,groups:Object.keys(built),labels:anch.length}; } };
@@ -2024,7 +2082,7 @@ G.createFaceSkin = function(){
   const n=S*S, F32=()=>new Float32Array(n);
   const accW=F32(), aP=F32(), aS=F32(), aR=F32(), aA=F32(), aE=F32(), aRg=F32(), aOc=F32(), aOs=F32();
   const L=F32(), R=F32(), M=new Uint8Array(n), triOK=new Uint8Array(NT);
-  let res={ pimples:[], spots:[], reds:[], lumps:[], segs:[], zones:[], coverage:0 };
+  let res={ moles:[], pimples:[], spots:[], reds:[], lumps:[], segs:[], zones:[], coverage:0 };
 
   /* normalised box blur via integral images */
   const I1=new Float64Array((S+1)*(S+1)), I2=new Float64Array((S+1)*(S+1));
@@ -2037,7 +2095,7 @@ G.createFaceSkin = function(){
     const med=v[v.length>>1]; const d=v.map(x=>Math.abs(x-med)).sort((a,b)=>a-b); return { med, mad:d[d.length>>1]*1.4826+1e-6 }; }
 
   function decay(k){ for(let p=0;p<n;p++){ aP[p]*=k; aS[p]*=k; aR[p]*=k; aA[p]*=k; aE[p]*=k; aRg[p]*=k; aOc[p]*=k; aOs[p]*=k; accW[p]*=k; } }
-  function reset(){ decay(0); res={ pimples:[], spots:[], reds:[], lumps:[], segs:[], zones:[], coverage:0 }; }
+  function reset(){ decay(0); res={ moles:[], pimples:[], spots:[], reds:[], lumps:[], segs:[], zones:[], coverage:0 }; }
 
   function analyze(src,lm,vw,vh){
     if(!lm || lm.length<N || !vw) return res;
@@ -2129,7 +2187,11 @@ G.createFaceSkin = function(){
     /* drop dark-spot candidates that are really pieces of wrinkle lines inside a wrinkled zone */
     const wz=ZONES.filter(z=>res.zones.some(r=>r.key===z.key));
     for(const e of spotC){ let mx=0; for(let dy=-3;dy<=3;dy++) for(let dx=-3;dx<=3;dx++){ const q=(((e.y|0)+dy)*S+((e.x|0)+dx)); if(q>=0&&q<n) mx=Math.max(mx,wrD[q]); } e.wr=mx; }
-    res.spots=spotC.filter(e=>e.wr<0.25).slice(0,8);
+    /* moles: small, round, clearly darker than the skin around them; found with a finer threshold than generic dark spots */
+    let moleC=blobs(p=>live(p)&&aS[p]<-6.5&&aP[p]<=0.5*(-aS[p])?-aS[p]:0,3,130).filter(e=>e.a/e.b<1.8 && e.score>=9);
+    for(const e of moleC){ let mx=0; for(let dy=-3;dy<=3;dy++) for(let dx=-3;dx<=3;dx++){ const q=(((e.y|0)+dy)*S+((e.x|0)+dx)); if(q>=0&&q<n) mx=Math.max(mx,wrD[q]); } e.wr=mx; }
+    res.moles=moleC.filter(e=>e.wr<0.25).slice(0,16);
+    res.spots=spotC.filter(e=>e.wr<0.25 && !res.moles.some(q=>Math.hypot(q.x-e.x,q.y-e.y)<Math.max(q.a,e.a)*1.2)).slice(0,8);
   }
 
   /* UV px -> screen through the live mesh */
@@ -2164,11 +2226,16 @@ G.createFaceSkin = function(){
     drawSet(res.reds,"rgba(255,120,150,"+al(0.8)+")","rgba(255,110,140,"+al(0.14)+")",[5,4],1.0,"skinRed");
     drawSet(res.lumps,"rgba(196,160,255,"+al(0.95)+")","rgba(170,130,255,"+al(0.12)+")",[6,4],1.15,"skinLump");
     drawSet(res.spots,"rgba(214,170,120,"+al(0.95)+")",null,null,1.6,"skinSpot");
+    /* moles: bracket marker and a number, so each one can be followed over time */
+    (res.moles||[]).forEach((e,k)=>{ const q=mapUV(e.x,e.y,P), q2=mapUV(e.x+e.a*1.9,e.y,P); if(!q||!q2) return; const r=Math.max(7,Math.hypot(q2.x-q.x,q2.y-q.y));
+      c.lineWidth=1.8; c.strokeStyle="rgba(120,255,214,"+al(0.95)+")"; for(let s=0;s<4;s++){ c.beginPath(); c.arc(q.x,q.y,r,s*Math.PI/2+0.35,s*Math.PI/2+1.22); c.stroke(); }
+      c.fillStyle="rgba(120,255,214,"+al(0.95)+")"; c.font="600 10px 'Share Tech Mono',ui-monospace,monospace"; c.textAlign="left"; c.textBaseline="middle"; c.fillText("N"+(k+1),q.x+r+3,q.y-r);
+      if(k===0) out.push({ key:"skinMole", x:q.x, y:q.y-r }); });
     drawSet(res.pimples,"rgba(255,80,70,"+al(0.95)+")","rgba(255,70,60,"+al(0.12)+")",null,1.7,"skinPimple");
     c.restore();
     return out;
   }
-  function summary(){ return { pimples:res.pimples.length, spots:res.spots.length, lumps:res.lumps.length, reds:res.reds.length, zones:res.zones.map(z=>z.key), coverage:res.coverage }; }
+  function summary(){ return { moles:(res.moles||[]).length, pimples:res.pimples.length, spots:res.spots.length, lumps:res.lumps.length, reds:res.reds.length, zones:res.zones.map(z=>z.key), coverage:res.coverage }; }
   return { analyze, draw, reset, summary, mapUV, _res:()=>res, _maps:{ aP, aRg, aA, accW, base, M }, _warp:warp, S };
 };
 })(typeof window!=="undefined"?window:globalThis);
@@ -2335,7 +2402,7 @@ import { FilesetResolver, PoseLandmarker, HandLandmarker, FaceLandmarker } from 
 
 const MP_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
 const MODEL = "https://storage.googleapis.com/mediapipe-models/";
-const POSE_URL = { high: MODEL+"pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task", fast: MODEL+"pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task" };
+const POSE_URL = { max: MODEL+"pose_landmarker/pose_landmarker_heavy/float16/1/pose_landmarker_heavy.task", high: MODEL+"pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task", fast: MODEL+"pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task" };
 const HAND_URL = MODEL+"hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 const FACE_URL = MODEL+"face_landmarker/face_landmarker/float16/1/face_landmarker.task";
 const LIB = window.AnatomyLib;
@@ -2347,7 +2414,13 @@ const T = {
     reveal:"Reveal", lens:"Lens", whole:"Whole body", follow:"Lens follows", finger:"Fingertip", touch:"Touch",
     layers:"Layers", skeleton:"Skeleton", skull:"Skull", hands:"Hand bones", muscleL:"Muscles", organL:"Organs", brain:"Brain", labels:"Labels", skin:"Face skin check",
     look:"Look", xray:"X-ray", solid:"Solid", real:"Real person showing through", brightness:"Brightness", lensSize:"Lens size", zoom:"Zoom",
-    quality:"Tracking", high:"Stable", fast:"Fast", density:"Labels shown", key:"Main ones", every:"All",
+    quality:"Tracking", high:"Stable", fast:"Fast", maxq:"Max", holoc:"Colour holo", arMode:"Body in AR", arHolo:"3D hologram", arDraw:"Drawing", moleBtn:"MOLES",
+    gTitle:"Quick guide", pTitle:"Patients and mole history", pAdd:"Add", pDel:"Delete", pName:"New patient name", pNone:"No patient yet",
+    pNote:"Photos and measurements stay only on this device, in this browser: nothing is uploaded. Ask the person for consent before saving their face. Sizes are estimates from the camera (about ±1 mm) and are not a diagnosis.",
+    pNoScan:"No scans yet. In Skin mode, frame the face and tap MOLES.", pScanDel:"Delete scan", pConfirmP:"Delete this patient and all their scans?", pConfirmS:"Delete this scan?",
+    mSaved:"Scan saved", mMoles:"moles", mNoFace:"Frame the face in Skin mode first, and hold still 2–3 seconds.", mNoPat:"Create or choose a patient first.", mNew:"new", mChg:"changed: show it to a dermatologist", mSame:"stable", mNoScale:"size n/a",
+    advSys:"Skin · food tips", advGood:"May help", advLimit:"Better to limit", advKey:"What matters most", advNote:"General wellbeing tips, not a prescription.",
+    load3dAR:"Loading 3D hologram…", density:"Labels shown", key:"Main ones", every:"All",
     start:"Start camera", starting:"Starting…",
     intro:"Point the camera at a person, or at yourself. Bones, muscles and organs are pinned to the body and follow every move.",
     disclaimer:"Illustrative anatomy placed on body landmarks. It’s not an X-ray and not a medical tool. Video is processed on this device and never uploaded.",
@@ -2365,7 +2438,13 @@ const T = {
     reveal:"Mostra", lens:"Lente", whole:"Corpo intero", follow:"La lente segue", finger:"Dito", touch:"Tocco",
     layers:"Livelli", skeleton:"Scheletro", skull:"Cranio", hands:"Ossa della mano", muscleL:"Muscoli", organL:"Organi", brain:"Cervello", labels:"Etichette", skin:"Controllo pelle del viso",
     look:"Aspetto", xray:"Raggi X", solid:"Solido", real:"Quanto si vede la persona", brightness:"Luminosità", lensSize:"Dimensione lente", zoom:"Zoom",
-    quality:"Tracciamento", high:"Stabile", fast:"Veloce", density:"Etichette", key:"Principali", every:"Tutte",
+    quality:"Tracciamento", high:"Stabile", fast:"Veloce", maxq:"Massima", holoc:"Olo a colori", arMode:"Corpo in AR", arHolo:"Ologramma 3D", arDraw:"Disegno", moleBtn:"NEI",
+    gTitle:"Mini guida", pTitle:"Pazienti e storico nei", pAdd:"Aggiungi", pDel:"Elimina", pName:"Nome nuovo paziente", pNone:"Nessun paziente",
+    pNote:"Foto e misure restano solo su questo dispositivo, in questo browser: nulla viene caricato online. Chiedi il consenso alla persona prima di salvare il suo viso. Le dimensioni sono stime da fotocamera (circa ±1 mm) e non sono una diagnosi.",
+    pNoScan:"Nessuna scansione. In modalità Pelle inquadra il viso e tocca NEI.", pScanDel:"Elimina scansione", pConfirmP:"Eliminare questo paziente e tutte le sue scansioni?", pConfirmS:"Eliminare questa scansione?",
+    mSaved:"Scansione salvata", mMoles:"nei", mNoFace:"Prima inquadra il viso in modalità Pelle e resta fermo 2–3 secondi.", mNoPat:"Prima crea o scegli un paziente.", mNew:"nuovo", mChg:"variato: fallo vedere al dermatologo", mSame:"stabile", mNoScale:"misura n.d.",
+    advSys:"Pelle · consigli alimentari", advGood:"Può aiutare", advLimit:"Meglio limitare", advKey:"Cosa conta di più", advNote:"Indicazioni generali di benessere, non una prescrizione.",
+    load3dAR:"Carico l’ologramma 3D…", density:"Etichette", key:"Principali", every:"Tutte",
     start:"Avvia fotocamera", starting:"Avvio…",
     intro:"Inquadra una persona, o te stesso. Ossa, muscoli e organi vengono agganciati al corpo e seguono ogni movimento.",
     disclaimer:"Anatomia illustrativa posizionata sui punti del corpo. Non è una radiografia né uno strumento medico. Il video viene elaborato su questo dispositivo e non viene mai caricato.",
@@ -2403,17 +2482,18 @@ const N = {
   adrenal:["Adrenal gland","Ghiandola surrenale"], thymus:["Thymus","Timo"], thyroid:["Thyroid cartilage","Cartilagine tiroidea"], diaphragm:["Diaphragm","Diaframma"], linea:["Linea alba","Linea alba"], galea:["Galea aponeurotica","Galea aponeurotica"],
   achilles:["Achilles tendon","Tendine d’Achille"], patellarT:["Patellar tendon","Tendine rotuleo"], itband:["Iliotibial band","Bandelletta ileotibiale"], wristT:["Flexor tendons","Tendini flessori"],
   femA:["Femoral artery","Arteria femorale"], femV:["Femoral vein","Vena femorale"], brachA:["Brachial artery","Arteria brachiale"], sciatic:["Sciatic nerve","Nervo sciatico"], iliac:["Iliac vessels","Vasi iliaci"],
-  skinRed:["Redness / irritation","Zona arrossata / irritazione"], skinBump:["Raised spot","Rilievo / protuberanza"], skinSpot:["Dark spot","Macchia scura"], skinAbr:["Possible abrasion","Possibile abrasione"],
+  skinRed:["Redness / irritation","Zona arrossata / irritazione"], skinBump:["Raised spot","Rilievo / protuberanza"], skinSpot:["Dark spot","Macchia scura"], skinMole:["Mole","Neo"], skinAbr:["Possible abrasion","Possibile abrasione"],
   skinPimple:["Pimple","Brufolo"], skinLump:["Swelling (possible lipoma)","Rigonfiamento (possibile lipoma)"], wrForehead:["Forehead lines","Rughe della fronte"], wrGlabella:["Frown lines","Rughe glabellari"], wrCrow:["Crow’s feet","Zampe di gallina"], wrUnder:["Under-eye lines","Rughe sotto gli occhi"], wrNaso:["Nasolabial folds","Solchi naso-labiali"]
 };
 const ESSENTIAL = new Set(["cranium","mandible","teeth","frontal","eye","cervical","clavicle","sternum","ribs","spine","pelvis","humerus","radius","femur","tibia","phalanges",
-  "heart","lungR","diaphragm","achilles","femA","cerebellum","gluteus","latissimus","hamstrings","lungL","liver","stomach","colon","smallint","kidneys","bladder","pecs","deltoid","biceps","abs","quads","masseter","skinRed","skinBump","skinSpot","skinAbr","skinPimple","skinLump","wrForehead","wrGlabella","wrCrow","wrUnder","wrNaso"]);
+  "heart","lungR","diaphragm","achilles","femA","cerebellum","gluteus","latissimus","hamstrings","lungL","liver","stomach","colon","smallint","kidneys","bladder","pecs","deltoid","biceps","abs","quads","masseter","skinRed","skinBump","skinSpot","skinMole","skinAbr","skinPimple","skinLump","wrForehead","wrGlabella","wrCrow","wrUnder","wrNaso"]);
 
 /* ---------- state ---------- */
 const S = {
   layers:{ skeleton:true, skull:true, hands:true, muscles:true, organs:true, brain:true, skin:true, shell:false, labels:true },
   look:"xray", brightness:1, real:0.55, reveal:"all", follow:"touch", lensSize:0.3, zoom:1.5,
   quality:"high", density:"key", theme:"hud", hudInit:false, view:"ar", section:"full", plane:"sagittal", slices:{ axial:0.94, coronal:0.45, sagittal:0.5 }, seen3d:false, pose3d:"live", focus:"body", spin:"off", inset:"on",
+  arMode:"holo", faceInit:false, guideSeen:false, pid:0,
   facing:"environment", lang:(navigator.language||"en").toLowerCase().startsWith("it") ? "it" : "en", touch:null
 };
 const PRESETS = {
@@ -2425,9 +2505,11 @@ const PRESETS = {
 };
 
 const $ = (s) => document.querySelector(s);
-const SAVE_KEYS = ["theme","hudInit","plane","slices","layers","look","brightness","real","reveal","follow","lensSize","zoom","quality","density","section","pose3d","focus","spin","inset","lang","seen3d"];
+const SAVE_KEYS = ["theme","hudInit","plane","slices","layers","look","brightness","real","reveal","follow","lensSize","zoom","quality","density","section","pose3d","focus","spin","inset","lang","seen3d","arMode","faceInit","guideSeen","pid"];
 try { const sv = JSON.parse(localStorage.getItem("anatomyLens.v1") || "null"); if (sv) for (const k of SAVE_KEYS) if (sv[k]!==undefined) S[k] = k==="layers" ? Object.assign(S.layers, sv.layers) : k==="slices" ? Object.assign(S.slices, sv.slices) : sv[k]; } catch(e){}
 if (!S.hudInit){ S.hudInit=true; S.theme="hud"; S.look="holo"; }
+/* the app opens on the face: skin map first */
+if (!S.faceInit){ S.faceInit=true; for (const k in PRESETS.skin) S.layers[k]=!!PRESETS.skin[k]; S.focus="head"; }
 function saveSettings(){ try { const o={}; for (const k of SAVE_KEYS) o[k]=S[k]; localStorage.setItem("anatomyLens.v1", JSON.stringify(o)); } catch(e){} }
 const video = $("#video"), canvas = $("#view"), ctx = canvas.getContext("2d");
 const scene = document.createElement("canvas"), sctx = scene.getContext("2d");
@@ -2528,15 +2610,41 @@ function confirmed(lm,t){
   }
   return !onHand(lm);
 }
-const WF = Array.from({length:33},()=>[new OneEuro(0.9,3),new OneEuro(0.9,3),new OneEuro(0.9,3)]);
+/* 3D pose clean-up: depth is noisier than x/y, hidden joints are held, impossible jumps are rejected,
+   and bone lengths are kept constant and left/right symmetric so limbs can't stretch between frames */
+const WF = Array.from({length:33},()=>[new OneEuro(0.9,3),new OneEuro(0.9,3),new OneEuro(0.45,1.2)]);
+const HOLD = new Array(33).fill(0), BL = {}, LEGS = { n:0, off:false };
+const BONES = [[11,13,"ua"],[13,15,"fa"],[12,14,"ua"],[14,16,"fa"],[15,17,"hd"],[15,19,"hd"],[16,18,"hd"],[16,20,"hd"],[23,25,"th"],[25,27,"sh"],[24,26,"th"],[26,28,"sh"],[27,29,"he"],[27,31,"ft"],[28,30,"he"],[28,32,"ft"]];
+function cleanWorld(raw, vis, prev){
+  const out = raw.map(p=>({ x:p.x, y:p.y, z:p.z }));
+  if (prev) for (let i=0;i<33;i++){
+    const d=Math.hypot(out[i].x-prev[i].x,out[i].y-prev[i].y,out[i].z-prev[i].z);
+    if ((vis[i]<0.5 || d>0.3) && HOLD[i]<10){ out[i]={ x:prev[i].x, y:prev[i].y, z:prev[i].z }; HOLD[i]++; } else HOLD[i]=0;
+  }
+  /* legs out of the picture: the model only guesses them, so stand them straight under the hips */
+  const legsGone = vis[25]<0.45 && vis[26]<0.45 && vis[27]<0.45 && vis[28]<0.45;
+  LEGS.n = legsGone ? Math.min(12, LEGS.n+1) : Math.max(0, LEGS.n-2); LEGS.off = LEGS.n>=6;
+  if (LEGS.off){ const th=BL.th||0.42, sh=BL.sh||0.41;
+    for (const [h,k,a,he,ft] of [[23,25,27,29,31],[24,26,28,30,32]]){ const H0=out[h];
+      out[k]={ x:H0.x, y:H0.y+th, z:H0.z }; out[a]={ x:H0.x, y:H0.y+th+sh, z:H0.z }; out[he]={ x:H0.x, y:H0.y+th+sh+0.05, z:H0.z+0.04 }; out[ft]={ x:H0.x, y:H0.y+th+sh+0.06, z:H0.z-0.14 }; } }
+  /* learn each bone length only from well-seen frames, shared by left and right */
+  for (const [a,b,k] of BONES){ if (vis[a]>0.8 && vis[b]>0.8){ const L=Math.hypot(out[b].x-out[a].x,out[b].y-out[a].y,out[b].z-out[a].z); if (L>0.02 && L<0.7) BL[k]=BL[k]==null?L:BL[k]*0.97+L*0.03; } }
+  for (const [a,b,k] of BONES){ const L=BL[k]; if (!L) continue; const dx=out[b].x-out[a].x, dy=out[b].y-out[a].y, dz=out[b].z-out[a].z, n=Math.hypot(dx,dy,dz); if (n<1e-4) continue;
+    const s=L/n, nb={ x:out[a].x+dx*s, y:out[a].y+dy*s, z:out[a].z+dz*s };
+    for (const [a2,b2] of BONES) if (a2===b){ out[b2].x+=nb.x-out[b].x; out[b2].y+=nb.y-out[b].y; out[b2].z+=nb.z-out[b].z; }
+    out[b]=nb; }
+  return out;
+}
 function onPose(r,t){
   const lm = r && r.landmarks && r.landmarks[0];
   const ok = !!lm && plausiblePose(lm) && confirmed(lm,t);
   hit(TR.pose, ok, t, lm);
   const wl = r && r.worldLandmarks && r.worldLandmarks[0];
   if (ok && wl){
-    if (TR.pose.good===1) WF.forEach(f=>f.forEach(e=>e.reset()));
-    TR.pose.world = wl.map((p,i)=>({ x:WF[i][0].f(p.x,t), y:WF[i][1].f(p.y,t), z:WF[i][2].f(p.z,t) }));
+    if (TR.pose.good===1){ WF.forEach(f=>f.forEach(e=>e.reset())); HOLD.fill(0); TR.pose.world=null; }
+    const vis = lm.map(p=>p.visibility ?? 1);
+    const cw = cleanWorld(wl, vis, TR.pose.world);
+    TR.pose.world = cw.map((p,i)=>({ x:WF[i][0].f(p.x,t), y:WF[i][1].f(p.y,t), z:WF[i][2].f(p.z,t) }));
   }
   if (ok){ const P=TR.pose; P.lm.forEach((p,i)=>{ P.on[i] = P.on[i] ? p.v>0.3 : p.v>0.6; }); }
 }
@@ -2599,7 +2707,8 @@ function drawLabels(c, lens){
     if (!st.side) st.side = x<cx ? "L" : "R";
     else if (st.side==="L" && x>cx+40) st.side="R";
     else if (st.side==="R" && x<cx-40) st.side="L";
-    items.push({ st, x, y, text: hud ? N[k][li].toUpperCase() : N[k][li] });
+    const nm = N[k][li] + (advKey(k) ? " ›" : "");
+    items.push({ st, x, y, text: hud ? nm.toUpperCase() : nm });
   }
   for (const side of ["L","R"]){
     const arr = items.filter(it=>it.st.side===side).sort((a,b)=>a.y-b.y);
@@ -2612,7 +2721,7 @@ function drawLabels(c, lens){
       if (target > H-110) continue;
       it.st.ty = it.st.ty==null ? target : it.st.ty + (target-it.st.ty)*0.3;
       last = target;
-      const ty=it.st.ty;
+      const ty=it.st.ty; it.st.box={ x:side==="L" ? tx-tw-14 : tx-2, y:ty-12, w:tw+18, h:24 };
       c.globalAlpha = Math.max(0, Math.min(1, it.st.a));
       if (hud){
         const ex = side==="L" ? tx+16 : tx-16;
@@ -2693,6 +2802,32 @@ function focusAR(P,F){
   return null;
 }
 
+/* ---------- AR: the real 3D hologram laid over the person ---------- */
+const lab3 = [], FIT = { s:0, tx:0, ty:0, ok:false, t:0 };
+const FITJ = [0,11,12,13,14,15,16,23,24,25,26,27,28];
+const bodyLayers = () => S.layers.skeleton || S.layers.skull || S.layers.hands || S.layers.muscles || S.layers.organs || S.layers.brain;
+function arHolo(P, now){
+  if (S.arMode!=="holo" || !P || !TR.pose.tracked || !TR.pose.world || !bodyLayers()) { FIT.ok=false; return false; }
+  if (!E3){ if (!E3load) ensure3D().then(updateStatus).catch(e=>{ console.warn(e); }); return false; }
+  if (!E3.real) return false;
+  const Wd=TR.pose.world, m=mirror()?-1:1; let sw=0,cX=0,cY=0,cx=0,cy=0;
+  const wt=(i)=> (P[i].on===false ? 0 : 1) * ((LEGS.off && i>=25) ? 0 : 1) * (i===0 ? 0.5 : 1);
+  for (const i of FITJ){ const w=wt(i); sw+=w; cX+=w*Wd[i].x; cY+=w*-Wd[i].y; cx+=w*P[i].x; cy+=w*P[i].y; }
+  if (sw<3){ FIT.ok=false; return false; }
+  cX/=sw; cY/=sw; cx/=sw; cy/=sw; let num=0, den=0;
+  for (const i of FITJ){ const w=wt(i), dX=Wd[i].x-cX, dY=-Wd[i].y-cY; num+=w*(m*dX*(P[i].x-cx) - dY*(P[i].y-cy)); den+=w*(dX*dX+dY*dY); }
+  const s=num/Math.max(1e-6,den); if (!(s>20) || !isFinite(s)){ FIT.ok=false; return false; }
+  const tx=cx-m*s*cX, ty=cy+s*cY, k=(FIT.ok && now-FIT.t<400) ? 0.55 : 1;
+  FIT.s+=(s-FIT.s)*k; FIT.tx+=(tx-FIT.tx)*k; FIT.ty+=(ty-FIT.ty)*k; FIT.ok=true; FIT.t=now;
+  livePose3();
+  const ms=m*FIT.s, dt = lastNow ? Math.min(100, now-lastNow) : 16; lastNow=now;
+  if (E3.setActivation) E3.setActivation(null, now);
+  E3.update({ pose:P3cur, hands:H3, mirror:false, layers:S.layers, section:"full", plane:S.plane, slice:0.5, look:S.look, brightness:S.brightness, t:now, dt,
+    ar:{ l:-FIT.tx/ms, r:(W-FIT.tx)/ms, t:FIT.ty/FIT.s, b:(FIT.ty-H)/FIT.s } });
+  E3.render();
+  return true;
+}
+
 /* ---------- render ---------- */
 const labelsOut = [];
 function render(now){
@@ -2705,8 +2840,12 @@ function render(now){
   const F = TR.face.lm && TR.face.fade>0.02 ? TR.face.lm.map(mp) : null;
   const hands = TR.hands.filter(h=>h.lm && h.fade>0.02).map(h=>({ pts:h.lm.map(mp), fade:h.fade }));
   const d0=performance.now();
-  LIB.draw(sctx, { dpr:sdpr, look:S.look==="holo"?"xray":S.look, hud:S.look==="holo", brightness:S.brightness, layers:S.layers, pose:P, poseFade:TR.pose.fade,
-    face:F, faceFade:TR.face.fade, hands, t:now, labels:labelsOut, skinDraw:(FSK && S.layers.skin) ? (c,d,f,M)=>FSK.draw(c,d,f,M) : null });
+  const use3 = arHolo(P, now);
+  if (use3){ base(sctx,sdpr); sctx.globalAlpha=Math.min(1,TR.pose.fade*1.2); sctx.drawImage($("#gl"),0,0,W,H); sctx.globalAlpha=1; }
+  const L2 = use3 ? Object.assign({}, S.layers, { skeleton:false, skull:false, hands:false, muscles:false, organs:false, brain:false }) : S.layers;
+  LIB.draw(sctx, { dpr:sdpr, look:(S.look==="holo"||S.look==="holoc")?"xray":S.look, hud:S.look==="holo", brightness:S.brightness, layers:L2, pose:use3?null:P, poseFade:TR.pose.fade,
+    face:F, faceFade:TR.face.fade, hands:use3?[]:hands, t:now, labels:labelsOut, skinDraw:(FSK && S.layers.skin) ? (c,d,f,M)=>FSK.draw(c,d,f,M) : null });
+  if (use3 && S.layers.labels){ E3.labels(lab3, S.layers); for (const q of lab3) labelsOut.push(q); }
   adapt(performance.now()-d0, now);
   base(ctx); ctx.clearRect(0,0,W,H);
   let lens=null;
@@ -2723,7 +2862,7 @@ function render(now){
 
 /* ---------- 3D view ---------- */
 let loadPct=0, noteUntil=0;
-function setLoad(p){ loadPct=p; if (!E3) $("#stext").textContent = `${T[S.lang].load3d} ${Math.round(p*100)}%`; }
+function setLoad(p){ loadPct=p; if (!E3) $("#stext").textContent = `${S.view==="3d" ? T[S.lang].load3d : T[S.lang].load3dAR} ${Math.round(p*100)}%`; }
 async function loadPack(onp){
   const r = await fetch(PACK_URL, { cache:"force-cache" }); if (!r.ok) throw new Error("pack "+r.status);
   const total = +r.headers.get("content-length") || 0; let txt;
@@ -2769,29 +2908,33 @@ async function setView(v){
   }
 }
 const toV = (p)=>({ x:p.x, y:-p.y, z:-p.z });
+function livePose3(){
+  if (!P3cur) P3cur = E3.defaultPose();
+  const THREEV = P3cur[0].constructor;
+  P3cur = TR.pose.world.map(p=>{ const q=toV(p); return new THREEV(q.x,q.y,q.z); });
+  H3 = { L:null, R:null };
+  const pl = TR.pose.lm;
+  for (const h of TR.hands){
+    if (!h.tracked || !h.world || !h.lm || !pl) continue;
+    const dL=Math.hypot(h.lm[0].x-pl[15].x,h.lm[0].y-pl[15].y), dR=Math.hypot(h.lm[0].x-pl[16].x,h.lm[0].y-pl[16].y);
+    const side = dL<dR ? "L" : "R", wr = P3cur[side==="L"?15:16], w0 = toV(h.world[0]);
+    H3[side] = h.world.map(p=>{ const q=toV(p); return new THREEV(wr.x+q.x-w0.x, wr.y+q.y-w0.y, wr.z+q.z-w0.z); });
+  }
+}
 function render3d(now){
   if (!E3) return;
   const live = S.pose3d==="live", V3 = (o)=>{ const v=Object.create(null); v.x=o.x; v.y=o.y; v.z=o.z; return v; };
   if (!P3cur) P3cur = E3.defaultPose();
-  if (live && TR.pose.tracked && TR.pose.world){
-    const THREEV = P3cur[0].constructor;
-    P3cur = TR.pose.world.map(p=>{ const q=toV(p); return new THREEV(q.x,q.y,q.z); });
-    H3 = { L:null, R:null };
-    const pl = TR.pose.lm;
-    for (const h of TR.hands){
-      if (!h.tracked || !h.world || !h.lm || !pl) continue;
-      const dL=Math.hypot(h.lm[0].x-pl[15].x,h.lm[0].y-pl[15].y), dR=Math.hypot(h.lm[0].x-pl[16].x,h.lm[0].y-pl[16].y);
-      const side = dL<dR ? "L" : "R", wr = P3cur[side==="L"?15:16], w0 = toV(h.world[0]);
-      H3[side] = h.world.map(p=>{ const q=toV(p); return new THREEV(wr.x+q.x-w0.x, wr.y+q.y-w0.y, wr.z+q.z-w0.z); });
-    }
-  }
+  if (live && TR.pose.tracked && TR.pose.world) livePose3();
   const dt = lastNow ? Math.min(100, now-lastNow) : 16; lastNow = now;
   const liveAct = E3.setActivation && live && TR.pose.tracked && TR.pose.world && S.layers.muscles && (S.section==="full" || S.section==="atlas");
   const act = liveAct ? estimateActivation(P3cur, now) : null;
   if (E3.setActivation) E3.setActivation(act, now);
   if (!act){ ACT.prev=null; ACT.t=0; ACT.sm.fill(0); }
   if ((now|0)%6===0 || !act) renderActPanel(act);
-  E3.update({ pose:P3cur, hands:H3, mirror:mirror(), layers:S.layers, section:S.section, plane:S.plane, slice:S.slices[S.plane], look:(E3.real||S.look!=="holo")?S.look:"xray", brightness:S.brightness, t:now, dt });
+  /* skin-only preset has nothing to show in 3D: fall back to the body silhouette */
+  const L3 = (bodyLayers() || S.layers.shell) ? S.layers : Object.assign({}, S.layers, { shell:true, skull:true });
+  E3.update({ pose:P3cur, hands:H3, mirror:mirror(), layers:L3, section:S.section, plane:S.plane, slice:S.slices[S.plane], look:(E3.real||(S.look!=="holo"&&S.look!=="holoc"))?S.look:"xray", brightness:S.brightness, t:now, dt });
   E3.render();
   base(ctx); ctx.clearRect(0,0,W,H);
   const sectionView = E3.real && (S.section==="mri" || S.section==="cut");
@@ -2801,7 +2944,7 @@ function render3d(now){
     if (mirror()){ ctx.translate(x+iw,y); ctx.scale(-1,1); ctx.drawImage(video,0,0,iw,ih); } else ctx.drawImage(video,x,y,iw,ih);
     ctx.restore(); ctx.strokeStyle="rgba(159,216,255,.6)"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,iw,ih,12) : ctx.rect(x,y,iw,ih); ctx.stroke();
   }
-  E3.labels(labelsOut, S.layers);
+  E3.labels(labelsOut, L3);
   updateLabels(labelsOut, null, now); drawLabels(ctx, null);
   if (S.section!=="mri") drawHUD(ctx, now, { x:W/2, y:H*0.5, r:Math.min(W,H)*0.44 }, null);
   if (E3.real && S.section==="mri"){
@@ -2814,11 +2957,49 @@ function render3d(now){
   }
 }
 
+/* ---------- skin tags: tap for food tips ---------- */
+const ADV = {
+  skinPimple:{ what:["Pimple or inflamed spot.","Brufolo o punto infiammato."],
+    good:["Low-glycaemic foods: whole grains, pulses, vegetables. Oily fish, walnuts and flaxseed (omega-3). Zinc-rich foods: pulses, pumpkin seeds, fish.","Cibi a basso indice glicemico: cereali integrali, legumi, verdure. Pesce azzurro, noci e semi di lino (omega-3). Alimenti ricchi di zinco: legumi, semi di zucca, pesce."],
+    limit:["Sugar, sweets, soft drinks and refined flour. For some people milk (skimmed above all) and whey protein: try cutting them for 4–6 weeks and watch what happens.","Zuccheri, dolci, bibite e farine raffinate. Per alcune persone latte (soprattutto scremato) e proteine del siero: prova a ridurli per 4–6 settimane e osserva."],
+    key:["Diet helps but is not enough alone: gentle cleansing, no squeezing. Widespread or scarring acne needs a dermatologist.","La dieta aiuta ma da sola non basta: detersione delicata e non schiacciare. Se l’acne è estesa o lascia segni serve il dermatologo."] },
+  skinSpot:{ what:["Darker patch of skin.","Zona di pelle più scura."],
+    good:["Vitamin C (citrus, kiwi, peppers), vitamin E (almonds, extra-virgin olive oil), carotenoids (carrots, tomato, leafy greens), green tea.","Vitamina C (agrumi, kiwi, peperoni), vitamina E (mandorle, olio extravergine), carotenoidi (carote, pomodoro, verdure a foglia), tè verde."],
+    limit:["Excess alcohol and smoking.","Alcol in eccesso e fumo."],
+    key:["Dark spots depend mostly on the sun: SPF 50 every day. Food gives a small extra help.","Le macchie dipendono soprattutto dal sole: protezione solare SPF 50 ogni giorno. Il cibo dà un piccolo aiuto in più."] },
+  skinMole:{ what:["Small, round, dark mark: probably a mole.","Segno piccolo, rotondo e scuro: probabilmente un neo."],
+    good:["No food removes or changes a mole. Plenty of fruit, vegetables and fish supports the skin in general.","Nessun alimento elimina o modifica un neo. Tanta frutta, verdura e pesce sostengono la pelle in generale."],
+    limit:["Nothing specific in the diet. Avoid sunbeds and sunburn.","Niente di specifico a tavola. Evita lampade abbronzanti e scottature."],
+    key:["ABCDE rule: Asymmetry, irregular Border, uneven Colour, Diameter over 6 mm, Evolution. If a mole changes, have a dermatologist check it. Tap MOLES to save a scan and compare it over time.","Regola ABCDE: Asimmetria, Bordi irregolari, Colore non uniforme, Diametro oltre 6 mm, Evoluzione. Se un neo cambia, fallo controllare dal dermatologo. Tocca NEI per salvare una scansione e confrontarlo nel tempo."] },
+  skinRed:{ what:["Reddened or irritated area.","Zona arrossata o irritata."],
+    good:["Omega-3 (oily fish, walnuts), vegetables, fermented foods such as yoghurt and kefir, plenty of water.","Omega-3 (pesce azzurro, noci), verdure, cibi fermentati come yogurt e kefir, molta acqua."],
+    limit:["Alcohol (red wine above all), spicy food and very hot drinks: the most common triggers of facial redness.","Alcol (soprattutto vino rosso), cibi piccanti e bevande molto calde: i fattori scatenanti più comuni del rossore."],
+    key:["Keep a diary to find your own triggers. Redness that stays needs a dermatologist.","Tieni un diario per scoprire i tuoi fattori scatenanti. Se il rossore non passa, serve il dermatologo."] },
+  skinLump:{ what:["Raised area; the camera cannot tell what it is.","Zona in rilievo; la fotocamera non può dire che cosa sia."],
+    good:["No food dissolves a lipoma or a cyst. A balanced diet and steady weight are still good for you.","Nessun alimento scioglie un lipoma o una cisti. Dieta equilibrata e peso stabile fanno comunque bene."],
+    limit:["Nothing specific.","Niente di specifico."],
+    key:["A lump that grows, is hard, hurts or is larger than 5 cm should be shown to a doctor.","Un rigonfiamento che cresce, è duro, fa male o supera i 5 cm va mostrato al medico."] },
+  wr:{ what:["Expression lines or wrinkles.","Linee d’espressione o rughe."],
+    good:["Vitamin C for collagen (citrus, kiwi, peppers), protein at every meal, omega-3 (fish, walnuts), extra-virgin olive oil, colourful vegetables, enough water.","Vitamina C per il collagene (agrumi, kiwi, peperoni), proteine a ogni pasto, omega-3 (pesce, noci), olio extravergine, verdure colorate, acqua a sufficienza."],
+    limit:["Excess sugar (it stiffens collagen), alcohol, heavily fried or charred food.","Zuccheri in eccesso (irrigidiscono il collagene), alcol, cibi molto fritti o bruciati."],
+    key:["Sun and smoking matter far more: daily sunscreen and no cigarettes. Sleep helps too.","Contano molto di più sole e fumo: protezione solare ogni giorno e niente sigarette. Anche il sonno aiuta."] }
+};
+function advKey(k){ return ADV[k] ? k : (k && k.startsWith("wr") ? "wr" : null); }
+function tapLabel(x,y){
+  for (const [k,st] of LST){ if (!advKey(k) || !st.vis || !st.box) continue; const b=st.box;
+    if ((x>=b.x-6 && x<=b.x+b.w+6 && y>=b.y-6 && y<=b.y+b.h+6)) return k; }
+  return null;
+}
+
 /* ---------- anatomy card on tap ---------- */
 let cardSel=null, tapStart=null, tapTimer=0;
 function esc(t){ return String(t==null?"":t).replace(/[&<>"]/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
 function showCard(sel){
   cardSel=sel; const tx=T[S.lang]; if (!sel){ $("#card3d").hidden=true; return; }
+  if (sel.advice){ const a=ADV[advKey(sel.advice)], li=S.lang==="it"?1:0;
+    $("#cardSys").textContent=tx.advSys; $("#cardT").textContent=N[sel.advice][li]; $("#cardP").textContent=a.what[li];
+    $("#cardD").innerHTML=[[tx.advGood,a.good[li]],[tx.advLimit,a.limit[li]],[tx.advKey,a.key[li]],["",tx.advNote]].map(r=>`<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join("");
+    $("#card3d").hidden=false; return; }
   const inf = window.anatomyInfo ? window.anatomyInfo(sel.en, S.lang, sel.g) : null;
   const part = sel.en ? sel.en.charAt(0).toUpperCase()+sel.en.slice(1) : "";
   if (!inf){ $("#cardSys").textContent=""; $("#cardT").textContent=part; $("#cardP").textContent=""; $("#cardD").innerHTML=""; $("#card3d").hidden=false; return; }
@@ -2978,13 +3159,13 @@ $("#go").addEventListener("click", async ()=>{
   const btn=$("#go"); btn.disabled=true; btn.textContent=T[S.lang].starting; $("#err").textContent="";
   const cam=startCamera(), mdl=loadModels();
   try { await cam; } catch(e){ btn.disabled=false; applyLang(); $("#err").textContent=T[S.lang].camErr; return; }
-  $("#start").hidden=true; $("#status").hidden=false; updateStatus();
+  $("#start").hidden=true; $("#status").hidden=false; updateStatus(); firstGuide();
   startLoop();
   try { await mdl; updateStatus(); } catch(e){ console.error(e); $("#stext").textContent=T[S.lang].modelErr; }
 });
 let looping=false;
 function startLoop(){ if (!looping){ looping=true; requestAnimationFrame(loop); } }
-$("#go3d").addEventListener("click", async ()=>{ $("#start").hidden=true; $("#status").hidden=false; await setView("3d"); startLoop(); });
+$("#go3d").addEventListener("click", async ()=>{ $("#start").hidden=true; $("#status").hidden=false; firstGuide(); await setView("3d"); startLoop(); });
 $("#v3d").addEventListener("click", ()=>{ setView(S.view==="3d" ? "ar" : "3d"); });
 
 /* ---------- UI ---------- */
@@ -2993,6 +3174,7 @@ function applyLang(){
   document.querySelectorAll("[data-i]").forEach(el=>{ if (tx[el.dataset.i]) el.textContent=tx[el.dataset.i]; });
   for (const b of [$("#lang"),$("#lang2")]) b.textContent = S.lang==="it" ? "EN" : "IT";
   document.title=tx.title; if (models.pose) updateStatus();
+  $("#patName").placeholder=tx.pName; renderGuide(); if (!$("#pat").hidden) renderPatients();
 }
 function syncUI(){
   saveSettings();
@@ -3003,6 +3185,7 @@ function syncUI(){
   $("#slice").value=Math.round(S.slices[S.plane]*1000);
   document.body.classList.toggle("secview", S.section==="mri" || S.section==="cut");
   document.body.classList.toggle("hud", S.theme==="hud");
+  document.body.classList.toggle("skinon", !!S.layers.skin);
   if (typeof updateStatus==="function" && S.view==="3d") try { updateStatus(); } catch(e){}
   $("#real").value=Math.round(S.real*100); $("#brightness").value=Math.round(S.brightness*100);
   $("#lensSize").value=Math.round(S.lensSize*100); $("#zoom").value=Math.round(S.zoom*10);
@@ -3012,7 +3195,7 @@ document.querySelectorAll("[data-layer]").forEach(el=>el.addEventListener("chang
 document.querySelectorAll("[data-seg]").forEach(seg=>seg.addEventListener("click",(e)=>{
   const b=e.target.closest("button"); if (!b) return;
   const key=seg.dataset.seg, prev=S[key]; S[key]=b.dataset.v; syncUI();
-  if (key==="reveal" || key==="density") LST.clear();
+  if (key==="reveal" || key==="density" || key==="arMode") LST.clear();
   if (E3 && key==="focus") E3.setFocus(S.focus);
   if (E3 && key==="spin") E3.setSpin(S.spin==="on");
   if (key==="pose3d" || key==="section" || key==="plane") updateStatus();
@@ -3047,14 +3230,134 @@ $("#snap").addEventListener("click",()=>{
     setTimeout(()=>URL.revokeObjectURL(a.href),4000);
   },"image/png");
 });
-let dragging=false;
-canvas.addEventListener("pointerdown",e=>{ if (S.view==="3d" && E3){ canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId); clearTimeout(tapTimer); tapStart={ x:e.clientX, y:e.clientY, t:performance.now(), id:e.pointerId, n:(tapStart&&tapStart.down||0) }; E3.pointerDown(e); return; } dragging=true; S.touch={ x:e.clientX, y:e.clientY }; });
+let dragging=false, arTap=null;
+canvas.addEventListener("pointerdown",e=>{ if (S.view==="3d" && E3){ canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId); clearTimeout(tapTimer); tapStart={ x:e.clientX, y:e.clientY, t:performance.now(), id:e.pointerId, n:(tapStart&&tapStart.down||0) }; E3.pointerDown(e); return; } dragging=true; arTap={ x:e.clientX, y:e.clientY, t:performance.now() };
+  if (!tapLabel(e.clientX,e.clientY)) S.touch={ x:e.clientX, y:e.clientY }; });
 canvas.addEventListener("pointermove",e=>{ if (S.view==="3d" && E3){ E3.pointerMove(e); return; } if (dragging) S.touch={ x:e.clientX, y:e.clientY }; });
 window.addEventListener("pointerup",e=>{ dragging=false; if (E3) E3.pointerUp(e);
+  if (S.view!=="3d" && arTap && e.target===canvas){ const mv=Math.hypot(e.clientX-arTap.x,e.clientY-arTap.y), dtp=performance.now()-arTap.t;
+    if (mv<10 && dtp<400){ const k=tapLabel(e.clientX,e.clientY); if (k) showCard({ advice:k }); else if (cardSel && cardSel.advice) closeCard(); } }
+  arTap=null;
   if (S.view==="3d" && E3 && tapStart && tapStart.id===e.pointerId){ const moved=Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y), dtp=performance.now()-tapStart.t, x=e.clientX, y=e.clientY;
     if (moved<9 && dtp<320){ clearTimeout(tapTimer); tapTimer=setTimeout(()=>doPick(x,y),280); } tapStart=null; } });
 window.addEventListener("pointercancel",e=>{ dragging=false; if (E3) E3.pointerUp(e); });
 canvas.addEventListener("wheel",e=>{ if (S.view==="3d" && E3){ e.preventDefault(); E3.wheel(e); } },{ passive:false });
+
+$("#reset3d").addEventListener("click",()=>{ if (E3) E3.resetView(); });
+/* ---------- mini guide ---------- */
+const GUIDE = {
+  it:[["Si parte dal viso","L’app si apre in modalità Pelle. Inquadra il viso con luce frontale e resta fermo 2–3 secondi: compaiono nei (verde), brufoli (rosso), macchie (marrone), rigonfiamenti (lilla) e rughe (ambra)."],
+    ["Tocca un’etichetta","Un tocco su un’etichetta della pelle apre i consigli alimentari per quel rilevamento."],
+    ["Nei e pazienti","👤 crea o sceglie il paziente. NEI salva foto del viso, dettaglio e misura di ogni neo. Nello storico vedi come cambiano nel tempo."],
+    ["Scansione del corpo","Scegli Tutto, Ossa, Muscoli o Organi e inquadra la persona: l’ologramma 3D si aggancia al corpo. Più corpo è inquadrato, più è preciso."],
+    ["Vista 3D","Pulsante 3D in alto. Un dito ruota, due dita spostano e ingrandiscono, ⟲ riporta la vista al centro. Tocca una struttura per la sua scheda."],
+    ["Impostazioni ⚙︎","Aspetto: Ologramma, Olo a colori, Raggi X, Solido. Tracciamento “Massima” è più preciso ma più lento. In 3D trovi anche Sezione e RM."],
+    ["Limiti","È una rappresentazione illustrativa, non una radiografia e non una diagnosi. Per ogni dubbio vale il parere del medico."]],
+  en:[["It starts on the face","The app opens in Skin mode. Frame the face in frontal light and hold still 2–3 seconds: moles (green), pimples (red), dark spots (brown), lumps (lilac) and wrinkles (amber) appear."],
+    ["Tap a label","Tap any skin label to open food tips for that finding."],
+    ["Moles and patients","👤 creates or picks the patient. MOLES saves a face photo plus a close-up and size of each mole. The history shows how they change over time."],
+    ["Body scan","Pick Everything, Bones, Muscles or Organs and frame the person: the 3D hologram locks onto the body. The more of the body in view, the more precise it is."],
+    ["3D view","3D button at the top. One finger rotates, two fingers move and zoom, ⟲ re-centres the view. Tap a structure for its card."],
+    ["Settings ⚙︎","Look: Hologram, Colour holo, X-ray, Solid. “Max” tracking is more precise but slower. In 3D you also get Section and MRI."],
+    ["Limits","This is an illustration, not an X-ray and not a diagnosis. For any doubt, a doctor’s opinion is what counts."]]
+};
+function renderGuide(){ $("#guideL").innerHTML = GUIDE[S.lang].map(g=>`<li><b>${esc(g[0])}</b>${esc(g[1])}</li>`).join(""); }
+function firstGuide(){ if (!S.guideSeen){ S.guideSeen=true; saveSettings(); $("#guide").hidden=false; } }
+for (const b of [$("#guideBtn"),$("#guideBtn2")]) b.addEventListener("click",()=>{ S.guideSeen=true; saveSettings(); $("#guide").hidden=false; });
+document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{ $("#"+b.dataset.close).hidden=true; }));
+let toastT=0;
+function toast(msg){ const el=$("#toast"); el.textContent=msg; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{ el.hidden=true; },3200); }
+
+/* ---------- patients and mole history (kept on this device only) ---------- */
+const DB = { db:null,
+  open(){ return this.db ? Promise.resolve(this.db) : new Promise((res,rej)=>{ const r=indexedDB.open("anatomyLens",1);
+    r.onupgradeneeded=()=>{ const d=r.result; d.createObjectStore("patients",{ keyPath:"id", autoIncrement:true }); d.createObjectStore("scans",{ keyPath:"id", autoIncrement:true }).createIndex("pid","pid"); };
+    r.onsuccess=()=>{ this.db=r.result; res(this.db); }; r.onerror=()=>rej(r.error); }); },
+  async run(store,mode,fn){ const d=await this.open(); return new Promise((res,rej)=>{ const t=d.transaction(store,mode), rq=fn(t.objectStore(store)); t.oncomplete=()=>res(rq && rq.result); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); }); },
+  all(store){ return this.run(store,"readonly",s=>s.getAll()); },
+  put(store,v){ return this.run(store,"readwrite",s=>s.put(v)); },
+  del(store,id){ return this.run(store,"readwrite",s=>s.delete(id)); },
+  scans(pid){ return this.run("scans","readonly",s=>s.index("pid").getAll(pid)); } };
+const fmtDate = (t)=> new Date(t).toLocaleString(S.lang==="it" ? "it-IT" : "en-GB", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
+async function renderPatients(){
+  const tx=T[S.lang]; let pts=[]; try { pts=await DB.all("patients"); } catch(e){ console.warn(e); }
+  if (!pts.some(p=>p.id===S.pid)) S.pid = pts.length ? pts[pts.length-1].id : 0;
+  $("#patSel").innerHTML = pts.length ? pts.map(p=>`<option value="${p.id}"${p.id===S.pid?" selected":""}>${esc(p.name)}</option>`).join("") : `<option value="0">${esc(tx.pNone)}</option>`;
+  $("#patDel").disabled = !S.pid;
+  let scans=[]; if (S.pid) try { scans=await DB.scans(S.pid); } catch(e){ console.warn(e); }
+  scans.sort((a,b)=>a.t-b.t);
+  const html=[];
+  for (let i=scans.length-1;i>=0;i--){ const sc=scans[i], older=scans.slice(0,i);
+    const cells=sc.moles.slice().sort((a,b)=>(+a.id.slice(1))-(+b.id.slice(1))).map(mo=>{ let prev=null; for (let j=older.length-1;j>=0 && !prev;j--) prev=older[j].moles.find(q=>q.id===mo.id) || null;
+      let st=""; if (!prev){ if (older.length) st=`<span class="new">${esc(tx.mNew)}</span>`; }
+      else if (mo.mm && prev.mm){ const d=mo.mm-prev.mm; st = (Math.abs(d)>=1 && Math.abs(d)/prev.mm>=0.25) ? `<span class="chg">${d>0?"+":""}${d.toFixed(1)} mm · ${esc(tx.mChg)}</span>` : `${d>=0?"+":""}${d.toFixed(1)} mm · ${esc(tx.mSame)}`; }
+      return `<div class="mole"><img src="${mo.img}" alt=""><b>${esc(mo.id)}</b> · ${mo.mm ? "≈ "+mo.mm.toFixed(1)+" mm" : esc(tx.mNoScale)}<br>${st}</div>`; }).join("");
+    html.push(`<div class="scan"><h3><span>${esc(fmtDate(sc.t))} · ${sc.moles.length} ${esc(tx.mMoles)}</span><button class="btn warn" data-delscan="${sc.id}">${esc(tx.pScanDel)}</button></h3><img class="face" src="${sc.face}" alt=""><div class="moles">${cells}</div></div>`); }
+  $("#patScans").innerHTML = html.length ? html.join("") : `<p class="note">${esc(tx.pNoScan)}</p>`;
+  saveSettings();
+}
+$("#patBtn").addEventListener("click",()=>{ $("#pat").hidden=false; renderPatients(); });
+$("#patSel").addEventListener("change",e=>{ S.pid=+e.target.value||0; renderPatients(); });
+$("#patAdd").addEventListener("click", async ()=>{ const nm=$("#patName").value.trim(); if (!nm) { $("#patName").focus(); return; }
+  try { S.pid = await DB.put("patients",{ name:nm, created:Date.now(), nextN:1 }); $("#patName").value=""; } catch(e){ console.warn(e); } renderPatients(); });
+$("#patDel").addEventListener("click", async ()=>{ if (!S.pid || !window.confirm(T[S.lang].pConfirmP)) return;
+  try { for (const sc of await DB.scans(S.pid)) await DB.del("scans",sc.id); await DB.del("patients",S.pid); } catch(e){ console.warn(e); } S.pid=0; renderPatients(); });
+$("#patScans").addEventListener("click", async e=>{ const b=e.target.closest("[data-delscan]"); if (!b || !window.confirm(T[S.lang].pConfirmS)) return;
+  try { await DB.del("scans",+b.dataset.delscan); } catch(err){ console.warn(err); } renderPatients(); });
+
+/* size of one mole from the full-resolution frame: Otsu threshold, then the dark blob at the centre */
+function moleSize(g, cx, cy, rr){
+  const half=Math.max(18, Math.min(80, Math.round(rr*3.2))), n=half*2; let id;
+  try { id=g.getImageData(Math.round(cx)-half, Math.round(cy)-half, n, n).data; } catch(e){ return null; }
+  const L=new Float32Array(n*n), hist=new Uint32Array(256); for (let i=0;i<n*n;i++){ const v=0.299*id[i*4]+0.587*id[i*4+1]+0.114*id[i*4+2]; L[i]=v; hist[v|0]++; }
+  let sum=0; for (let i=0;i<256;i++) sum+=i*hist[i]; let wB=0, sB=0, best=0, thr=0;
+  for (let i=0;i<256;i++){ wB+=hist[i]; if (!wB) continue; const wF=n*n-wB; if (!wF) break; sB+=i*hist[i]; const mB=sB/wB, mF=(sum-sB)/wF, v=wB*wF*(mB-mF)*(mB-mF); if (v>best){ best=v; thr=i; } }
+  let seed=-1, sv=1e9; const sr=Math.max(3, Math.round(rr)); for (let dy=-sr;dy<=sr;dy++) for (let dx=-sr;dx<=sr;dx++){ const p=(half+dy)*n+half+dx; if (L[p]<sv){ sv=L[p]; seed=p; } }
+  if (seed<0 || sv>thr) return null;
+  const seen=new Uint8Array(n*n), st=[seed]; seen[seed]=1; let A=0, edge=false, md=0, ml=0, cl=0;
+  while (st.length){ const p=st.pop(), x=p%n, y=(p/n)|0; A++; md+=L[p]; if (x===0||y===0||x===n-1||y===n-1){ edge=true; break; }
+    for (const q of [p-1,p+1,p-n,p+n]) if (!seen[q] && L[q]<=thr){ seen[q]=1; st.push(q); } }
+  if (edge || A<6 || A>n*n*0.4) return null;
+  for (let i=0;i<n*n;i++) if (!seen[i]){ ml+=L[i]; cl++; }
+  if (ml/Math.max(1,cl) - md/A < 12) return null;
+  return 2*Math.sqrt(A/Math.PI);
+}
+async function saveMoleScan(){
+  const tx=T[S.lang], lm=TR.face.lm, vw=video.videoWidth, vh=video.videoHeight;
+  if (!FSK || !lm || !TR.face.tracked || !vw || !S.layers.skin){ toast(tx.mNoFace); return; }
+  let pts=[]; try { pts=await DB.all("patients"); } catch(e){ console.warn(e); }
+  const pat=pts.find(p=>p.id===S.pid); if (!pat){ toast(tx.mNoPat); $("#pat").hidden=false; renderPatients(); return; }
+  const full=document.createElement("canvas"); full.width=vw; full.height=vh; const g=full.getContext("2d",{ willReadFrequently:true }); g.drawImage(video,0,0,vw,vh);
+  const V=lm.map(p=>({ x:p.x*vw, y:p.y*vh })), UVS=FSK.S;
+  /* scale: the human iris is about 11.7 mm across */
+  let mmpp=0; if (V.length>=478){ const d=(a,b)=>Math.hypot(V[a].x-V[b].x,V[a].y-V[b].y), e1=Math.max(d(469,471),d(470,472)), e2=Math.max(d(474,476),d(475,477)), ir=Math.max(e1,e2); if (ir>5) mmpp=11.7/ir; }
+  const found=(FSK._res().moles||[]).map(e=>{ const c=FSK.mapUV(e.x,e.y,V), a=FSK.mapUV(e.x+e.a,e.y,V), b=FSK.mapUV(e.x,e.y+e.a,V); if (!c) return null;
+    const rr=Math.max(2, a?Math.hypot(a.x-c.x,a.y-c.y):0, b?Math.hypot(b.x-c.x,b.y-c.y):0); return { u:e.x/UVS, v:e.y/UVS, c, rr }; }).filter(Boolean);
+  let prev=[]; try { prev=(await DB.scans(pat.id)).sort((a,b)=>a.t-b.t); } catch(e){ console.warn(e); }
+  const known=new Map(); for (const sc of prev) for (const mo of sc.moles) known.set(mo.id,mo);
+  const used=new Set(), moles=[]; let nextN=pat.nextN||1;
+  for (const f of found){
+    let id=null, bd=0.035; for (const [kid,mo] of known){ if (used.has(kid)) continue; const d=Math.hypot(mo.u-f.u,mo.v-f.v); if (d<bd){ bd=d; id=kid; } }
+    if (!id) id="N"+(nextN++); used.add(id);
+    const dpx=moleSize(g,f.c.x,f.c.y,f.rr) || f.rr*2, half=Math.max(28, Math.min(110, Math.round(Math.max(f.rr,dpx/2)*3.5)));
+    const cc=document.createElement("canvas"); cc.width=cc.height=200; const k=cc.getContext("2d"); k.imageSmoothingQuality="high";
+    k.drawImage(full, f.c.x-half, f.c.y-half, half*2, half*2, 0,0,200,200);
+    moles.push({ id, u:f.u, v:f.v, mm: mmpp ? Math.round(dpx*mmpp*10)/10 : 0, img:cc.toDataURL("image/jpeg",0.9), cx:f.c.x, cy:f.c.y });
+  }
+  /* face photo with numbered markers */
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for (let i=0;i<468;i++){ const p=V[i]; if(p.x<x0)x0=p.x; if(p.x>x1)x1=p.x; if(p.y<y0)y0=p.y; if(p.y>y1)y1=p.y; }
+  const pad=(x1-x0)*0.14; x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad*1.6); x1=Math.min(vw,x1+pad); y1=Math.min(vh,y1+pad);
+  const sc=Math.min(1, 720/Math.max(x1-x0,y1-y0)), fc=document.createElement("canvas"); fc.width=Math.round((x1-x0)*sc); fc.height=Math.round((y1-y0)*sc);
+  const f2=fc.getContext("2d"); f2.drawImage(full,x0,y0,x1-x0,y1-y0,0,0,fc.width,fc.height);
+  f2.font="700 15px ui-monospace,monospace"; f2.lineWidth=2; f2.textBaseline="middle";
+  for (const mo of moles){ const px=(mo.cx-x0)*sc, py=(mo.cy-y0)*sc; f2.strokeStyle="#78ffd6"; f2.beginPath(); f2.arc(px,py,11,0,TAU); f2.stroke();
+    f2.strokeStyle="rgba(0,0,0,.7)"; f2.lineWidth=3; f2.strokeText(mo.id,px+14,py-10); f2.fillStyle="#78ffd6"; f2.fillText(mo.id,px+14,py-10); f2.lineWidth=2; delete mo.cx; delete mo.cy; }
+  try { await DB.put("scans",{ pid:pat.id, t:Date.now(), face:fc.toDataURL("image/jpeg",0.85), mmpp, moles }); pat.nextN=nextN; await DB.put("patients",pat); }
+  catch(e){ console.warn(e); toast(String(e && e.message || e)); return; }
+  const fl=$("#flash"); fl.classList.add("on"); setTimeout(()=>fl.classList.remove("on"),60);
+  toast(`${tx.mSaved} · ${pat.name} · ${moles.length} ${tx.mMoles}`);
+}
+$("#moleBtn").addEventListener("click",()=>{ saveMoleScan().catch(e=>{ console.warn(e); }); });
 
 applyLang(); syncUI();
 
