@@ -1595,7 +1595,7 @@ function basis(Y,Zref){ const y=Y.clone().normalize(), z=perpTo(Zref,y,Math.abs(
 const mid=(a,b)=>a.clone().add(b).multiplyScalar(0.5);
 
 /* joint set (MediaPipe numbering) -> bone frames */
-function frames(P){
+function frames(P,headUp){
   const hipL=P[23], hipR=P[24], shL=P[11], shR=P[12], hipM=mid(hipL,hipR), shM=mid(shL,shR);
   const up=shM.clone().sub(hipM); const tl=up.length(); up.normalize();
   const hipAx=hipL.clone().sub(hipR), shAx=shL.clone().sub(shR);
@@ -1603,6 +1603,7 @@ function frames(P){
   const fwd=v3().setFromMatrixColumn(chestB,2), fwdP=v3().setFromMatrixColumn(pelvB,2);
   const earM=mid(P[7],P[8]), earAx=P[7].clone().sub(P[8]);
   let hy=earM.clone().sub(shM); if(hy.lengthSq()<1e-6) hy=up.clone();
+  if(headUp && headUp.lengthSq && headUp.lengthSq()>1e-6) hy=headUp.clone().normalize().multiplyScalar(hy.length()); /* AR: head axis from the face mesh */
   const headB=basis(hy,earAx.clone().cross(hy.clone().normalize()));
   const F=[];
   F[0]={o:hipM,B:pelvB,L:tl}; F[1]={o:shM,B:chestB,L:tl}; F[2]={o:shM,B:headB,L:Math.max(1e-3,hy.length()),earM,earW:earAx.length()};
@@ -1682,7 +1683,7 @@ async function create(canvas,PACK,onProgress){
     await new Promise(r=>setTimeout(r,0));
   }
   /* ---- rest skeleton ---- */
-  const J=PACK.joints, RP=restPose(J), RF=frames(RP), CAP=capsules(RF,J);
+  const J=PACK.joints, RP=restPose(J), RF=frames(RP), CAP=capsules(RF,J); const EYE={ m:null, ipd:0, local:null };
   const bones=SEG.map((n,k)=>{ const b=new THREE.Bone(); b.name=n; b.position.copy(RF[k].o); b.quaternion.setFromRotationMatrix(RF[k].B); root.add(b); return b; });
   root.updateMatrixWorld(true);
   const skeleton=new THREE.Skeleton(bones);
@@ -1763,6 +1764,12 @@ async function create(canvas,PACK,onProgress){
     if(gname==="muscles"||gname==="musFront") geo.setAttribute("mgrp",new THREE.BufferAttribute(mgr,1));
     geo.computeBoundingSphere();
     built[gname]={ geo, pos, si, sw, pid, col0:col.slice() };
+    if(gname==="eyes"){ /* rest eye centres, used to pin the hologram head on the real eyes in AR */
+      /* cornea apex of each eye = the front-most vertices of that side (what the iris landmark marks) */
+      let zl=-1e9, zr=-1e9; for(let i=0;i<pos.length;i+=3){ if(pos[i]<0) zr=Math.max(zr,pos[i+2]); else zl=Math.max(zl,pos[i+2]); }
+      const L=v3(), Rr=v3(); let nl=0,nr=0; for(let i=0;i<pos.length;i+=3){ if(pos[i]<0){ if(pos[i+2]>zr-0.004){ Rr.x+=pos[i]; Rr.y+=pos[i+1]; Rr.z+=pos[i+2]; nr++; } } else if(pos[i+2]>zl-0.004){ L.x+=pos[i]; L.y+=pos[i+1]; L.z+=pos[i+2]; nl++; } }
+      if(nl&&nr){ L.divideScalar(nl); Rr.divideScalar(nr); EYE.m=L.clone().add(Rr).multiplyScalar(0.5); EYE.ipd=L.distanceTo(Rr);
+        const inv=new THREE.Matrix4().copy(RF[2].B).invert(); EYE.local=EYE.m.clone().sub(RF[2].o).applyMatrix4(inv); } }
     prog(0.5+0.45*(++gi/order.length)); await new Promise(r=>setTimeout(r,0));
   }
 
@@ -1895,17 +1902,21 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
   /* ---- per frame ---- */
   let W_=1,H_=1, look="solid", atlas=null;
   function resize(w,h,pr){ W_=w; H_=h; renderer.setPixelRatio(pr); renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
-  const S3=v3(), Q=new THREE.Quaternion();
+  const S3=v3(), Q=new THREE.Quaternion(); let badBones=0, badPose=0, P_last="";
   function update(st){
     const mode=st.section||"full"; cutActive=(mode==="cut"||mode==="mri"); mriActive=(mode==="mri");
-    const mirror=cutActive?false:!!st.mirror, P=cutActive?RP:st.pose; const F=frames(P);
+    const mirror=cutActive?false:!!st.mirror, P=cutActive?RP:st.pose; badPose=0; for(const q of P) if(!q||!isFinite(q.x+q.y+q.z)) badPose++; P_last=[0,11,12,23,24].map(i=>P[i]?[+P[i].x.toFixed(2),+P[i].y.toFixed(2),+P[i].z.toFixed(2)].join(","):"-").join(" | "); const F=frames(P, (st.ar&&st.headUp)?v3(st.headUp.x,st.headUp.y,st.headUp.z):null);
     const g=clamp(F[0].L/RF[0].L,0.7,1.4);
     for(let k=0;k<15;k++){ const b=bones[k]; b.position.copy(F[k].o); b.quaternion.setFromRotationMatrix(F[k].B);
       let ky=k<=1?F[k].L/RF[k].L : k===2?1 : F[k].L/RF[k].L; ky=clamp(ky, k===5||k===8||k===11||k===14?0.6:0.7, k===5||k===8||k===11||k===14?1.6:1.4);
-      if(k===2){ if(st.ar && RF[2].earW>1e-3){ /* AR: the skull takes its size from the ear width seen in the picture and sits centred on the ears */
-          const gh=clamp(F[2].earW/RF[2].earW,0.6,2.2); b.scale.set(gh,gh,gh);
+      if(k===2){ if(st.ar && st.faceOn && EYE.local){ /* AR with the face tracked: the skull is sized on the distance between the eyes and its eyes sit on the real irises */
+          const eyeM=mid(P[2],P[5]), ipd=P[2].distanceTo(P[5]), gh=clamp(ipd/EYE.ipd,0.7,1.6); b.scale.set(gh,gh,gh);
+          const off=EYE.local.clone().applyMatrix4(F[2].B).multiplyScalar(gh); b.position.copy(eyeM).sub(off); }
+        else if(st.ar && RF[2].earW>1e-3){ /* no face: size from the ear width, centred on the ears */
+          const gh=clamp(F[2].earW/RF[2].earW,0.7,1.6); b.scale.set(gh,gh,gh);
           const yax=v3().setFromMatrixColumn(F[2].B,1).normalize(); b.position.copy(F[2].earM).addScaledVector(yax,-RF[2].L*gh); }
         else b.scale.set(g,g,g); } else b.scale.set(g,ky,g); }
+    for(let k=0;k<15;k++){ const b=bones[k]; if(!isFinite(b.position.x+b.position.y+b.position.z+b.quaternion.x+b.quaternion.y+b.quaternion.z+b.quaternion.w+b.scale.x+b.scale.y)){ b.position.copy(RF[k].o); b.quaternion.setFromRotationMatrix(RF[k].B); b.scale.set(1,1,1); badBones++; } }
     root.scale.x=mirror?-1:1;
     root.updateMatrixWorld(true);
     /* look + layout */
@@ -2018,7 +2029,19 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
   }
   function defaultPose(){ return restPose(J); }
   prog(1);
-  const api={ arCam:acam, resize, update, render, labels, defaultPose, pointerDown, pointerMove, pointerUp, wheel, resetView, setFocus, setSpin, scene, camera, ocam, root, renderer, bones, real:true, onSlice:null,
+  function diag(){
+    const gl=renderer.getContext(), dbg=gl.getExtension("WEBGL_debug_renderer_info");
+    const out={ gl:(dbg?gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL):"?")+" | "+gl.getParameter(gl.VERSION), vtex:gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS), vuni:gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS), err:gl.getError(), badBones, badPose, pose:P_last, look, groups:[], bones:[] };
+    for(let k=0;k<15;k++){ const b=bones[k]; out.bones.push(SEG[k]+":"+(isFinite(b.matrixWorld.elements.reduce((s,v)=>s+v,0))?"ok":"NaN")+"/"+b.scale.x.toFixed(2)); }
+    const rt=new THREE.WebGLRenderTarget(96,96), px=new Uint8Array(96*96*4), vis={}; for(const n in meshes) vis[n]=meshes[n].visible;
+    const hv=hud.visible, gv=grid.visible; hud.visible=false; grid.visible=false; const bg=scene.background; scene.background=null;
+    for(const n in meshes){ for(const q in meshes) meshes[q].visible=(q===n); renderer.setRenderTarget(rt); renderer.setClearColor(0,0); renderer.clear(); renderer.render(scene, viewCam||camera); renderer.readRenderTargetPixels(rt,0,0,96,96,px);
+      let lit=0; for(let i=0;i<px.length;i+=4) if(px[i]+px[i+1]+px[i+2]>12) lit++;
+      const ge=meshes[n].geometry; out.groups.push(`${n}:${vis[n]?"on":"off"} v${ge.attributes.position.count} px${lit}`); }
+    renderer.setRenderTarget(null); rt.dispose(); for(const n in meshes) meshes[n].visible=vis[n]; hud.visible=hv; grid.visible=gv; scene.background=bg;
+    return out;
+  }
+  const api={ diag, eyeRest:EYE, arCam:acam, resize, update, render, labels, defaultPose, pointerDown, pointerMove, pointerUp, wheel, resetView, setFocus, setSpin, scene, camera, ocam, root, renderer, bones, real:true, onSlice:null,
     cutInfo:()=>cutInfo, isMri:()=>mriActive, caps, stencilMs, cutPlane, pick, highlight, setActivation, MG:MG.map(x=>x[0]), parts:PARTS,
     normalsOk:()=>Object.values(built).every(b=>{ const a=b.geo.attributes.normal.array; let z=0; for(let i=0;i<a.length;i+=3) if(a[i]===0&&a[i+1]===0&&a[i+2]===0) z++; return z<a.length/3*0.01; }),
     stats:()=>{ let v=0,t=0; for(const n in built){ v+=built[n].geo.attributes.position.count; t+=built[n].geo.index.count/3; } return {v,t,groups:Object.keys(built),labels:anch.length}; } };
@@ -2563,10 +2586,11 @@ class OneEuro {
 }
 function filterSet(n,mc,beta){ return Array.from({length:n},()=>({ x:new OneEuro(mc,beta), y:new OneEuro(mc,beta) })); }
 function resetSet(set){ for (const f of set){ f.x.reset(); f.y.reset(); } }
-function applyFilter(set,lm,t){ return lm.map((p,i)=>({ x:set[i].x.f(p.x,t), y:set[i].y.f(p.y,t), v:p.visibility ?? 1 })); }
+function applyFilter(set,lm,t){ return lm.map((p,i)=>({ x:set[i].x.f(p.x,t), y:set[i].y.f(p.y,t), z:p.z||0, v:p.visibility ?? 1 })); }
 
 /* ---------- tracking state with confirmation (rejects objects and flicker) ---------- */
 function track(n,mc,beta,acq,lose){ return { lm:null, filt:filterSet(n,mc,beta), good:0, bad:0, tracked:false, fade:0, acq, lose }; }
+window.__lens = { get TR(){ return TR; }, get S(){ return S; }, get E3(){ return E3; }, get models(){ return models; }, get P3(){ return P3cur; }, get FIT(){ return FIT; }, mp:(p)=>mp(p) };
 const TR = {
   pose: Object.assign(track(33,0.9,4,4,10), { on:new Array(33).fill(false) }),
   face: track(478,1.1,5,3,8),
@@ -2823,7 +2847,7 @@ function arHolo(P, F, now){
   const useFace = F && F.length>=474 && TR.face.tracked;
   if (useFace){ for (const k in FACEJ){ const f=F[FACEJ[k]]; if (f){ Q[k].x=f.x; Q[k].y=f.y; wv[k]=1; } }
     /* the face contour sits a little in front of the ears: push the ear anchors outward */
-    const ex=F[454].x-F[234].x, ey=F[454].y-F[234].y; Q[7].x+=ex*0.1; Q[7].y+=ey*0.1; Q[8].x-=ex*0.1; Q[8].y-=ey*0.1; }
+    const ex=F[454].x-F[234].x, ey=F[454].y-F[234].y; Q[7].x+=ex*0.04; Q[7].y+=ey*0.04; Q[8].x-=ex*0.04; Q[8].y-=ey*0.04; }
   const fitJ=[0,7,8,11,12,13,14,15,16,23,24,25,26,27,28];
   let sw=0,cX=0,cY=0,cx=0,cy=0;
   for (const i of fitJ){ const w=wv[i]; sw+=w; cX+=w*Wd[i].x; cY+=w*-Wd[i].y; cx+=w*Q[i].x; cy+=w*Q[i].y; }
@@ -2842,10 +2866,15 @@ function arHolo(P, F, now){
   if (rn){ rx/=rn; ry/=rn; }
   for (let i=0;i<33;i++){ if (wv[i]>0.5) continue; const p=PARJ[i]; if (p==null){ dx[i]=rx; dy[i]=ry; } else { dx[i]=dx[p]; dy[i]=dy[p]; } }
   for (let i=0;i<33;i++) P3cur[i]=new V3(P3cur[i].x+dx[i], P3cur[i].y+dy[i], P3cur[i].z);
+  /* head depth and tilt from the face mesh: its z is far better than the pose's for the head */
+  let headUp=null;
+  if (useFace){ const fl=TR.face.lm, zpx=(i)=>-(fl[i].z||0)*cover.dw, z0=zpx(1), nz=P3cur[0].z;
+    for (const k in FACEJ){ if (k==="0") continue; const q=P3cur[k]; P3cur[k]=new V3(q.x, q.y, nz+(zpx(FACEJ[k])-z0)/FIT.s); }
+    const a=F[10], b=F[152]; let hu={ x:m*(a.x-b.x)/FIT.s, y:(b.y-a.y)/FIT.s, z:(zpx(10)-zpx(152))/FIT.s }; const hl=Math.hypot(hu.x,hu.y,hu.z)||1; headUp={ x:hu.x/hl, y:hu.y/hl, z:hu.z/hl }; }
   if (H3) for (const sd of ["L","R"]){ const h=H3[sd]; if (!h) continue; const wi=sd==="L"?15:16; for (let i=0;i<h.length;i++) h[i]=new V3(h[i].x+dx[wi], h[i].y+dy[wi], h[i].z); }
   const dt = lastNow ? Math.min(100, now-lastNow) : 16; lastNow=now;
   if (E3.setActivation) E3.setActivation(null, now);
-  E3.update({ pose:P3cur, hands:H3, mirror:false, layers:S.layers, section:"full", plane:S.plane, slice:0.5, look:S.look, brightness:S.brightness, t:now, dt,
+  E3.update({ pose:P3cur, hands:H3, mirror:false, layers:S.layers, section:"full", plane:S.plane, slice:0.5, look:S.look, brightness:S.brightness, t:now, dt, headUp, faceOn:!!useFace,
     ar:{ l:-FIT.tx/ms, r:(W-FIT.tx)/ms, t:FIT.ty/FIT.s, b:(FIT.ty-H)/FIT.s } });
   E3.render();
   return true;
@@ -3284,8 +3313,11 @@ const GUIDE = {
     ["Settings ⚙︎","Look: Hologram, Colour holo, X-ray, Solid. “Max” tracking is more precise but slower. In 3D you also get Section and MRI."],
     ["Limits","This is an illustration, not an X-ray and not a diagnosis. For any doubt, a doctor’s opinion is what counts."]]
 };
-const APP_VER="v6 · 15/11";
-function renderGuide(){ $("#guide h2").textContent=T[S.lang].gTitle+" · "+APP_VER; $("#guideL").innerHTML = GUIDE[S.lang].map(g=>`<li><b>${esc(g[0])}</b>${esc(g[1])}</li>`).join(""); }
+const APP_VER="v7 · 15/11";
+function renderGuide(){ $("#guide h2").textContent=T[S.lang].gTitle+" · "+APP_VER; $("#guideL").innerHTML = GUIDE[S.lang].map(g=>`<li><b>${esc(g[0])}</b>${esc(g[1])}</li>`).join("")
+  + `<li><b>Diagnostica 3D</b><button class="btn" id="diagBtn" type="button">Esegui test</button><pre id="diagOut" style="white-space:pre-wrap;font-size:11px;line-height:1.35;margin:8px 0 0"></pre></li>`;
+  $("#diagBtn").addEventListener("click", async ()=>{ const o=$("#diagOut"); o.textContent="…"; try { const E=await ensure3D(); if (!E.diag){ o.textContent="motore semplificato (pack non caricato)"; return; }
+    const d=E.diag(); o.textContent=`${APP_VER} · ${navigator.userAgent.slice(0,90)}\nGL: ${d.gl}\nvtex ${d.vtex} vuni ${d.vuni} err ${d.err} badBones ${d.badBones} badPose ${d.badPose} look ${d.look}\npose(nose,sh,hips): ${d.pose}\nbones: ${d.bones.join(" ")}\n${d.groups.join("\n")}`; } catch(e){ o.textContent="errore: "+(e&&e.message||e); } }); }
 function firstGuide(){ if (!S.guideSeen){ S.guideSeen=true; saveSettings(); $("#guide").hidden=false; } }
 for (const b of [$("#guideBtn"),$("#guideBtn2")]) b.addEventListener("click",()=>{ S.guideSeen=true; saveSettings(); $("#guide").hidden=false; });
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{ $("#"+b.dataset.close).hidden=true; }));
