@@ -1699,6 +1699,7 @@ async function create(canvas,PACK,onProgress){
   const PARTS=[];
   const built={}; const labelAnch=[];
   const order=["skeleton","skull","hands","muscles","musFront",...ORG,...BRN,"eyes","hair","shell"];
+  if(groups.organs && !ORG.some(g=>groups[g])){ groups.solid=groups.organs; delete groups.organs; } /* an older data file kept all organs in one group: still show them */
   let gi=0;
   for(const gname of order){
     const list=groups[gname]; if(!list) continue;
@@ -2451,7 +2452,7 @@ const POSE_URL = { max: MODEL+"pose_landmarker/pose_landmarker_heavy/float16/1/p
 const HAND_URL = MODEL+"hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 const FACE_URL = MODEL+"face_landmarker/face_landmarker/float16/1/face_landmarker.task";
 const LIB = window.AnatomyLib;
-const THREE_SPEC = "three", ROOM_SPEC = "three/addons/environments/RoomEnvironment.js", GLTF_SPEC = "three/addons/loaders/GLTFLoader.js", MESHOPT_SPEC = "three/addons/libs/meshopt_decoder.module.js", PACK_URL = "anatomia-3d.js";
+const THREE_SPEC = "three", ROOM_SPEC = "three/addons/environments/RoomEnvironment.js", GLTF_SPEC = "three/addons/loaders/GLTFLoader.js", MESHOPT_SPEC = "three/addons/libs/meshopt_decoder.module.js", PACK_URL = "anatomia-3d.js?v=296173c4";
 
 /* ---------- text ---------- */
 const T = {
@@ -2935,7 +2936,7 @@ function render(now){
 let loadPct=0, noteUntil=0;
 function setLoad(p){ loadPct=p; if (!E3) $("#stext").textContent = `${S.view==="3d" ? T[S.lang].load3d : T[S.lang].load3dAR} ${Math.round(p*100)}%`; }
 async function loadPack(onp){
-  const r = await fetch(PACK_URL, { cache:"force-cache" }); if (!r.ok) throw new Error("pack "+r.status);
+  const r = await fetch(PACK_URL, { cache:"no-cache" });  /* the ?v= tag changes with the file, and no-cache always revalidates: an old copy can never stick */ if (!r.ok) throw new Error("pack "+r.status);
   const total = +r.headers.get("content-length") || 0; let txt;
   if (r.body && r.body.getReader){
     const rd=r.body.getReader(), parts=[]; let got=0;
@@ -3340,7 +3341,7 @@ const GUIDE = {
     ["Settings ⚙︎","Look: Hologram, Colour holo, X-ray, Solid. “Max” tracking is more precise but slower. In 3D you also get Section and MRI."],
     ["Limits","This is an illustration, not an X-ray and not a diagnosis. For any doubt, a doctor’s opinion is what counts."]]
 };
-const APP_VER="v9 · 16/11";
+const APP_VER="v10 · 16/11";
 function renderGuide(){ $("#guide h2").textContent=T[S.lang].gTitle+" · "+APP_VER; $("#guideL").innerHTML = GUIDE[S.lang].map(g=>`<li><b>${esc(g[0])}</b>${esc(g[1])}</li>`).join("")
   + `<li><b>Diagnostica 3D</b><button class="btn" id="diagBtn" type="button">Esegui test</button><pre id="diagOut" style="white-space:pre-wrap;font-size:11px;line-height:1.35;margin:8px 0 0"></pre></li>`;
   $("#diagBtn").addEventListener("click", async ()=>{ const o=$("#diagOut"); o.textContent="…"; try { const E=await ensure3D(); if (!E.diag){ o.textContent="motore semplificato (pack non caricato)"; return; }
