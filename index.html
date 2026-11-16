@@ -1694,7 +1694,7 @@ async function create(canvas,PACK,onProgress){
     for(const k of allowed){ const d=capDist(p,CAP[k],k), w=1/(Math.pow(d,4)+1e-3); if(w>w1){ b2=b1; w2=w1; b1=k; w1=w; } else if(w>w2){ b2=k; w2=w; } }
     if(b2<0){ out[o]=b1; out[o+1]=b1; return 1; } const s=w1+w2; out[o]=b1; out[o+1]=b2; return w1/s; }
   function nearestSeg(p,set){ let best=0,bd=1e9; for(const k of set){ const d=capDist(p,CAP[k],k); if(d<bd){ bd=d; best=k; } } return best; }
-  const ALL=[...Array(15).keys()], TORSO=[0,1,2], VERT=/(vertebra|atlas|axis|sacrum|coccyx|intervertebral)/;
+  const ALL=[...Array(15).keys()], TORSO=[0,1,2], VERT=/(vertebra|atlas|axis|sacrum|coccyx|intervertebral)/, PELV=/(hip bone|ilium|ischium|pubi|sacrum|coccyx|pubic symphysis)/i, CHEST=/(\brib\b|costal|sternum|manubrium|xiphoid|clavicle|scapula)/i;
   const pool=[]; /* bone + muscle samples for skin weight transfer */
   const PARTS=[];
   const built={}; const labelAnch=[];
@@ -1719,7 +1719,10 @@ async function create(canvas,PACK,onProgress){
       let allowed=null, rigid=-1;
       const isBoneG=(gname==="skeleton"||gname==="skull"||gname==="hands");
       if(gname==="skull"||BRN.includes(gname)||gname==="eyes"||gname==="hair") rigid=2;
-      else if(isBoneG){ allowed=VERT.test(it.inf.en||"")?TORSO:null; if(!allowed) rigid=nearestSeg(cen,ALL); }
+      else if(isBoneG){ const en=it.inf.en||"";
+        /* trunk bones belong to the trunk: nearest-segment would hand the hip bones to the thighs and the shoulder girdle to the arms */
+        if(PELV.test(en)) rigid=0; else if(CHEST.test(en)) rigid=1;
+        else { allowed=VERT.test(en)?TORSO:null; if(!allowed) rigid=nearestSeg(cen,ALL); } }
       else if(ORG.includes(gname)){ allowed=cen.y>RF[1].o.y+0.02?[1,2]:[0,1]; }
       else if(gname==="muscles"||gname==="musFront"){
         const cnt=new Array(15).fill(0); const step=Math.max(1,Math.floor(n/300));
@@ -2041,14 +2044,23 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
     const out={ gl:(dbg?gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL):"?")+" | "+gl.getParameter(gl.VERSION), vtex:gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS), vuni:gl.getParameter(gl.MAX_VERTEX_UNIFORM_VECTORS), err:gl.getError(), badBones, badPose, pose:P_last, look, groups:[], bones:[] };
     for(let k=0;k<15;k++){ const b=bones[k]; out.bones.push(SEG[k]+":"+(isFinite(b.matrixWorld.elements.reduce((s,v)=>s+v,0))?"ok":"NaN")+"/"+b.scale.x.toFixed(2)); }
     const rt=new THREE.WebGLRenderTarget(96,96), px=new Uint8Array(96*96*4), vis={}; for(const n in meshes) vis[n]=meshes[n].visible;
+    for(let k=0;k<15;k++) BM[k].multiplyMatrices(bones[k].matrixWorld, skeleton.boneInverses[k]);
     const hv=hud.visible, gv=grid.visible; hud.visible=false; grid.visible=false; const bg=scene.background; scene.background=null;
     for(const n in meshes){ for(const q in meshes) meshes[q].visible=(q===n); renderer.setRenderTarget(rt); renderer.setClearColor(0,0); renderer.clear(); renderer.render(scene, viewCam||camera); renderer.readRenderTargetPixels(rt,0,0,96,96,px);
       let lit=0; for(let i=0;i<px.length;i+=4) if(px[i]+px[i+1]+px[i+2]>12) lit++;
-      const ge=meshes[n].geometry; out.groups.push(`${n}:${vis[n]?"on":"off"} v${ge.attributes.position.count} px${lit}`); }
+      const ge=meshes[n].geometry, e2=gl.getError();
+      /* where the group really is: CPU-skinned centre of a few vertices, projected on screen (0..1) */
+      const b=built[n], st=Math.max(1,Math.floor(b.pos.length/3/40)); const c=v3(), q=v3(); let k=0;
+      for(let i=0;i<b.pos.length/3;i+=st){ skinV(b,i,q); if(isFinite(q.x+q.y+q.z)){ c.add(q); k++; } } if(k) c.divideScalar(k);
+      const sc=c.clone().project(viewCam||camera);
+      out.groups.push(`${n}:${vis[n]?"on":"off"} px${lit}${e2?" E"+e2:""} @${k?((sc.x+1)/2).toFixed(2)+","+((1-sc.y)/2).toFixed(2):"NaN"}`); }
+    { for(const n in meshes) meshes[n].visible=vis[n]; renderer.setRenderTarget(rt); renderer.setClearColor(0,0); renderer.clear(); renderer.render(scene, viewCam||camera); renderer.readRenderTargetPixels(rt,0,0,96,96,px);
+      let lit=0; for(let i=0;i<px.length;i+=4) if(px[i]+px[i+1]+px[i+2]>12) lit++; out.scenePx=lit; }
+    { let mem=0; for(const n in built){ const ge=built[n].geo; for(const k in ge.attributes) mem+=ge.attributes[k].array.byteLength; mem+=ge.index.array.byteLength; } out.gpuMB=(mem/1048576).toFixed(1); }
     renderer.setRenderTarget(null); rt.dispose(); for(const n in meshes) meshes[n].visible=vis[n]; hud.visible=hv; grid.visible=gv; scene.background=bg;
     return out;
   }
-  const api={ diag, eyeRest:EYE, arCam:acam, resize, update, render, labels, defaultPose, pointerDown, pointerMove, pointerUp, wheel, resetView, setFocus, setSpin, scene, camera, ocam, root, renderer, bones, real:true, onSlice:null,
+  const api={ _pid:(g)=>built[g]&&built[g].pid, diag, eyeRest:EYE, arCam:acam, resize, update, render, labels, defaultPose, pointerDown, pointerMove, pointerUp, wheel, resetView, setFocus, setSpin, scene, camera, ocam, root, renderer, bones, real:true, onSlice:null,
     cutInfo:()=>cutInfo, isMri:()=>mriActive, caps, stencilMs, cutPlane, pick, highlight, setActivation, MG:MG.map(x=>x[0]), parts:PARTS,
     normalsOk:()=>Object.values(built).every(b=>{ const a=b.nor; let z=0; for(let i=0;i<a.length;i+=3) if(a[i]===0&&a[i+1]===0&&a[i+2]===0) z++; return z<a.length/3*0.01; }),
     stats:()=>{ let v=0,t=0; for(const n in built){ v+=built[n].geo.attributes.position.count; t+=built[n].geo.index.count/3; } return {v,t,groups:Object.keys(built),labels:anch.length}; } };
@@ -3256,7 +3268,8 @@ function organCheck(){ if (organChecked || !S.layers.organs) return;
   setTimeout(()=>{ if (organChecked || !S.layers.organs || S.view!=="3d" || !E3 || !E3.diag) return; organChecked=true;
     try { const d=E3.diag(), px=(n)=>{ const r=d.groups.find(g=>g.startsWith(n+":")); return r ? +(r.match(/px(\d+)/)||[0,0])[1] : -1; };
       const org=["lungs","heart","solid","gut"].reduce((s,n)=>s+Math.max(0,px(n)),0), br=px("brain");
-      if (org===0 && br>0) toast(`${S.lang==="it"?"Organi non disegnati su questo dispositivo":"Organs not drawn on this device"} · GL err ${d.err} · ${String(d.gl).slice(0,40)}`); } catch(e){ console.warn(e); } }, 2500); }
+      const pos=(n)=>{ const r=d.groups.find(g=>g.startsWith(n+":")); return r ? (r.match(/@(\S+)/)||[0,"?"])[1] : "-"; };
+      toast(`${APP_VER} · ${S.lang==="it"?"controllo organi":"organ check"}: lungs px${px("lungs")} @${pos("lungs")} · heart px${px("heart")} · gut px${px("gut")} · brain px${br} · err ${d.err} · ${d.gpuMB}MB · ${String(d.gl).slice(0,48)}`, 12000); } catch(e){ toast("organ check error: "+(e&&e.message||e), 12000); } }, 2500); }
 document.querySelectorAll("[data-layer]").forEach(el=>el.addEventListener("change",()=>{ S.layers[el.dataset.layer]=el.checked; syncUI(); }));
 document.querySelectorAll("[data-seg]").forEach(seg=>seg.addEventListener("click",(e)=>{
   const b=e.target.closest("button"); if (!b) return;
@@ -3327,16 +3340,16 @@ const GUIDE = {
     ["Settings ⚙︎","Look: Hologram, Colour holo, X-ray, Solid. “Max” tracking is more precise but slower. In 3D you also get Section and MRI."],
     ["Limits","This is an illustration, not an X-ray and not a diagnosis. For any doubt, a doctor’s opinion is what counts."]]
 };
-const APP_VER="v8 · 16/11";
+const APP_VER="v9 · 16/11";
 function renderGuide(){ $("#guide h2").textContent=T[S.lang].gTitle+" · "+APP_VER; $("#guideL").innerHTML = GUIDE[S.lang].map(g=>`<li><b>${esc(g[0])}</b>${esc(g[1])}</li>`).join("")
   + `<li><b>Diagnostica 3D</b><button class="btn" id="diagBtn" type="button">Esegui test</button><pre id="diagOut" style="white-space:pre-wrap;font-size:11px;line-height:1.35;margin:8px 0 0"></pre></li>`;
   $("#diagBtn").addEventListener("click", async ()=>{ const o=$("#diagOut"); o.textContent="…"; try { const E=await ensure3D(); if (!E.diag){ o.textContent="motore semplificato (pack non caricato)"; return; }
-    const d=E.diag(); o.textContent=`${APP_VER} · ${navigator.userAgent.slice(0,90)}\nGL: ${d.gl}\nvtex ${d.vtex} vuni ${d.vuni} err ${d.err} badBones ${d.badBones} badPose ${d.badPose} look ${d.look}\npose(nose,sh,hips): ${d.pose}\nbones: ${d.bones.join(" ")}\n${d.groups.join("\n")}`; } catch(e){ o.textContent="errore: "+(e&&e.message||e); } }); }
+    const d=E.diag(); o.textContent=`${APP_VER} · ${navigator.userAgent.slice(0,90)}\nGL: ${d.gl}\nvtex ${d.vtex} vuni ${d.vuni} err ${d.err} badBones ${d.badBones} badPose ${d.badPose} look ${d.look} gpu ${d.gpuMB}MB scenePx ${d.scenePx}\npose(nose,sh,hips): ${d.pose}\nbones: ${d.bones.join(" ")}\n${d.groups.join("\n")}`; } catch(e){ o.textContent="errore: "+(e&&e.message||e); } }); }
 function firstGuide(){ if (!S.guideSeen){ S.guideSeen=true; saveSettings(); $("#guide").hidden=false; } }
 for (const b of [$("#guideBtn"),$("#guideBtn2")]) b.addEventListener("click",()=>{ S.guideSeen=true; saveSettings(); $("#guide").hidden=false; });
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>{ $("#"+b.dataset.close).hidden=true; }));
 let toastT=0;
-function toast(msg){ const el=$("#toast"); el.textContent=msg; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{ el.hidden=true; },3200); }
+function toast(msg,ms){ const el=$("#toast"); el.textContent=msg; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{ el.hidden=true; },ms||3200); }
 
 /* ---------- patients and mole history (kept on this device only) ---------- */
 const DB = { db:null,
