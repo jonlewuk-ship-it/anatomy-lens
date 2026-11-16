@@ -1759,11 +1759,18 @@ async function create(canvas,PACK,onProgress){
         const s2=w1+Math.max(0,w2); si[v*4]=b1; si[v*4+1]=b2; sw[v*4]=w1/s2; sw[v*4+1]=Math.max(0,w2)/s2; }
     }
     const geo=new THREE.BufferGeometry();
-    geo.setAttribute("position",new THREE.BufferAttribute(pos,3)); geo.setAttribute("normal",new THREE.BufferAttribute(nor,3)); geo.setAttribute("color",new THREE.BufferAttribute(col,3));
-    geo.setAttribute("skinIndex",new THREE.Uint16BufferAttribute(si,4)); geo.setAttribute("skinWeight",new THREE.BufferAttribute(sw,4)); geo.setIndex(new THREE.BufferAttribute(idx,1));
-    if(gname==="muscles"||gname==="musFront") geo.setAttribute("mgrp",new THREE.BufferAttribute(mgr,1));
+    /* GPU copies are packed (16-bit normals, 8-bit colours and weights, 16-bit indices where they fit):
+       about half the video memory, which phones (iOS Safari above all) run out of with the full model */
+    const nor16=new Int16Array(nv*3); for(let i=0;i<nv*3;i++) nor16[i]=Math.round(clamp(nor[i],-1,1)*32767);
+    const col8=new Uint8Array(nv*3); for(let i=0;i<nv*3;i++) col8[i]=Math.round(clamp(col[i],0,1)*255);
+    const si8=new Uint8Array(nv*4); for(let i=0;i<nv*4;i++) si8[i]=si[i];
+    const sw8=new Uint8Array(nv*4); for(let v=0;v<nv;v++){ const o=v*4, a0=Math.round(clamp(sw[o],0,1)*255); sw8[o]=a0; sw8[o+1]=sw[o+1]>0?255-a0:0; }
+    geo.setAttribute("position",new THREE.BufferAttribute(pos,3)); geo.setAttribute("normal",new THREE.BufferAttribute(nor16,3,true)); geo.setAttribute("color",new THREE.BufferAttribute(col8,3,true));
+    geo.setAttribute("skinIndex",new THREE.BufferAttribute(si8,4)); geo.setAttribute("skinWeight",new THREE.BufferAttribute(sw8,4,true));
+    geo.setIndex(nv<65536 ? new THREE.BufferAttribute(Uint16Array.from(idx),1) : new THREE.BufferAttribute(idx,1));
+    if(gname==="muscles"||gname==="musFront") geo.setAttribute("mgrp",new THREE.BufferAttribute(Uint8Array.from(mgr),1));
     geo.computeBoundingSphere();
-    built[gname]={ geo, pos, si, sw, pid, col0:col.slice() };
+    built[gname]={ geo, pos, nor, si, sw, pid, col0:col8.slice() };
     if(gname==="eyes"){ /* rest eye centres, used to pin the hologram head on the real eyes in AR */
       /* cornea apex of each eye = the front-most vertices of that side (what the iris landmark marks) */
       let zl=-1e9, zr=-1e9; for(let i=0;i<pos.length;i+=3){ if(pos[i]<0) zr=Math.max(zr,pos[i+2]); else zl=Math.max(zl,pos[i+2]); }
@@ -1876,7 +1883,7 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
   let curMode=null, cutActive=false, mriActive=false, cutInfo={ plane:"sagittal", mm:0 };
 
   /* ---- labels: skin anchor vertices on the CPU ---- */
-  const anch=labelAnch.map(a=>{ const b=built[a.g], o=a.vi*4, N=b.geo.attributes.normal.array; return { key:a.key, g:a.g, p:v3(b.pos[a.vi*3],b.pos[a.vi*3+1],b.pos[a.vi*3+2]), n:v3(N[a.vi*3],N[a.vi*3+1],N[a.vi*3+2]), samp:a.samp, i0:b.si[o], i1:b.si[o+1], w0:b.sw[o], w1:b.sw[o+1] }; });
+  const anch=labelAnch.map(a=>{ const b=built[a.g], o=a.vi*4, N=b.nor; return { key:a.key, g:a.g, p:v3(b.pos[a.vi*3],b.pos[a.vi*3+1],b.pos[a.vi*3+2]), n:v3(N[a.vi*3],N[a.vi*3+1],N[a.vi*3+2]), samp:a.samp, i0:b.si[o], i1:b.si[o+1], w0:b.sw[o], w1:b.sw[o+1] }; });
   const BM=bones.map(()=>new THREE.Matrix4());
 
   /* ---- camera control ---- */
@@ -2024,7 +2031,7 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
   function highlight(pi){
     if(hl){ const b=built[hl.g], ca=b.geo.attributes.color; ca.array.set(b.col0); ca.needsUpdate=true; hl=null; }
     if(pi==null || pi<0) return; const g=PARTS[pi].g, b=built[g], ca=b.geo.attributes.color, a=ca.array;
-    for(let i=0;i<b.pid.length;i++) if(b.pid[i]===pi){ a[i*3]=a[i*3]*0.35+0.13; a[i*3+1]=a[i*3+1]*0.35+0.55; a[i*3+2]=a[i*3+2]*0.35+0.65; }
+    for(let i=0;i<b.pid.length;i++) if(b.pid[i]===pi){ a[i*3]=a[i*3]*0.35+33; a[i*3+1]=a[i*3+1]*0.35+140; a[i*3+2]=a[i*3+2]*0.35+166; }
     ca.needsUpdate=true; hl={ g, pi };
   }
   function defaultPose(){ return restPose(J); }
@@ -2043,7 +2050,7 @@ gl_FragColor=vec4(col,clamp(a,0.0,1.0)); }`;
   }
   const api={ diag, eyeRest:EYE, arCam:acam, resize, update, render, labels, defaultPose, pointerDown, pointerMove, pointerUp, wheel, resetView, setFocus, setSpin, scene, camera, ocam, root, renderer, bones, real:true, onSlice:null,
     cutInfo:()=>cutInfo, isMri:()=>mriActive, caps, stencilMs, cutPlane, pick, highlight, setActivation, MG:MG.map(x=>x[0]), parts:PARTS,
-    normalsOk:()=>Object.values(built).every(b=>{ const a=b.geo.attributes.normal.array; let z=0; for(let i=0;i<a.length;i+=3) if(a[i]===0&&a[i+1]===0&&a[i+2]===0) z++; return z<a.length/3*0.01; }),
+    normalsOk:()=>Object.values(built).every(b=>{ const a=b.nor; let z=0; for(let i=0;i<a.length;i+=3) if(a[i]===0&&a[i+1]===0&&a[i+2]===0) z++; return z<a.length/3*0.01; }),
     stats:()=>{ let v=0,t=0; for(const n in built){ v+=built[n].geo.attributes.position.count; t+=built[n].geo.index.count/3; } return {v,t,groups:Object.keys(built),labels:anch.length}; } };
   return api;
 }
@@ -3218,7 +3225,7 @@ $("#go").addEventListener("click", async ()=>{
 let looping=false;
 function startLoop(){ if (!looping){ looping=true; requestAnimationFrame(loop); } }
 $("#go3d").addEventListener("click", async ()=>{ $("#start").hidden=true; $("#status").hidden=false; firstGuide(); await setView("3d"); startLoop(); });
-$("#v3d").addEventListener("click", ()=>{ setView(S.view==="3d" ? "ar" : "3d"); });
+$("#v3d").addEventListener("click", ()=>{ setView(S.view==="3d" ? "ar" : "3d"); organCheck(); });
 
 /* ---------- UI ---------- */
 function applyLang(){
@@ -3242,7 +3249,14 @@ function syncUI(){
   $("#real").value=Math.round(S.real*100); $("#brightness").value=Math.round(S.brightness*100);
   $("#lensSize").value=Math.round(S.lensSize*100); $("#zoom").value=Math.round(S.zoom*10);
 }
-document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{ const p=PRESETS[b.dataset.preset]; for (const k in p) S.layers[k]=!!p[k]; LST.clear(); syncUI(); }));
+document.querySelectorAll("[data-preset]").forEach(b=>b.addEventListener("click",()=>{ const p=PRESETS[b.dataset.preset]; for (const k in p) S.layers[k]=!!p[k]; LST.clear(); syncUI(); organCheck(); }));
+/* self-check, once per session: organs switched on but not drawn on this device -> say so, with the GPU error */
+let organChecked=false;
+function organCheck(){ if (organChecked || !S.layers.organs) return;
+  setTimeout(()=>{ if (organChecked || !S.layers.organs || S.view!=="3d" || !E3 || !E3.diag) return; organChecked=true;
+    try { const d=E3.diag(), px=(n)=>{ const r=d.groups.find(g=>g.startsWith(n+":")); return r ? +(r.match(/px(\d+)/)||[0,0])[1] : -1; };
+      const org=["lungs","heart","solid","gut"].reduce((s,n)=>s+Math.max(0,px(n)),0), br=px("brain");
+      if (org===0 && br>0) toast(`${S.lang==="it"?"Organi non disegnati su questo dispositivo":"Organs not drawn on this device"} · GL err ${d.err} · ${String(d.gl).slice(0,40)}`); } catch(e){ console.warn(e); } }, 2500); }
 document.querySelectorAll("[data-layer]").forEach(el=>el.addEventListener("change",()=>{ S.layers[el.dataset.layer]=el.checked; syncUI(); }));
 document.querySelectorAll("[data-seg]").forEach(seg=>seg.addEventListener("click",(e)=>{
   const b=e.target.closest("button"); if (!b) return;
@@ -3313,7 +3327,7 @@ const GUIDE = {
     ["Settings ⚙︎","Look: Hologram, Colour holo, X-ray, Solid. “Max” tracking is more precise but slower. In 3D you also get Section and MRI."],
     ["Limits","This is an illustration, not an X-ray and not a diagnosis. For any doubt, a doctor’s opinion is what counts."]]
 };
-const APP_VER="v7 · 15/11";
+const APP_VER="v8 · 16/11";
 function renderGuide(){ $("#guide h2").textContent=T[S.lang].gTitle+" · "+APP_VER; $("#guideL").innerHTML = GUIDE[S.lang].map(g=>`<li><b>${esc(g[0])}</b>${esc(g[1])}</li>`).join("")
   + `<li><b>Diagnostica 3D</b><button class="btn" id="diagBtn" type="button">Esegui test</button><pre id="diagOut" style="white-space:pre-wrap;font-size:11px;line-height:1.35;margin:8px 0 0"></pre></li>`;
   $("#diagBtn").addEventListener("click", async ()=>{ const o=$("#diagOut"); o.textContent="…"; try { const E=await ensure3D(); if (!E.diag){ o.textContent="motore semplificato (pack non caricato)"; return; }
