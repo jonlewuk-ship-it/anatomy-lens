@@ -56,6 +56,13 @@ body.v3d.real3d .credit{ display:block; }
 .cardx{ position:absolute; top:10px; right:10px; width:34px; height:34px; border-radius:17px; border:1px solid var(--line); background:var(--chip); color:var(--text); cursor:pointer; }
 .actp{ position:fixed; left:12px; top:calc(env(safe-area-inset-top,0px) + 150px); z-index:4; width:min(240px,62vw); background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:10px 12px; pointer-events:none; }
 .actp[hidden]{ display:none; }
+.skinp{ pointer-events:auto; width:min(250px,64vw); padding:8px 10px; cursor:pointer; }
+.skinp.min #skinL, .skinp.min p{ display:none; }
+.srow{ display:grid; grid-template-columns:1fr 34px; grid-template-rows:auto auto; column-gap:6px; font-size:11.5px; margin:4px 0; }
+.srow span{ grid-column:1; } .srow i{ grid-column:1 / 3; font-style:normal; color:var(--muted); font-size:10.5px; }
+.srow b{ grid-column:2; grid-row:1; align-self:center; height:5px; border-radius:3px; background:linear-gradient(90deg,#4ef0c4 var(--w),rgba(255,255,255,.12) var(--w)); }
+.skinrow{ display:flex; flex-wrap:wrap; gap:4px 10px; font-size:12px; color:var(--muted); margin:0 0 10px; }
+.skinrow b{ color:#d9fbff; font-weight:600; } .skinrow em{ font-style:normal; color:#ffc454; }
 .actp h5{ margin:0 0 6px; font-size:12px; font-weight:600; color:#ffb14a; }
 .actp p{ margin:6px 0 0; font-size:10.5px; color:var(--muted); line-height:1.3; }
 .arow{ display:grid; grid-template-columns:1fr 54px 34px; align-items:center; gap:6px; font-size:12.5px; margin:3px 0; }
@@ -205,6 +212,7 @@ body.hud .secondary{ border-radius:2px; font-family:'Rajdhani',var(--font); font
 </header>
 
 <div class="credit" id="credit3d" data-i="credit3d"></div>
+<div class="actp skinp" id="skinP" hidden><h5 data-i="skTitle">Skin analysis</h5><div id="skinL"></div><p data-i="skNote"></p></div>
 <div class="actp" id="actP" hidden><h5 data-i="actTitle">Active muscles</h5><div id="actL"></div><p data-i="actNote"></p></div>
 <section class="card3d" id="card3d" hidden aria-live="polite"><button class="cardx" id="cardX" aria-label="Close">✕</button><div class="cardsys" id="cardSys"></div><h3 id="cardT"></h3><div class="cardpart" id="cardP"></div><dl id="cardD"></dl></section>
 <div class="fabs">
@@ -2082,7 +2090,7 @@ const FACE_TRI=[173,155,133,246,33,7,382,398,362,263,466,249,308,415,324,78,95,1
 /* Face skin map: unwraps the face into MediaPipe's canonical UV space, accumulates evidence there over time,
    and draws findings back onto the live face through the triangle mesh, so they stay glued to the skin. */
 G.createFaceSkin = function(){
-  const S=256, N=468, NT=FACE_TRI.length/3, TAU=Math.PI*2;
+  const S=384, K=S/256, KR=(r)=>Math.max(1,Math.round(r*K)), KA=(a)=>Math.round(a*K*K), N=468, NT=FACE_TRI.length/3, TAU=Math.PI*2;
   const UV=new Float32Array(N*2); for(let i=0;i<N*2;i++) UV[i]=FACE_UV[i]*S;
   const ux=(i)=>UV[i*2], uy=(i)=>UV[i*2+1];
   /* triangle index map */
@@ -2103,11 +2111,22 @@ G.createFaceSkin = function(){
     for(let y=Math.max(0,Math.floor(y0));y<=Math.min(S-1,Math.ceil(y1));y++){ const yc=y+0.5, xs=[];
       for(let i=0,j=P.length-1;i<P.length;j=i++){ const a=P[i], b=P[j]; if((a[1]>yc)!==(b[1]>yc)) xs.push(a[0]+(yc-a[1])*(b[0]-a[0])/(b[1]-a[1])); }
       xs.sort((m,n)=>m-n); for(let k=0;k+1<xs.length;k+=2) for(let x=Math.max(0,Math.ceil(xs[k]-0.5));x<=Math.min(S-1,Math.floor(xs[k+1]-0.5));x++) arr[y*S+x]=val; } }
+  function hull(P){ const s=P.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]), cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]), lo=[], up=[];
+    for(const p of s){ while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0) lo.pop(); lo.push(p); }
+    for(let i=s.length-1;i>=0;i--){ const p=s[i]; while(up.length>=2&&cr(up[up.length-2],up[up.length-1],p)<=0) up.pop(); up.push(p); }
+    return lo.slice(0,-1).concat(up.slice(0,-1)); }
   function fillCircle(cx,cy,r,val,arr){ for(let y=Math.max(0,Math.floor(cy-r));y<=Math.min(S-1,Math.ceil(cy+r));y++) for(let x=Math.max(0,Math.floor(cx-r));x<=Math.min(S-1,Math.ceil(cx+r));x++) if((x+0.5-cx)**2+(y+0.5-cy)**2<=r*r) arr[y*S+x]=val; }
-  fillPoly(poly(EYE_R,2.0),1,excl); fillPoly(poly(EYE_L,2.0),1,excl); fillPoly(poly(BROW_R,1.45),1,excl); fillPoly(poly(BROW_L,1.45),1,excl); fillPoly(poly(LIPS,1.18),1,excl);
-  for(const i of [98,327]) fillCircle(ux(i),uy(i),0.03*S,1,excl); fillCircle(ux(1),uy(1),0.028*S,1,excl); fillCircle(ux(4),uy(4),0.02*S,1,excl);
+  fillPoly(poly(EYE_R,2.0),1,excl); fillPoly(poly(EYE_L,2.0),1,excl); fillPoly(poly(BROW_R,1.45),1,excl); fillPoly(poly(BROW_L,1.45),1,excl); fillPoly(poly(LIPS,1.32),1,excl);
+  for(const i of [98,327]) fillCircle(ux(i),uy(i),0.045*S,1,excl); fillCircle(ux(1),uy(1),0.028*S,1,excl); fillCircle(ux(4),uy(4),0.02*S,1,excl);
+  /* whole nose base: nostrils, alae and the shadowed groove under the nose are dark holes with a reddish rim, never skin findings */
+  const NOSEBASE=[129,49,64,98,97,2,326,327,294,279,358,278,344,440,275,4,45,220,115,48];
+  fillPoly(hull(poly(NOSEBASE,1.12)),1,excl); for(const i of [79,309,2,164,0]) fillCircle(ux(i),uy(i),0.03*S,1,excl);
   /* keep away from the outer rim (hairline, jaw edge) */
   const inner=new Uint8Array(S*S); fillPoly(poly(OVAL,0.93),1,inner);
+  /* how close each point is to an excluded area: findings hugging an exclusion are almost always its shadow or rim */
+  const nearEx=(()=>{ const e=new Float32Array(S*S), o=new Float32Array(S*S), r=KR(4); for(let p=0;p<S*S;p++) e[p]=excl[p];
+    const I=new Float64Array((S+1)*(S+1)), W1=S+1; for(let y=0;y<S;y++){ let s=0; for(let x=0;x<S;x++){ s+=e[y*S+x]; I[(y+1)*W1+x+1]=I[y*W1+x+1]+s; } }
+    for(let y=0;y<S;y++){ const ya=Math.max(0,y-r), yb=Math.min(S,y+r+1); for(let x=0;x<S;x++){ const xa=Math.max(0,x-r), xb=Math.min(S,x+r+1); o[y*S+x]=(I[yb*W1+xb]-I[ya*W1+xb]-I[yb*W1+xa]+I[ya*W1+xa])/((yb-ya)*(xb-xa)); } } return o; })();
   const base=new Uint8Array(S*S); let baseN=0; for(let p=0;p<S*S;p++){ if(triMap[p]>=0 && inner[p] && !excl[p]){ base[p]=1; baseN++; } }
   /* wrinkle zones (UV px circles) */
   const lat=(i)=>Math.sign(ux(i)-S/2)||1;
@@ -2117,18 +2136,23 @@ G.createFaceSkin = function(){
     { key:"wrUnder", x:ux(145), y:uy(145)+0.045*S, r:0.035*S, pair:true }, { key:"wrUnder", x:ux(374), y:uy(374)+0.045*S, r:0.035*S, pair:true },
     { key:"wrNaso", x:(ux(98)+ux(61))/2+lat(98)*0.01*S, y:(uy(98)+uy(61))/2, r:0.035*S, pair:true }, { key:"wrNaso", x:(ux(327)+ux(291))/2+lat(327)*0.01*S, y:(uy(327)+uy(291))/2, r:0.035*S, pair:true } ];
   for(const z of ZONES){ z.mask=new Uint8Array(S*S); fillCircle(z.x,z.y,z.r,1,z.mask); }
+  /* measurement zones for the skin report */
+  const MZ={ forehead:[ux(151),uy(151)-0.02*S,0.085*S], cheekR:[ux(50),uy(50),0.06*S], cheekL:[ux(280),uy(280),0.06*S], nose:[ux(195),uy(195),0.025*S],
+    chin:[(ux(17)+ux(152))/2,(uy(17)+uy(152))/2+0.01*S,0.04*S], underR:[ux(145),uy(145)+0.04*S,0.025*S], underL:[ux(374),uy(374)+0.04*S,0.025*S] };
+  const MZK=Object.keys(MZ), MZM=new Uint8Array(S*S); MZK.forEach((k,i)=>{ const z=MZ[k], tmp=new Uint8Array(S*S); fillCircle(z[0],z[1],z[2],1,tmp); for(let p=0;p<S*S;p++) if(tmp[p]&&base[p]&&!MZM[p]) MZM[p]=i+1; });
+  const MET={ n:0 };
   /* unique mesh edges for the overlay */
   const edgeSet=new Set(), EDGES=[]; for(let t=0;t<NT;t++) for(let k=0;k<3;k++){ const a=FACE_TRI[t*3+k], b=FACE_TRI[t*3+(k+1)%3], key=a<b?a*1000+b:b*1000+a; if(!edgeSet.has(key)){ edgeSet.add(key); EDGES.push(a,b); } }
   const CONTOURS=[OVAL,EYE_R,EYE_L,LIPS,[70,63,105,66,107],[300,293,334,296,336]];
 
   /* canvases */
   const mk=(w,h)=>{ const c=document.createElement("canvas"); c.width=w; c.height=h; return c; };
-  const crop=mk(256,256), cctx=crop.getContext("2d"), warp=mk(S,S), wctx=warp.getContext("2d",{ willReadFrequently:true });
+  const CS=512, crop=mk(CS,CS), cctx=crop.getContext("2d",{ willReadFrequently:true }), warp=mk(S,S), wctx=warp.getContext("2d",{ willReadFrequently:true });
   /* accumulators */
   const n=S*S, F32=()=>new Float32Array(n);
   const accW=F32(), aP=F32(), aS=F32(), aR=F32(), aA=F32(), aE=F32(), aRg=F32(), aOc=F32(), aOs=F32();
-  const L=F32(), R=F32(), M=new Uint8Array(n), triOK=new Uint8Array(NT);
-  let res={ moles:[], pimples:[], spots:[], reds:[], lumps:[], segs:[], zones:[], coverage:0 };
+  const L=F32(), R=F32(), M=new Uint8Array(n), triOK=new Uint8Array(NT), WIM=new Uint8ClampedArray(n*4);
+  let res={ moles:[], pimples:[], spots:[], reds:[], lumps:[], segs:[], zones:[], coverage:0, metrics:null };
 
   /* normalised box blur via integral images */
   const I1=new Float64Array((S+1)*(S+1)), I2=new Float64Array((S+1)*(S+1));
@@ -2137,19 +2161,21 @@ G.createFaceSkin = function(){
     for(let y=0;y<S;y++){ const ya=Math.max(0,y-r), yb=Math.min(S,y+r+1); for(let x=0;x<S;x++){ const xa=Math.max(0,x-r), xb=Math.min(S,x+r+1);
       const w=I2[yb*W1+xb]-I2[ya*W1+xb]-I2[yb*W1+xa]+I2[ya*W1+xa]; out[y*S+x]= w>0 ? (I1[yb*W1+xb]-I1[ya*W1+xb]-I1[yb*W1+xa]+I1[ya*W1+xa])/w : 0; } }
     return out; }
-  function robust(arr,msk,step){ const v=[]; for(let p=0;p<n;p+=step||3) if(msk[p]) v.push(arr[p]); if(v.length<50) return null; v.sort((a,b)=>a-b);
+  function robust(arr,msk,step){ const v=[]; for(let p=0;p<n;p+=step||Math.round(3*K*K)) if(msk[p]) v.push(arr[p]); if(v.length<50) return null; v.sort((a,b)=>a-b);
     const med=v[v.length>>1]; const d=v.map(x=>Math.abs(x-med)).sort((a,b)=>a-b); return { med, mad:d[d.length>>1]*1.4826+1e-6 }; }
 
   function decay(k){ for(let p=0;p<n;p++){ aP[p]*=k; aS[p]*=k; aR[p]*=k; aA[p]*=k; aE[p]*=k; aRg[p]*=k; aOc[p]*=k; aOs[p]*=k; accW[p]*=k; } }
-  function reset(){ decay(0); res={ moles:[], pimples:[], spots:[], reds:[], lumps:[], segs:[], zones:[], coverage:0 }; }
+  function reset(){ decay(0); res={ moles:[], pimples:[], spots:[], reds:[], lumps:[], segs:[], zones:[], coverage:0, metrics:null }; for(const k in MET) delete MET[k]; MET.n=0; }
 
-  function analyze(src,lm,vw,vh){
+  let LASTMS=0;
+  function analyze(src,lm,vw,vh){ const t0=(typeof performance!=="undefined"?performance.now():Date.now()); const r=analyze0(src,lm,vw,vh); LASTMS=(typeof performance!=="undefined"?performance.now():Date.now())-t0; return r; }
+  function analyze0(src,lm,vw,vh){
     if(!lm || lm.length<N || !vw) return res;
     let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9; for(let i=0;i<N;i++){ const x=lm[i].x*vw, y=lm[i].y*vh; if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
     const pad=(x1-x0)*0.06; x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad); x1=Math.min(vw,x1+pad); y1=Math.min(vh,y1+pad);
     const bw=x1-x0, bh=y1-y0; if(bw<60||bh<60){ decay(0.9); return res; }
-    cctx.setTransform(1,0,0,1,0,0); cctx.drawImage(src,x0,y0,bw,bh,0,0,256,256);
-    const sx=256/bw, sy=256/bh, SP=new Float32Array(N*2); for(let i=0;i<N;i++){ SP[i*2]=(lm[i].x*vw-x0)*sx; SP[i*2+1]=(lm[i].y*vh-y0)*sy; }
+    cctx.setTransform(1,0,0,1,0,0); cctx.drawImage(src,x0,y0,bw,bh,0,0,CS,CS);
+    const sx=CS/bw, sy=CS/bh, SP=new Float32Array(N*2); for(let i=0;i<N;i++){ SP[i*2]=(lm[i].x*vw-x0)*sx; SP[i*2+1]=(lm[i].y*vh-y0)*sy; }
     /* triangle visibility: front facing and not too foreshortened */
     const ratio=new Float32Array(NT); const rs=[];
     for(let t=0;t<NT;t++){ const a=FACE_TRI[t*3],b=FACE_TRI[t*3+1],c=FACE_TRI[t*3+2];
@@ -2158,25 +2184,31 @@ G.createFaceSkin = function(){
     if(rs.length<NT*0.4){ decay(0.92); return res; }
     rs.sort((a,b)=>a-b); const med=rs[rs.length>>1];
     for(let t=0;t<NT;t++) triOK[t]= ratio[t]>0.4*med ? 1 : 0;
-    /* warp into UV space */
-    wctx.setTransform(1,0,0,1,0,0); wctx.clearRect(0,0,S,S);
+    /* warp into UV space: read the face crop once, then sample it for every UV pixel through its triangle's affine map (bilinear) */
+    const src4=cctx.getImageData(0,0,CS,CS).data, AF=new Float32Array(NT*6);
     for(let t=0;t<NT;t++){ if(!triOK[t]) continue; const a=FACE_TRI[t*3],b=FACE_TRI[t*3+1],c=FACE_TRI[t*3+2];
-      const s0x=SP[a*2],s0y=SP[a*2+1], sx1=SP[b*2]-s0x, sy1=SP[b*2+1]-s0y, sx2=SP[c*2]-s0x, sy2=SP[c*2+1]-s0y, det=sx1*sy2-sx2*sy1; if(Math.abs(det)<1e-6) continue;
-      const d0x=ux(a),d0y=uy(a), dx1=ux(b)-d0x, dy1=uy(b)-d0y, dx2=ux(c)-d0x, dy2=uy(c)-d0y;
-      const A=(dx1*sy2-dx2*sy1)/det, C=(dx2*sx1-dx1*sx2)/det, B=(dy1*sy2-dy2*sy1)/det, D=(dy2*sx1-dy1*sx2)/det, E=d0x-A*s0x-C*s0y, F=d0y-B*s0x-D*s0y;
-      const gx=(d0x+ux(b)+ux(c))/3, gy=(d0y+uy(b)+uy(c))/3, ex=(i)=>gx+(ux(i)-gx)*1.06+(ux(i)>gx?0.3:-0.3), ey=(i)=>gy+(uy(i)-gy)*1.06+(uy(i)>gy?0.3:-0.3);
-      wctx.save(); wctx.beginPath(); wctx.moveTo(ex(a),ey(a)); wctx.lineTo(ex(b),ey(b)); wctx.lineTo(ex(c),ey(c)); wctx.closePath(); wctx.clip();
-      wctx.setTransform(A,B,C,D,E,F); wctx.drawImage(crop,0,0); wctx.restore(); }
-    const im=wctx.getImageData(0,0,S,S).data;
+      const d0x=ux(a),d0y=uy(a), dx1=ux(b)-d0x, dy1=uy(b)-d0y, dx2=ux(c)-d0x, dy2=uy(c)-d0y, det=dx1*dy2-dx2*dy1; if(Math.abs(det)<1e-9){ triOK[t]=0; continue; }
+      const s0x=SP[a*2],s0y=SP[a*2+1], sx1=SP[b*2]-s0x, sy1=SP[b*2+1]-s0y, sx2=SP[c*2]-s0x, sy2=SP[c*2+1]-s0y;
+      const A=(sx1*dy2-sx2*dy1)/det, Bc=(sx2*dx1-sx1*dx2)/det, Cc=(sy1*dy2-sy2*dy1)/det, D=(sy2*dx1-sy1*dx2)/det;
+      AF[t*6]=A; AF[t*6+1]=Bc; AF[t*6+2]=s0x-A*d0x-Bc*d0y; AF[t*6+3]=Cc; AF[t*6+4]=D; AF[t*6+5]=s0y-Cc*d0x-D*d0y; }
+    const im=WIM; im.fill(0);
+    for(let y=0;y<S;y++) for(let x=0;x<S;x++){ const p=y*S+x, t=triMap[p]; if(t<0||!triOK[t]||!base[p]) continue; const o=t*6, X=x+0.5, Y=y+0.5;
+      const fx=AF[o]*X+AF[o+1]*Y+AF[o+2]-0.5, fy=AF[o+3]*X+AF[o+4]*Y+AF[o+5]-0.5; if(fx<0||fy<0||fx>=CS-1||fy>=CS-1) continue;
+      const ix=fx|0, iy=fy|0, wx=fx-ix, wy=fy-iy, q=(iy*CS+ix)*4, q2=q+CS*4, w00=(1-wx)*(1-wy), w10=wx*(1-wy), w01=(1-wx)*wy, w11=wx*wy, pp=p*4;
+      im[pp]=src4[q]*w00+src4[q+4]*w10+src4[q2]*w01+src4[q2+4]*w11; im[pp+1]=src4[q+1]*w00+src4[q+5]*w10+src4[q2+1]*w01+src4[q2+5]*w11;
+      im[pp+2]=src4[q+2]*w00+src4[q+6]*w10+src4[q2+2]*w01+src4[q2+6]*w11; im[pp+3]=255; }
     let vN=0; const Ls=[];
     for(let p=0;p<n;p++){ const t=triMap[p], ok=base[p] && t>=0 && triOK[t] && im[p*4+3]>200; M[p]=0; if(!ok) continue;
       const r=im[p*4], g=im[p*4+1], b=im[p*4+2]; L[p]=0.299*r+0.587*g+0.114*b; R[p]=(r-g)/(r+g+1); M[p]=1; vN++; if((p&7)===0) Ls.push(L[p]); }
     res.coverage=vN/baseN;
     if(vN<baseN*0.3 || Ls.length<60){ decay(0.95); return res; }
     Ls.sort((a,b)=>a-b); const mL=Ls[Ls.length>>1]; if(mL<40){ decay(0.95); return res; }
+    /* shine: near-white low-saturation highlights in the T-zone (forehead + nose), measured before glare is masked out */
+    let tz=0, gl=0; for(let p=0;p<n;p++){ const zi=MZM[p]; if(!M[p] || (zi!==1 && zi!==4)) continue; tz++; const r=im[p*4],g=im[p*4+1],b=im[p*4+2], mx=Math.max(r,g,b), mn=Math.min(r,g,b); if(L[p]>1.35*mL && (mx-mn)<0.28*mx) gl++; }
     for(let p=0;p<n;p++) if(M[p] && (L[p]<0.5*mL || L[p]>1.65*mL)) M[p]=0;   /* beard, deep shadow, specular glare */
     /* features */
-    const Lb1=nblur(L,M,1), Lb6=nblur(L,M,6), Lb12=nblur(L,M,12), R1=nblur(R,M,1), R6=nblur(R,M,6), R4=nblur(R,M,4), A10=nblur(L,M,10), A24=nblur(L,M,24);
+    const Lb1=nblur(L,M,1), Lb6=nblur(L,M,KR(6)), Lb12=nblur(L,M,KR(12)), R1=nblur(R,M,1), R6=nblur(R,M,KR(6)), R4=nblur(R,M,KR(4)), A10=nblur(L,M,KR(10)), A24=nblur(L,M,KR(24)), Lb3=nblur(L,M,KR(2));
+    measure(im,L,Lb1,Lb3,Lb12,mL,tz?gl/tz:0);
     const dR=F32(), dL=F32(), Ln=F32(); for(let p=0;p<n;p++){ dR[p]=R1[p]-R6[p]; dL[p]=(Lb1[p]-Lb6[p])/mL; Ln[p]=Lb12[p]>1?L[p]/Lb12[p]:1; }
     const sR=robust(dR,M), sL=robust(dL,M), sR4=robust(R4,M); if(!sR||!sL||!sR4){ decay(0.95); return res; }
     /* left-right asymmetry for lumps, after removing a linear lighting gradient */
@@ -2186,7 +2218,7 @@ G.createFaceSkin = function(){
     for(let y=0;y<S;y++) for(let x=0;x<S/2;x++){ const p=y*S+x, q=y*S+(S-1-x); if(!Ma[p]) continue; const r=asym[p]-(kk*(S/2-x)/S+c0); asym[p]=r; asym[q]=-r; Ma[q]=1; }
     const sA=robust(asym,Ma);
     /* wrinkles: Hessian ridge (dark valleys) */
-    const Gs=nblur(Ln,M,1), Hxx=F32(), Hyy=F32(), Hxy=F32(), st=2;
+    const Gs=nblur(Ln,M,1), Hxx=F32(), Hyy=F32(), Hxy=F32(), st=KR(2);
     for(let y=st;y<S-st;y++) for(let x=st;x<S-st;x++){ const p=y*S+x; if(!M[p]) continue; const g=Gs[p];
       Hxx[p]=(Gs[p+st]-2*g+Gs[p-st])/(st*st); Hyy[p]=(Gs[p+st*S]-2*g+Gs[p-st*S])/(st*st); Hxy[p]=(Gs[p+st+st*S]-Gs[p+st-st*S]-Gs[p-st+st*S]+Gs[p-st-st*S])/(4*st*st); }
     const hxx=nblur(Hxx,M,1), hyy=nblur(Hyy,M,1), hxy=nblur(Hxy,M,1);
@@ -2194,11 +2226,33 @@ G.createFaceSkin = function(){
     for(let p=0;p<n;p++){ if(!M[p]){ continue; }
       const zP=(dR[p]-sR.med)/sR.mad, zS=(dL[p]-sL.med)/sL.mad, zR=(R4[p]-sR4.med)/sR4.mad, zA=sA&&Ma[p]?Math.abs(asym[p]-sA.med)/sA.mad:0;
       const tr=hxx[p]+hyy[p], df=Math.sqrt((hxx[p]-hyy[p])**2+4*hxy[p]**2), l1=(tr+df)/2, l2=(tr-df)/2;
-      const rg=l1>0?Math.max(0,l1-2*Math.abs(l2)):0, phi=0.5*Math.atan2(2*hxy[p],hxx[p]-hyy[p])+Math.PI/2;
+      const rg=l1>0?Math.max(0,l1-2*Math.abs(l2)):0, idf=df>1e-12?1/df:0, c2=-(hxx[p]-hyy[p])*idf, s2=-2*hxy[p]*idf;   /* cos/sin of twice the ridge angle, no trigonometry */
       aP[p]+=a*(zP-aP[p]); aS[p]+=a*(zS-aS[p]); aR[p]+=a*(zR-aR[p]); aA[p]+=a*(zA-aA[p]); aE[p]+=a*(Math.abs(A10[p]-A24[p])/mL-aE[p]); aRg[p]+=a*(rg-aRg[p]);
-      aOc[p]+=a*(rg*Math.cos(2*phi)-aOc[p]); aOs[p]+=a*(rg*Math.sin(2*phi)-aOs[p]); accW[p]+=a*(1-accW[p]); }
+      aOc[p]+=a*(rg*c2-aOc[p]); aOs[p]+=a*(rg*s2-aOs[p]); accW[p]+=a*(1-accW[p]); }
     for(let p=0;p<n;p++) if(!M[p]) accW[p]*=0.985;
     extract(); return res;
+  }
+
+  /* skin report: colour (CIE Lab), redness, evenness, shine, texture, under-eye darkness. Smoothed over time. */
+  function lab(r,g,b){ const f=(c)=>{ c/=255; return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4); }; const R_=f(r),G_=f(g),B_=f(b);
+    const X=(0.4124*R_+0.3576*G_+0.1805*B_)/0.95047, Y=0.2126*R_+0.7152*G_+0.0722*B_, Z=(0.0193*R_+0.1192*G_+0.9505*B_)/1.08883, h=(t)=>t>0.008856?Math.cbrt(t):7.787*t+16/116;
+    return [116*h(Y)-16, 500*(h(X)-h(Y)), 200*(h(Y)-h(Z))]; }
+  function measure(im,L,Lb1,Lb3,Lb12,mL,shine){
+    const nz=MZK.length, sr=new Float64Array(nz+1), sg=new Float64Array(nz+1), sb=new Float64Array(nz+1), cn=new Float64Array(nz+1), sl=new Float64Array(nz+1);
+    let tx=0,txn=0, ev=0,ev2=0,evn=0;
+    for(let p=0;p<n;p++){ const zi=MZM[p]; if(!zi||!M[p]) continue; sr[zi]+=im[p*4]; sg[zi]+=im[p*4+1]; sb[zi]+=im[p*4+2]; sl[zi]+=L[p]; cn[zi]++;
+      if(zi===2||zi===3){ tx+=Math.abs(Lb1[p]-Lb3[p])/mL; txn++; }
+      if(zi<=3 && Lb12[p]>1){ const d=Lb3[p]/Lb12[p]-1; ev+=d; ev2+=d*d; evn++; } }
+    const Z={}; MZK.forEach((k,i)=>{ const c=cn[i+1]; if(c>KA(40)) Z[k]={ lab:lab(sr[i+1]/c,sg[i+1]/c,sb[i+1]/c), L:sl[i+1]/c }; });
+    if(!Z.forehead && !Z.cheekR && !Z.cheekL) return;
+    const avg=(ks,f)=>{ const v=ks.filter(k=>Z[k]).map(k=>f(Z[k])); return v.length? v.reduce((s,x)=>s+x,0)/v.length : null; };
+    const Ls=avg(["forehead","cheekR","cheekL"],z=>z.lab[0]), bs=avg(["forehead","cheekR","cheekL"],z=>z.lab[2]);
+    const now={ ita: (Ls!=null&&bs!=null&&Math.abs(bs)>0.5) ? Math.atan((Ls-50)/bs)*180/Math.PI : null,
+      aCheeks: avg(["cheekR","cheekL"],z=>z.lab[1]), aNose: avg(["nose"],z=>z.lab[1]), aForehead: avg(["forehead"],z=>z.lab[1]), aChin: avg(["chin"],z=>z.lab[1]),
+      uneven: evn>KA(200) ? Math.sqrt(Math.max(0,ev2/evn-(ev/evn)**2))*100 : null, shine: shine*100, texture: txn>KA(100) ? tx/txn*1000 : null,
+      dark: (Z.underR||Z.underL) && (Z.cheekR||Z.cheekL) ? (1-avg(["underR","underL"],z=>z.L)/avg(["cheekR","cheekL"],z=>z.L))*100 : null };
+    const k=MET.n<4?0.5:0.2; for(const key in now){ const v=now[key]; if(v==null||!isFinite(v)) continue; MET[key]= MET[key]==null ? v : MET[key]+(v-MET[key])*k; } MET.n++;
+    res.metrics=Object.assign({},MET);
   }
 
   /* connected components -> ellipses in UV px */
@@ -2213,29 +2267,30 @@ G.createFaceSkin = function(){
     return out.sort((p,q)=>q.area*q.score-p.area*p.score); }
   const live=(p)=>accW[p]>0.45;
   function extract(){
-    const TH=0.0065, compact=(e)=>e.a/e.b<2.4, mir=(p)=>((p/S)|0)*S+(S-1-(p%S));
+    const TH=0.0065*0.85/(K*K), compact=(e)=>e.a/e.b<2.4, mir=(p)=>((p/S)|0)*S+(S-1-(p%S));
     /* red, compact = pimple; dark and not very red = spot; wrinkle valleys are left to the wrinkle layer */
-    res.pimples=blobs(p=>live(p)&&aP[p]>3.0&&aP[p]>0.6*(-aS[p])?aP[p]:0,7,160).filter(e=>compact(e) && e.a>1.8).slice(0,12);
-    const wr=new Float32Array(n), one=new Uint8Array(n).fill(1); for(let p=0;p<n;p++) wr[p]=aRg[p]>TH*0.6?1:0; const wrD=nblur(wr,one,5);
-    let spotC=blobs(p=>live(p)&&aS[p]<-5&&aP[p]<=0.6*(-aS[p])?-aS[p]:0,4,200).filter(e=>e.a/e.b<1.9 && e.score>=8);
-    res.reds=blobs(p=>live(p)&&aR[p]>2.6?aR[p]:0,160,30000).slice(0,4);
-    let lumps=blobs(p=>live(p)&&aA[p]>3.2&&aE[p]>1.25*aE[mir(p)]+0.004?aA[p]:0,220,20000);
+    const farEx=(e)=>nearEx[((e.y|0)*S+(e.x|0))]<0.04;
+    res.pimples=blobs(p=>live(p)&&aP[p]>2.6&&aP[p]>0.6*(-aS[p])?aP[p]:0,KA(7),KA(160)).filter(e=>compact(e) && e.a>1.8*K && farEx(e)).slice(0,12);
+    const wr=new Float32Array(n), one=new Uint8Array(n).fill(1); for(let p=0;p<n;p++) wr[p]=aRg[p]>TH*0.6?1:0; const wrD=nblur(wr,one,KR(5));
+    let spotC=blobs(p=>live(p)&&aS[p]<-4.4&&aP[p]<=0.6*(-aS[p])?-aS[p]:0,KA(4),KA(200)).filter(e=>e.a/e.b<1.9 && e.score>=7.2 && farEx(e));
+    res.reds=blobs(p=>live(p)&&aR[p]>2.4?aR[p]:0,KA(160),KA(30000)).filter(farEx).slice(0,4);
+    let lumps=blobs(p=>live(p)&&aA[p]>3.2&&aE[p]>1.25*aE[mir(p)]+0.004?aA[p]:0,KA(220),KA(20000));
     lumps=lumps.filter(l=>!res.pimples.some(q=>Math.hypot(q.x-l.x,q.y-l.y)<l.a*0.6) && !res.reds.some(q=>Math.hypot(q.x-l.x,q.y-l.y)<q.a*0.8));
     const merged=[]; for(const l of lumps){ const m=merged.find(q=>Math.hypot(q.x-l.x,q.y-l.y)<(q.a+l.a)*0.9); if(m){ const w=m.area+l.area; m.x=(m.x*m.area+l.x*l.area)/w; m.y=(m.y*m.area+l.y*l.area)/w; m.a=Math.max(m.a,l.a)*1.2; m.b=Math.max(m.b,l.b)*1.2; m.area=w; } else merged.push(Object.assign({},l)); }
     res.lumps=merged.slice(0,3);
     const segs=[];
-    for(let y=3;y<S;y+=4) for(let x=3;x<S;x+=4){ const p=y*S+x; if(!live(p)||aRg[p]<TH) continue; const ang=0.5*Math.atan2(aOs[p],aOc[p]), h=2.6;
+    const gs=KR(4); for(let y=3;y<S;y+=gs) for(let x=3;x<S;x+=gs){ const p=y*S+x; if(!live(p)||aRg[p]<TH) continue; const ang=0.5*Math.atan2(aOs[p],aOc[p]), h=2.6*K;
       segs.push(x+0.5-Math.cos(ang)*h, y+0.5-Math.sin(ang)*h, x+0.5+Math.cos(ang)*h, y+0.5+Math.sin(ang)*h, Math.min(1,aRg[p]/(TH*3))); }
     res.segs=segs;
     const zs={}; for(const z of ZONES){ let tot=0,hit=0; for(let p=0;p<n;p++){ if(!z.mask[p]||!live(p)) continue; tot++; if(aRg[p]>=TH) hit++; }
-      const sc=tot>30?hit/tot:0; if(!zs[z.key]||sc>zs[z.key].score) zs[z.key]={ key:z.key, x:z.x, y:z.y, score:sc }; }
+      const sc=tot>KA(30)?hit/tot:0; if(!zs[z.key]||sc>zs[z.key].score) zs[z.key]={ key:z.key, x:z.x, y:z.y, score:sc }; }
     res.zones=Object.values(zs).filter(z=>z.score>0.06);
     /* drop dark-spot candidates that are really pieces of wrinkle lines inside a wrinkled zone */
     const wz=ZONES.filter(z=>res.zones.some(r=>r.key===z.key));
-    for(const e of spotC){ let mx=0; for(let dy=-3;dy<=3;dy++) for(let dx=-3;dx<=3;dx++){ const q=(((e.y|0)+dy)*S+((e.x|0)+dx)); if(q>=0&&q<n) mx=Math.max(mx,wrD[q]); } e.wr=mx; }
+    const W3=KR(3); for(const e of spotC){ let mx=0; for(let dy=-W3;dy<=W3;dy++) for(let dx=-W3;dx<=W3;dx++){ const q=(((e.y|0)+dy)*S+((e.x|0)+dx)); if(q>=0&&q<n) mx=Math.max(mx,wrD[q]); } e.wr=mx; }
     /* moles: small, round, clearly darker than the skin around them; found with a finer threshold than generic dark spots */
-    let moleC=blobs(p=>live(p)&&aS[p]<-6.5&&aP[p]<=0.5*(-aS[p])?-aS[p]:0,3,130).filter(e=>e.a/e.b<1.8 && e.score>=9);
-    for(const e of moleC){ let mx=0; for(let dy=-3;dy<=3;dy++) for(let dx=-3;dx<=3;dx++){ const q=(((e.y|0)+dy)*S+((e.x|0)+dx)); if(q>=0&&q<n) mx=Math.max(mx,wrD[q]); } e.wr=mx; }
+    let moleC=blobs(p=>live(p)&&aS[p]<-5.6&&aP[p]<=0.5*(-aS[p])?-aS[p]:0,KA(3),KA(130)).filter(e=>e.a/e.b<1.8 && e.score>=8 && farEx(e));
+    for(const e of moleC){ let mx=0; for(let dy=-W3;dy<=W3;dy++) for(let dx=-W3;dx<=W3;dx++){ const q=(((e.y|0)+dy)*S+((e.x|0)+dx)); if(q>=0&&q<n) mx=Math.max(mx,wrD[q]); } e.wr=mx; }
     res.moles=moleC.filter(e=>e.wr<0.25).slice(0,16);
     res.spots=spotC.filter(e=>e.wr<0.25 && !res.moles.some(q=>Math.hypot(q.x-e.x,q.y-e.y)<Math.max(q.a,e.a)*1.2)).slice(0,8);
   }
@@ -2281,8 +2336,8 @@ G.createFaceSkin = function(){
     c.restore();
     return out;
   }
-  function summary(){ return { moles:(res.moles||[]).length, pimples:res.pimples.length, spots:res.spots.length, lumps:res.lumps.length, reds:res.reds.length, zones:res.zones.map(z=>z.key), coverage:res.coverage }; }
-  return { analyze, draw, reset, summary, mapUV, _res:()=>res, _maps:{ aP, aRg, aA, accW, base, M }, _warp:warp, S };
+  function summary(){ return { moles:(res.moles||[]).length, pimples:res.pimples.length, spots:res.spots.length, lumps:res.lumps.length, reds:res.reds.length, zones:res.zones.map(z=>z.key), coverage:res.coverage, metrics:res.metrics }; }
+  return { lastMs:()=>LASTMS, analyze, draw, reset, summary, mapUV, _res:()=>res, _maps:{ aP, aRg, aA, accW, base, M, excl, MZM }, _warp:warp, _wim:()=>WIM, S };
 };
 })(typeof window!=="undefined"?window:globalThis);
 
@@ -2465,6 +2520,9 @@ const T = {
     pNote:"Photos and measurements stay only on this device, in this browser: nothing is uploaded. Ask the person for consent before saving their face. Sizes are estimates from the camera (about ±1 mm) and are not a diagnosis.",
     pNoScan:"No scans yet. In Skin mode, frame the face and tap MOLES.", pScanDel:"Delete scan", pConfirmP:"Delete this patient and all their scans?", pConfirmS:"Delete this scan?",
     mSaved:"Scan saved", mMoles:"moles", mNoFace:"Frame the face in Skin mode first, and hold still 2–3 seconds.", mNoPat:"Create or choose a patient first.", mNew:"new", mChg:"changed: show it to a dermatologist", mSame:"stable", mNoScale:"size n/a",
+    skTitle:"Skin analysis", skPhoto:"Skin tone", skRedC:"Redness · cheeks", skRedN:"Redness · nose", skEven:"Tone evenness", skShine:"Shine · T-zone", skTex:"Texture · pores", skDark:"Dark circles", skBlink:"Blinks", skPulse:"Pulse", skPerMin:"/min", skWait:"hold still…",
+    skNote:"Camera estimates: they depend on light and distance. Not medical measurements.", skLow:"low", skMid:"medium", skHigh:"high",
+    skTones:["very light","light","intermediate","tan","brown","dark"],
     advSys:"Skin · food tips", advGood:"May help", advLimit:"Better to limit", advKey:"What matters most", advNote:"General wellbeing tips, not a prescription.",
     load3dAR:"Loading 3D hologram…", density:"Labels shown", key:"Main ones", every:"All",
     start:"Start camera", starting:"Starting…",
@@ -2489,6 +2547,9 @@ const T = {
     pNote:"Foto e misure restano solo su questo dispositivo, in questo browser: nulla viene caricato online. Chiedi il consenso alla persona prima di salvare il suo viso. Le dimensioni sono stime da fotocamera (circa ±1 mm) e non sono una diagnosi.",
     pNoScan:"Nessuna scansione. In modalità Pelle inquadra il viso e tocca NEI.", pScanDel:"Elimina scansione", pConfirmP:"Eliminare questo paziente e tutte le sue scansioni?", pConfirmS:"Eliminare questa scansione?",
     mSaved:"Scansione salvata", mMoles:"nei", mNoFace:"Prima inquadra il viso in modalità Pelle e resta fermo 2–3 secondi.", mNoPat:"Prima crea o scegli un paziente.", mNew:"nuovo", mChg:"variato: fallo vedere al dermatologo", mSame:"stabile", mNoScale:"misura n.d.",
+    skTitle:"Analisi pelle", skPhoto:"Tono della pelle", skRedC:"Rossore · guance", skRedN:"Rossore · naso", skEven:"Uniformità del tono", skShine:"Lucidità · zona T", skTex:"Texture · pori", skDark:"Occhiaie", skBlink:"Ammiccamenti", skPulse:"Battito", skPerMin:"/min", skWait:"resta fermo…",
+    skNote:"Stime dalla fotocamera: dipendono da luce e distanza. Non sono misure mediche.", skLow:"basso", skMid:"medio", skHigh:"alto",
+    skTones:["molto chiaro","chiaro","intermedio","olivastro","scuro","molto scuro"],
     advSys:"Pelle · consigli alimentari", advGood:"Può aiutare", advLimit:"Meglio limitare", advKey:"Cosa conta di più", advNote:"Indicazioni generali di benessere, non una prescrizione.",
     load3dAR:"Carico l’ologramma 3D…", density:"Etichette", key:"Principali", every:"Tutte",
     start:"Avvia fotocamera", starting:"Avvio…",
@@ -2539,7 +2600,7 @@ const S = {
   layers:{ skeleton:true, skull:true, hands:true, muscles:true, organs:true, brain:true, skin:true, shell:false, labels:true },
   look:"xray", brightness:1, real:0.55, reveal:"all", follow:"touch", lensSize:0.3, zoom:1.5,
   quality:"high", density:"key", theme:"hud", hudInit:false, view:"ar", section:"full", plane:"sagittal", slices:{ axial:0.94, coronal:0.45, sagittal:0.5 }, seen3d:false, pose3d:"live", focus:"body", spin:"off", inset:"on",
-  arMode:"holo", faceInit:false, guideSeen:false, pid:0,
+  arMode:"holo", faceInit:false, skinPanel:true, guideSeen:false, pid:0,
   facing:"environment", lang:(navigator.language||"en").toLowerCase().startsWith("it") ? "it" : "en", touch:null
 };
 const PRESETS = {
@@ -2551,7 +2612,7 @@ const PRESETS = {
 };
 
 const $ = (s) => document.querySelector(s);
-const SAVE_KEYS = ["theme","hudInit","plane","slices","layers","look","brightness","real","reveal","follow","lensSize","zoom","quality","density","section","pose3d","focus","spin","inset","lang","seen3d","arMode","faceInit","guideSeen","pid"];
+const SAVE_KEYS = ["theme","hudInit","plane","slices","layers","look","brightness","real","reveal","follow","lensSize","zoom","quality","density","section","pose3d","focus","spin","inset","lang","seen3d","arMode","faceInit","guideSeen","pid","skinPanel"];
 try { const sv = JSON.parse(localStorage.getItem("anatomyLens.v1") || "null"); if (sv) for (const k of SAVE_KEYS) if (sv[k]!==undefined) S[k] = k==="layers" ? Object.assign(S.layers, sv.layers) : k==="slices" ? Object.assign(S.slices, sv.slices) : sv[k]; } catch(e){}
 if (!S.hudInit){ S.hudInit=true; S.theme="hud"; S.look="holo"; }
 /* the app opens on the face: skin map first */
@@ -2705,6 +2766,7 @@ function onFace(r,t){
   }
   hit(TR.face, ok, t, lm);
   if (ok) TR.face.lastOk=t;
+  if (ok && S.layers.skin && S.view!=="3d") { try { sampleVitals(lm); } catch(e){ console.warn(e); } }
 }
 function onHands(r,t){
   const found=[];
@@ -2724,6 +2786,72 @@ function onHands(r,t){
 const FSK = window.createFaceSkin ? window.createFaceSkin() : null;
 const SK = { last:0, lastFace:0 };
 function analyzeSkin(){ if (FSK && TR.face.lm && video.videoWidth) FSK.analyze(video, TR.face.lm, video.videoWidth, video.videoHeight); }
+
+
+/* ---------- vital signs from the face: pulse (remote PPG, CHROM method) and blink rate ---------- */
+const VS={ buf:[], bpm:null, snr:0, calcT:0, blinks:[], earBase:0, closed:false, closedT:0, since:0, lastT:0, moving:0, nose:null };
+const vsC=document.createElement("canvas"); vsC.width=16; vsC.height=10; const vsG=vsC.getContext("2d",{ willReadFrequently:true });
+function boxMean(cx,cy,w,h,acc){ const vw=video.videoWidth, vh=video.videoHeight, x0=Math.max(0,cx-w/2), y0=Math.max(0,cy-h/2), ww=Math.min(vw-x0,w), hh=Math.min(vh-y0,h); if (ww<6||hh<4) return;
+  vsG.drawImage(video,x0,y0,ww,hh,0,0,16,10); const d=vsG.getImageData(0,0,16,10).data;
+  for (let i=0;i<d.length;i+=4){ const l=d[i]+d[i+1]+d[i+2]; if (l<90||l>720) continue; acc[0]+=d[i]; acc[1]+=d[i+1]; acc[2]+=d[i+2]; acc[3]++; } }
+function sampleVitals(lm){
+  const vw=video.videoWidth, vh=video.videoHeight; if (!vw) return; const ts=performance.now()/1000, P=(i)=>({ x:lm[i].x*vw, y:lm[i].y*vh });
+  if (ts-VS.lastT>2){ VS.buf=[]; VS.blinks=[]; VS.since=ts; VS.bpm=null; VS.earBase=0; VS.closed=false; }
+  VS.lastT=ts;
+  const fw=Math.hypot(P(454).x-P(234).x,P(454).y-P(234).y); if (fw<60) return;
+  const nz=P(1); if (VS.nose){ const mv=Math.hypot(nz.x-VS.nose.x,nz.y-VS.nose.y)/fw; VS.moving=VS.moving*0.8+mv*0.2; } VS.nose=nz;
+  const acc=[0,0,0,0], fh=P(151), c1=P(50), c2=P(280);
+  boxMean(fh.x, fh.y-0.07*fw, 0.32*fw, 0.12*fw, acc); boxMean(c1.x, c1.y, 0.14*fw, 0.12*fw, acc); boxMean(c2.x, c2.y, 0.14*fw, 0.12*fw, acc);
+  if (acc[3]>40) VS.buf.push([ts, acc[0]/acc[3], acc[1]/acc[3], acc[2]/acc[3], VS.moving]);
+  while (VS.buf.length && ts-VS.buf[0][0]>14) VS.buf.shift();
+  /* blinks: eye aspect ratio against the person's own open-eye baseline */
+  const d=(a,b)=>Math.hypot(P(a).x-P(b).x,P(a).y-P(b).y);
+  const ear=((d(159,145)+d(158,153))/(2*d(33,133)) + (d(386,374)+d(385,380))/(2*d(362,263)))/2;
+  if (!VS.earBase) VS.earBase=ear; else if (!VS.closed && ear>0.8*VS.earBase) VS.earBase+=(ear-VS.earBase)*0.03;
+  if (!VS.closed && ear<0.55*VS.earBase){ VS.closed=true; VS.closedT=ts; }
+  else if (VS.closed && ear>0.75*VS.earBase){ VS.closed=false; const du=ts-VS.closedT; if (du>0.04 && du<0.6) VS.blinks.push(ts); }
+  while (VS.blinks.length && ts-VS.blinks[0]>60) VS.blinks.shift();
+  if (ts-VS.calcT>1) { VS.calcT=ts; calcPulse(); }
+}
+function calcPulse(){
+  const B=VS.buf; if (B.length<40) return; const t0=B[0][0], t1=B[B.length-1][0], span=t1-t0, rate=B.length/span; if (span<8 || rate<6) return;
+  const fs=15, n=Math.floor(span*fs), ch=[[],[],[]]; let j=0;
+  for (let k=0;k<n;k++){ const t=t0+k/fs; while (j<B.length-2 && B[j+1][0]<t) j++; const a=B[j], b=B[j+1], w=Math.min(1,Math.max(0,(t-a[0])/Math.max(1e-3,b[0]-a[0]))); for (let c=0;c<3;c++) ch[c].push(a[c+1]+(b[c+1]-a[c+1])*w); }
+  const mov=(arr,r)=>arr.map((_,i)=>{ let s=0,c=0; for (let q=Math.max(0,i-r);q<=Math.min(arr.length-1,i+r);q++){ s+=arr[q]; c++; } return s/c; });
+  const nrm=ch.map(a=>{ const m=mov(a,11); return a.map((v,i)=>v/m[i]-1); });
+  const X=nrm[0].map((r,i)=>3*r-2*nrm[1][i]), Y=nrm[0].map((r,i)=>1.5*r+nrm[1][i]-1.5*nrm[2][i]);
+  const sd=(a)=>{ const m=a.reduce((s,v)=>s+v,0)/a.length; return Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/a.length)||1e-9; };
+  const al=sd(X)/sd(Y); let s=X.map((x,i)=>x-al*Y[i]); const sm=mov(s,7); s=s.map((v,i)=>v-sm[i]);
+  const hann=s.map((v,i)=>v*(0.5-0.5*Math.cos(2*Math.PI*i/(s.length-1))));
+  let best=0, bf=0, tot=0, cnt=0;
+  for (let bpm=42; bpm<=180; bpm+=1){ const f=bpm/60; let re=0, im=0; for (let i=0;i<hann.length;i++){ const ph=2*Math.PI*f*i/fs; re+=hann[i]*Math.cos(ph); im+=hann[i]*Math.sin(ph); } const p=re*re+im*im; tot+=p; cnt++; if (p>best){ best=p; bf=bpm; } }
+  const snr=best/(tot/cnt), still=B.reduce((m,b)=>Math.max(m,b[4]),0)<0.02;
+  VS.snr=snr;
+  /* a value is shown only when the peak is clear and two estimates in a row agree */
+  const good = snr>7.5 && still, agree = VS.cand!=null && Math.abs(bf-VS.cand)<=6; VS.cand = good ? bf : null;
+  if (good && (agree || VS.bpm!=null && Math.abs(bf-VS.bpm)<=8)) VS.bpm = VS.bpm==null ? bf : VS.bpm+(bf-VS.bpm)*0.35;
+}
+function blinkRate(){ const ts=performance.now()/1000, el=ts-VS.since; if (el<20) return null; return VS.blinks.length*60/Math.min(60,el); }
+
+/* ---------- skin report panel ---------- */
+let skinPT=0;
+function renderSkinPanel(now){
+  const box=$("#skinP"); const show = S.view!=="3d" && S.layers.skin && TR.face.tracked && FSK && S.skinPanel!==false;
+  if (!show){ box.hidden=true; return; } box.hidden=false; if (now-skinPT<500) return; skinPT=now;
+  const tx=T[S.lang], m=(FSK._res().metrics)||{}, rows=[], cl=(v)=>Math.max(0,Math.min(1,v)), lvl=(v,a,b)=>v<a?tx.skLow:v<b?tx.skMid:tx.skHigh;
+  if (m.ita!=null){ const t=m.ita, k=t>55?0:t>41?1:t>28?2:t>10?3:t>-30?4:5; rows.push([tx.skPhoto, cl((t+30)/100), `${tx.skTones[k]} · ITA ${Math.round(t)}°`]); }
+  if (m.aCheeks!=null) rows.push([tx.skRedC, cl((m.aCheeks-5)/15), `a* ${m.aCheeks.toFixed(1)} · ${lvl(m.aCheeks,10,15)}`]);
+  if (m.aNose!=null) rows.push([tx.skRedN, cl((m.aNose-5)/15), `a* ${m.aNose.toFixed(1)} · ${lvl(m.aNose,10,15)}`]);
+  if (m.uneven!=null){ const sc=Math.round(Math.max(0,Math.min(100,100-m.uneven*9))); rows.push([tx.skEven, sc/100, `${sc}/100`]); }
+  if (m.shine!=null) rows.push([tx.skShine, cl(m.shine/12), `${m.shine.toFixed(1)}% · ${lvl(m.shine,3,8)}`]);
+  if (m.texture!=null) rows.push([tx.skTex, cl(m.texture/25), `${Math.round(m.texture)} · ${lvl(m.texture,8,15)}`]);
+  if (m.dark!=null) rows.push([tx.skDark, cl(m.dark/25), `${Math.max(0,m.dark).toFixed(0)}% · ${lvl(m.dark,6,14)}`]);
+  const br=blinkRate(); rows.push([tx.skBlink, br==null?0:cl(br/30), br==null?tx.skWait:`${Math.round(br)}${tx.skPerMin}`]);
+  rows.push([tx.skPulse, VS.bpm==null?0:cl((VS.bpm-40)/120), VS.bpm==null?tx.skWait:`${Math.round(VS.bpm)} bpm`]);
+  $("#skinL").innerHTML = rows.map(r=>`<div class="srow"><span>${esc(r[0])}</span><b style="--w:${Math.round(r[1]*100)}%"></b><i>${esc(r[2])}</i></div>`).join("");
+}
+function skinSnapshot(){ const m=(FSK && FSK._res().metrics)||{}; const o={}; for (const k of ["ita","aCheeks","aNose","aForehead","aChin","uneven","shine","texture","dark"]) if (m[k]!=null) o[k]=Math.round(m[k]*10)/10;
+  if (VS.bpm!=null) o.bpm=Math.round(VS.bpm); const br=blinkRate(); if (br!=null) o.blink=Math.round(br); return o; }
 
 /* ---------- labels that stay put ---------- */
 const LST = new Map();
@@ -3176,10 +3304,11 @@ function loop(){
     } catch(e){ console.warn(e); }
     frameN++; detN++;
     if (TR.face.tracked) SK.lastFace=now;
-    if (L.skin && TR.face.tracked && now-SK.last>180){ SK.last=now; try { analyzeSkin(); } catch(e){ console.warn(e); } }
+    if (L.skin && TR.face.tracked && now-SK.last>Math.max(180, (FSK && FSK.lastMs ? FSK.lastMs() : 0)*3)){ SK.last=now; try { analyzeSkin(); } catch(e){ console.warn(e); } }  /* adaptive: never more than about a third of the time */
     if (FSK && now-SK.lastFace>2500 && SK.lastFace) { FSK.reset(); SK.lastFace=0; }
   }
   if (now-fpsT>1000){ fps=Math.round(detN*1000/(now-fpsT)); detN=0; fpsT=now; updateStatus(); }
+  renderSkinPanel(now);
   if (S.view==="3d") render3d(now); else render(now);
 }
 
@@ -3324,10 +3453,12 @@ window.addEventListener("pointercancel",e=>{ dragging=false; if (E3) E3.pointerU
 canvas.addEventListener("wheel",e=>{ if (S.view==="3d" && E3){ e.preventDefault(); E3.wheel(e); } },{ passive:false });
 
 $("#reset3d").addEventListener("click",()=>{ if (E3) E3.resetView(); });
+$("#skinP").addEventListener("click",()=>{ $("#skinP").classList.toggle("min"); });
 /* ---------- mini guide ---------- */
 const GUIDE = {
   it:[["Si parte dal viso","L’app si apre in modalità Pelle. Inquadra il viso con luce frontale e resta fermo 2–3 secondi: compaiono nei (verde), brufoli (rosso), macchie (marrone), rigonfiamenti (lilla) e rughe (ambra)."],
     ["Tocca un’etichetta","Un tocco su un’etichetta della pelle apre i consigli alimentari per quel rilevamento."],
+    ["Analisi pelle","Il pannello a sinistra stima tono, rossore, uniformità, lucidità, pori, occhiaie, ammiccamenti e battito. Resta fermo 10–15 secondi con luce frontale; toccalo per ridurlo. Le misure vengono salvate con ogni scansione NEI."],
     ["Nei e pazienti","👤 crea o sceglie il paziente. NEI salva foto del viso, dettaglio e misura di ogni neo. Nello storico vedi come cambiano nel tempo."],
     ["Scansione del corpo","Scegli Tutto, Ossa, Muscoli o Organi e inquadra la persona: l’ologramma 3D si aggancia al corpo. Più corpo è inquadrato, più è preciso."],
     ["Vista 3D","Pulsante 3D in alto. Un dito ruota, due dita spostano e ingrandiscono, ⟲ riporta la vista al centro. Tocca una struttura per la sua scheda."],
@@ -3335,13 +3466,14 @@ const GUIDE = {
     ["Limiti","È una rappresentazione illustrativa, non una radiografia e non una diagnosi. Per ogni dubbio vale il parere del medico."]],
   en:[["It starts on the face","The app opens in Skin mode. Frame the face in frontal light and hold still 2–3 seconds: moles (green), pimples (red), dark spots (brown), lumps (lilac) and wrinkles (amber) appear."],
     ["Tap a label","Tap any skin label to open food tips for that finding."],
+    ["Skin analysis","The panel on the left estimates tone, redness, evenness, shine, pores, dark circles, blinks and pulse. Hold still 10–15 seconds in frontal light; tap it to collapse. The readings are saved with every MOLES scan."],
     ["Moles and patients","👤 creates or picks the patient. MOLES saves a face photo plus a close-up and size of each mole. The history shows how they change over time."],
     ["Body scan","Pick Everything, Bones, Muscles or Organs and frame the person: the 3D hologram locks onto the body. The more of the body in view, the more precise it is."],
     ["3D view","3D button at the top. One finger rotates, two fingers move and zoom, ⟲ re-centres the view. Tap a structure for its card."],
     ["Settings ⚙︎","Look: Hologram, Colour holo, X-ray, Solid. “Max” tracking is more precise but slower. In 3D you also get Section and MRI."],
     ["Limits","This is an illustration, not an X-ray and not a diagnosis. For any doubt, a doctor’s opinion is what counts."]]
 };
-const APP_VER="v10 · 16/11";
+const APP_VER="v11 · 17/11";
 function renderGuide(){ $("#guide h2").textContent=T[S.lang].gTitle+" · "+APP_VER; $("#guideL").innerHTML = GUIDE[S.lang].map(g=>`<li><b>${esc(g[0])}</b>${esc(g[1])}</li>`).join("")
   + `<li><b>Diagnostica 3D</b><button class="btn" id="diagBtn" type="button">Esegui test</button><pre id="diagOut" style="white-space:pre-wrap;font-size:11px;line-height:1.35;margin:8px 0 0"></pre></li>`;
   $("#diagBtn").addEventListener("click", async ()=>{ const o=$("#diagOut"); o.textContent="…"; try { const E=await ensure3D(); if (!E.diag){ o.textContent="motore semplificato (pack non caricato)"; return; }
@@ -3363,6 +3495,9 @@ const DB = { db:null,
   del(store,id){ return this.run(store,"readwrite",s=>s.delete(id)); },
   scans(pid){ return this.run("scans","readonly",s=>s.index("pid").getAll(pid)); } };
 const fmtDate = (t)=> new Date(t).toLocaleString(S.lang==="it" ? "it-IT" : "en-GB", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" });
+function skinLine(k,p){ if (!k || !Object.keys(k).length) return ""; const tx=T[S.lang];
+  const f=(key,lab,u,dec)=>{ if (k[key]==null) return ""; const d=p&&p[key]!=null ? k[key]-p[key] : null; return `<span>${esc(lab)} <b>${k[key].toFixed(dec||0)}${u||""}</b>${d!=null&&Math.abs(d)>=(dec?0.5:1)?` <em>${d>0?"+":""}${d.toFixed(dec||0)}</em>`:""}</span>`; };
+  return `<div class="skinrow">${[f("ita","ITA","°"),f("aCheeks",tx.skRedC,"",1),f("uneven",tx.skEven+" σ","%",1),f("shine",tx.skShine,"%",1),f("texture",tx.skTex),f("dark",tx.skDark,"%"),f("bpm",tx.skPulse," bpm"),f("blink",tx.skBlink,tx.skPerMin)].join("")}</div>`; }
 async function renderPatients(){
   const tx=T[S.lang]; let pts=[]; try { pts=await DB.all("patients"); } catch(e){ console.warn(e); }
   if (!pts.some(p=>p.id===S.pid)) S.pid = pts.length ? pts[pts.length-1].id : 0;
@@ -3376,7 +3511,7 @@ async function renderPatients(){
       let st=""; if (!prev){ if (older.length) st=`<span class="new">${esc(tx.mNew)}</span>`; }
       else if (mo.mm && prev.mm){ const d=mo.mm-prev.mm; st = (Math.abs(d)>=1 && Math.abs(d)/prev.mm>=0.25) ? `<span class="chg">${d>0?"+":""}${d.toFixed(1)} mm · ${esc(tx.mChg)}</span>` : `${d>=0?"+":""}${d.toFixed(1)} mm · ${esc(tx.mSame)}`; }
       return `<div class="mole"><img src="${mo.img}" alt=""><b>${esc(mo.id)}</b> · ${mo.mm ? "≈ "+mo.mm.toFixed(1)+" mm" : esc(tx.mNoScale)}<br>${st}</div>`; }).join("");
-    html.push(`<div class="scan"><h3><span>${esc(fmtDate(sc.t))} · ${sc.moles.length} ${esc(tx.mMoles)}</span><button class="btn warn" data-delscan="${sc.id}">${esc(tx.pScanDel)}</button></h3><img class="face" src="${sc.face}" alt=""><div class="moles">${cells}</div></div>`); }
+    html.push(`<div class="scan"><h3><span>${esc(fmtDate(sc.t))} · ${sc.moles.length} ${esc(tx.mMoles)}</span><button class="btn warn" data-delscan="${sc.id}">${esc(tx.pScanDel)}</button></h3><img class="face" src="${sc.face}" alt="">${skinLine(sc.skin, scans[i-1] && scans[i-1].skin)}<div class="moles">${cells}</div></div>`); }
   $("#patScans").innerHTML = html.length ? html.join("") : `<p class="note">${esc(tx.pNoScan)}</p>`;
   saveSettings();
 }
@@ -3436,7 +3571,7 @@ async function saveMoleScan(){
   f2.font="700 15px ui-monospace,monospace"; f2.lineWidth=2; f2.textBaseline="middle";
   for (const mo of moles){ const px=(mo.cx-x0)*sc, py=(mo.cy-y0)*sc; f2.strokeStyle="#78ffd6"; f2.beginPath(); f2.arc(px,py,11,0,TAU); f2.stroke();
     f2.strokeStyle="rgba(0,0,0,.7)"; f2.lineWidth=3; f2.strokeText(mo.id,px+14,py-10); f2.fillStyle="#78ffd6"; f2.fillText(mo.id,px+14,py-10); f2.lineWidth=2; delete mo.cx; delete mo.cy; }
-  try { await DB.put("scans",{ pid:pat.id, t:Date.now(), face:fc.toDataURL("image/jpeg",0.85), mmpp, moles }); pat.nextN=nextN; await DB.put("patients",pat); }
+  try { await DB.put("scans",{ pid:pat.id, t:Date.now(), face:fc.toDataURL("image/jpeg",0.85), mmpp, moles, skin:skinSnapshot() }); pat.nextN=nextN; await DB.put("patients",pat); }
   catch(e){ console.warn(e); toast(String(e && e.message || e)); return; }
   const fl=$("#flash"); fl.classList.add("on"); setTimeout(()=>fl.classList.remove("on"),60);
   toast(`${tx.mSaved} · ${pat.name} · ${moles.length} ${tx.mMoles}`);
