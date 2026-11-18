@@ -78,6 +78,13 @@ body.v3d.real3d .credit{ display:block; }
 .report td.bad{ color:#ff8a8a; font-weight:700; } .report td.mid{ color:#ffc454; } .report td.nm{ color:var(--muted); }
 .flags p{ margin:6px 0; padding:8px 10px; border-left:3px solid; font-size:13px; line-height:1.4; } .flags .ok{ border-color:#4ef0c4; } .flags .info{ border-color:#7ff3ff; } .flags .warn{ border-color:#ffc454; } .flags .high{ border-color:#ff8a5a; background:rgba(255,120,80,.08); } .flags .crit{ border-color:#ff4d4d; background:rgba(255,60,60,.14); font-weight:600; }
 .gzw{ display:flex; gap:12px; align-items:flex-start; } .gzs{ width:120px; min-width:120px; } .gzs rect{ fill:none; stroke:var(--line); } .gzs line{ stroke:rgba(127,243,255,.25); } .gzs .gR{ fill:#7ff3ff; } .gzs .gL{ fill:#ffb63c; }
+.lgrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+.lcard{ display:flex; flex-direction:column; gap:4px; text-align:left; padding:12px; border:1px solid rgba(0,229,255,.35); background:rgba(0,229,255,.06); color:inherit; font:inherit; cursor:pointer; min-height:132px; }
+.lcard .lic{ font-size:24px; } .lcard b{ font-size:14.5px; line-height:1.25; } .lcard small{ color:var(--muted); font-size:12px; line-height:1.35; } .lcard em{ margin-top:auto; font-style:normal; font-size:11px; color:#7ff3ff; font-family:'Share Tech Mono',monospace; }
+.exask{ display:flex; gap:10px; margin-top:10px; } .exask[hidden]{ display:none; } .exask .btn{ flex:1; height:48px; font-size:16px; }
+.charts{ display:flex; flex-wrap:wrap; gap:12px; margin:12px 0; } .chart small{ display:block; color:var(--muted); font-size:11px; margin-bottom:2px; } .spk{ display:block; max-width:100%; }
+.trend{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; } .trend div{ border:1px solid var(--line); padding:6px; font-size:12px; } .trend small{ display:block; color:var(--muted); } .trend b{ color:#d9fbff; margin-right:6px; } .trend em{ font-style:normal; color:#ffc454; }
+.flags a.call{ display:inline-block; margin-left:8px; padding:4px 12px; background:#ff4d4d; color:#fff !important; font-weight:700; text-decoration:none; border-radius:4px; }
 .report .disc{ font-size:11.5px; color:var(--muted); margin-top:14px; } .scan.exam .rowb{ display:flex; gap:6px; }
 @media print{ body.printing > *:not(#report){ display:none !important; } body.printing #report{ position:static; background:#fff; color:#000; padding:0; } body.printing #report *{ color:#000 !important; border-color:#999 !important; background:none !important; } body.printing .noprint, body.printing #report .x{ display:none !important; } body.printing .gzs .gR{ fill:#1a73e8 !important; } body.printing .gzs .gL{ fill:#e8710a !important; } }
 .skinp{ pointer-events:auto; width:min(250px,64vw); padding:8px 10px; cursor:pointer; }
@@ -237,7 +244,8 @@ body.hud .secondary{ border-radius:2px; font-family:'Rajdhani',var(--font); font
 
 <div class="credit" id="credit3d" data-i="credit3d"></div>
 <div class="dock" id="dock" hidden></div>
-<div class="examhud" id="examHud" hidden><div class="exrow"><b id="exStep"></b><span id="exText"></span><button class="iconbtn" id="exStop" aria-label="Stop">✕</button></div><small id="exMus"></small><div class="exbar"><i id="exBar"></i></div><em id="exWarn"></em></div>
+<div class="examhud" id="examHud" hidden><div class="exrow"><b id="exStep"></b><span id="exText"></span><button class="iconbtn" id="exStop" aria-label="Stop">✕</button></div><small id="exMus"></small><div class="exbar"><i id="exBar"></i></div><em id="exWarn"></em><div class="exask" id="exAsk" hidden><button class="btn warn" id="exYes">Sì / Yes</button><button class="btn" id="exNo">No</button></div></div>
+<section class="over" id="lab" hidden><button class="iconbtn x" data-close="lab" aria-label="Close">✕</button><div class="in"><h2 data-i="labTitle">Clinical lab</h2><p class="note" data-i="labNote"></p><div class="lgrid" id="labGrid"></div></div></section>
 <div class="gazedot" id="gazeDot" hidden></div>
 <section class="over report" id="report" hidden><button class="iconbtn x" data-close="report" aria-label="Close">✕</button><div class="in"><div id="repBody"></div><div class="rowf noprint"><button class="btn" id="repSave">Salva / Save</button><button class="btn" id="repPrint">PDF</button></div></div></section>
 <div class="actp" id="actP" hidden><h5 data-i="actTitle">Active muscles</h5><div id="actL"></div><p data-i="actNote"></p></div>
@@ -245,7 +253,7 @@ body.hud .secondary{ border-radius:2px; font-family:'Rajdhani',var(--font); font
 <div class="fabs">
   <button class="iconbtn only3d" id="reset3d" aria-label="Reset view">⟲</button>
   <button class="iconbtn txt onlyAR" id="moleBtn" data-i="moleBtn">MOLES</button>
-  <button class="iconbtn" id="examBtn" aria-label="Facial exam">🩺</button>
+  <button class="iconbtn" id="labBtn" aria-label="Clinical lab">🩺</button>
   <button class="iconbtn" id="patBtn" aria-label="Patients">👤</button>
   <button class="iconbtn txt" id="guideBtn" aria-label="Guide">?</button>
 </div>
@@ -254,7 +262,7 @@ body.hud .secondary{ border-radius:2px; font-family:'Rajdhani',var(--font); font
 <section class="over" id="pat" hidden><button class="iconbtn x" data-close="pat" aria-label="Close">✕</button><div class="in">
   <h2 data-i="pTitle">Patients and mole history</h2>
   <div class="rowf"><select id="patSel" aria-label="Patient"></select><button class="btn warn" id="patDel" data-i="pDel">Delete</button></div>
-  <div class="rowf"><input type="text" id="patName" maxlength="40" autocomplete="off"><button class="btn" id="patAdd" data-i="pAdd">Add</button></div>
+  <div class="rowf"><input type="text" id="patName" maxlength="40" autocomplete="off"><input type="number" id="patAge" min="1" max="120" inputmode="numeric" placeholder="età/age" style="max-width:86px"><select id="patSex" style="max-width:76px"><option value="">–</option><option value="M">M</option><option value="F">F</option></select><button class="btn" id="patAdd" data-i="pAdd">Add</button></div>
   <p class="note" data-i="pNote"></p>
   <div id="patScans"></div>
 </div></section>
@@ -2545,7 +2553,7 @@ const T = {
     layers:"Layers", skeleton:"Skeleton", skull:"Skull", hands:"Hand bones", muscleL:"Muscles", faceMusL:"Facial muscles and jaw", organL:"Organs", brain:"Brain", labels:"Labels", skin:"Face skin check",
     look:"Look", xray:"X-ray", solid:"Solid", real:"Real person showing through", brightness:"Brightness", lensSize:"Lens size", zoom:"Zoom",
     quality:"Tracking", high:"Stable", fast:"Fast", maxq:"Max", holoc:"Colour holo", arMode:"Body in AR", arHolo:"3D hologram", arDraw:"Drawing", moleBtn:"MOLES",
-    gTitle:"Quick guide", pTitle:"Patients and mole history", pAdd:"Add", pDel:"Delete", pName:"New patient name", pNone:"No patient yet",
+    gTitle:"Quick guide", labTitle:"Clinical lab", labNote:"Standardised tests measured with the camera. Put the phone on a stable support for body tests, frame the hand for hand tests. Results are estimates, not diagnoses.", pTitle:"Patients and mole history", pAdd:"Add", pDel:"Delete", pName:"New patient name", pNone:"No patient yet",
     pNote:"Photos and measurements stay only on this device, in this browser: nothing is uploaded. Ask the person for consent before saving their face. Sizes are estimates from the camera (about ±1 mm) and are not a diagnosis.",
     pNoScan:"No scans yet. In Skin mode, frame the face and tap MOLES.", pScanDel:"Delete scan", pConfirmP:"Delete this patient and all their scans?", pConfirmS:"Delete this scan?",
     mSaved:"Scan saved", mMoles:"moles", mNoFace:"Frame the face in Skin mode first, and hold still 2–3 seconds.", mNoPat:"Create or choose a patient first.", mNew:"new", mChg:"changed: show it to a dermatologist", mSame:"stable", mNoScale:"size n/a",
@@ -2572,7 +2580,7 @@ const T = {
     layers:"Livelli", skeleton:"Scheletro", skull:"Cranio", hands:"Ossa della mano", muscleL:"Muscoli", faceMusL:"Muscoli mimici e mandibola", organL:"Organi", brain:"Cervello", labels:"Etichette", skin:"Controllo pelle del viso",
     look:"Aspetto", xray:"Raggi X", solid:"Solido", real:"Quanto si vede la persona", brightness:"Luminosità", lensSize:"Dimensione lente", zoom:"Zoom",
     quality:"Tracciamento", high:"Stabile", fast:"Veloce", maxq:"Massima", holoc:"Olo a colori", arMode:"Corpo in AR", arHolo:"Ologramma 3D", arDraw:"Disegno", moleBtn:"NEI",
-    gTitle:"Mini guida", pTitle:"Pazienti e storico nei", pAdd:"Aggiungi", pDel:"Elimina", pName:"Nome nuovo paziente", pNone:"Nessun paziente",
+    gTitle:"Mini guida", labTitle:"Laboratorio clinico", labNote:"Test standardizzati misurati con la fotocamera. Per i test del corpo appoggia il telefono su un supporto fisso, per quelli della mano inquadra la mano. I risultati sono stime, non diagnosi.", pTitle:"Pazienti e storico nei", pAdd:"Aggiungi", pDel:"Elimina", pName:"Nome nuovo paziente", pNone:"Nessun paziente",
     pNote:"Foto e misure restano solo su questo dispositivo, in questo browser: nulla viene caricato online. Chiedi il consenso alla persona prima di salvare il suo viso. Le dimensioni sono stime da fotocamera (circa ±1 mm) e non sono una diagnosi.",
     pNoScan:"Nessuna scansione. In modalità Pelle inquadra il viso e tocca NEI.", pScanDel:"Elimina scansione", pConfirmP:"Eliminare questo paziente e tutte le sue scansioni?", pConfirmS:"Eliminare questa scansione?",
     mSaved:"Scansione salvata", mMoles:"nei", mNoFace:"Prima inquadra il viso in modalità Pelle e resta fermo 2–3 secondi.", mNoPat:"Prima crea o scegli un paziente.", mNew:"nuovo", mChg:"variato: fallo vedere al dermatologo", mSame:"stabile", mNoScale:"misura n.d.",
@@ -2778,6 +2786,7 @@ function onPose(r,t){
   const lm = r && r.landmarks && r.landmarks[0];
   const ok = !!lm && plausiblePose(lm) && confirmed(lm,t);
   hit(TR.pose, ok, t, lm);
+  if (LAB.on && ok) labPose(lm, r.worldLandmarks && r.worldLandmarks[0], performance.now());
   const wl = r && r.worldLandmarks && r.worldLandmarks[0];
   if (ok && wl){
     if (TR.pose.good===1){ WF.forEach(f=>f.forEach(e=>e.reset())); HOLD.fill(0); TR.pose.world=null; }
@@ -2798,13 +2807,14 @@ function onFace(r,t){
   hit(TR.face, ok, t, lm);
   if (ok) TR.face.lastOk=t;
   if (ok && S.layers.skin && S.view!=="3d") { try { sampleVitals(lm); } catch(e){ console.warn(e); } }
-  if (ok && (S.layers.faceMus || EX.on)) { try { const g=faceGeom(lm), bs=bsMap(r); updateFaceMus(g,bs); examSample(g,bs,performance.now()); } catch(e){ console.warn(e); } }
+  if (ok && (S.layers.faceMus || EX.on || LAB.on)) { try { const g=faceGeom(lm), bs=bsMap(r), ts=performance.now(); updateFaceMus(g,bs); examSample(g,bs,ts); labFace(g,bs,ts); } catch(e){ console.warn(e); } }
 }
 function onHands(r,t){
   const found=[];
   const L=(r && r.landmarks) || [], Hd=(r && (r.handedness || r.handednesses)) || [];
   const WLh=(r && r.worldLandmarks) || [];
   L.forEach((lm,i)=>{ const sc=(Hd[i] && Hd[i][0] && Hd[i][0].score) ?? 1; if (sc>0.75 && dist(px(lm[0]),px(lm[9]))>18){ lm.__w=WLh[i]||null; found.push(lm); } });
+  if (LAB.on) labHands(found, performance.now());
   const used=[false,false];
   for (const slot of TR.hands){
     let best=-1, bd=1e9;
@@ -3119,7 +3129,7 @@ function dockSection(id, title, rows, note){
     <div class="dbody">${rows.map(r=>`<div class="drow${r.warn?" warn":""}"><span>${esc(r.lab)}</span><b style="--w:${Math.round(Math.max(0,Math.min(1,r.w||0))*100)}%"></b><i>${esc(r.txt)}</i>${r.sub?`<small>${esc(r.sub)}</small>`:""}</div>`).join("")}${note?`<p>${esc(note)}</p>`:""}</div></section>`;
 }
 function updateDock(now){
-  const dock=$("#dock"); if (S.view==="3d" || EX.on){ dock.hidden=true; return; }
+  const dock=$("#dock"); if (S.view==="3d" || EX.on || LAB.on){ dock.hidden=true; return; }
   if (now-DOCK.t<350) return; DOCK.t=now;
   updateMech(now);
   const secs=[];
@@ -3299,7 +3309,7 @@ function examAnalyse(){
   return { composite, volSum, rest, synSum, restItems, tab, op, jr, jl, fw, eyeTab, gz, bl, flags:F };
 }
 function examReport(saved){
-  const A = saved ? saved.a : examAnalyse(); const tx=T[S.lang];
+  REPSAVE=null; const A = saved ? saved.a : examAnalyse(); const tx=T[S.lang];
   EX.report = saved || { t:Date.now(), a:A };
   const f1=(v,u)=>v==null||!isFinite(v)?"–":(Math.abs(v)<10?v.toFixed(1):Math.round(v))+(u?" "+u:"");
   const lvc=["ok","info","warn","high","crit"];
@@ -3329,10 +3339,313 @@ async function examSave(){
   const pat=pts.find(p=>p.id===S.pid); if (!pat){ toast(T[S.lang].mNoPat); $("#pat").hidden=false; renderPatients(); return; }
   try { await DB.put("scans",{ pid:pat.id, t:EX.report.t, type:"exam", a:EX.report.a, moles:[], face:"" }); toast(Lx("Referto salvato · ","Report saved · ")+pat.name); $("#repSave").hidden=true; } catch(e){ toast(String(e&&e.message||e)); }
 }
-$("#examBtn").addEventListener("click",()=>{ if (S.view==="3d") setView("ar"); examStart(); });
-$("#exStop").addEventListener("click",examStop);
-$("#repSave").addEventListener("click",()=>{ examSave(); });
+$("#exStop").addEventListener("click",()=>{ examStop(); labStop(); });
+$("#repSave").addEventListener("click",()=>{ if (REPSAVE) REPSAVE(); else examSave(); });
 $("#repPrint").addEventListener("click",()=>{ document.body.classList.add("printing"); setTimeout(()=>{ window.print(); setTimeout(()=>document.body.classList.remove("printing"),400); },50); });
+
+
+/* =====================================================================
+   CLINICAL LAB: standardised, camera-measurable tests from neurology,
+   orthopaedics, hand surgery and geriatrics. Raw (unfiltered) landmarks
+   are sampled at full frame rate; each test produces a report that is
+   stored per patient and trended over time.
+   ===================================================================== */
+const LAB = { on:false, p:null, i:0, t0:0, buf:[], data:{}, answers:{}, wait:false };
+let REPSAVE = null;
+function beep(f,ms){ try { const A=beep.ctx||(beep.ctx=new (window.AudioContext||window.webkitAudioContext)()); const o=A.createOscillator(), g=A.createGain(); o.frequency.value=f||880; g.gain.value=0.15; o.connect(g); g.connect(A.destination); o.start(); o.stop(A.currentTime+(ms||180)/1000); } catch(e){} }
+const vwh = () => [video.videoWidth||1, video.videoHeight||1];
+const dW = (a,b) => Math.hypot(a.x-b.x, a.y-b.y, (a.z||0)-(b.z||0));
+function resample(T, V, fs){ if (T.length<4) return []; const t0=T[0], n=Math.floor((T[T.length-1]-t0)*fs), out=[]; let j=0;
+  for (let k=0;k<n;k++){ const t=t0+k/fs; while (j<T.length-2 && T[j+1]<t) j++; const w=Math.max(0,Math.min(1,(t-T[j])/Math.max(1e-4,T[j+1]-T[j]))); out.push(V[j]+(V[j+1]-V[j])*w); } return out; }
+function movAvg(a,r){ const o=new Array(a.length); let s=0, c=0, lo=0; const pre=[0]; for (const v of a) pre.push(pre[pre.length-1]+v);
+  for (let i=0;i<a.length;i++){ const x=Math.max(0,i-r), y=Math.min(a.length-1,i+r); o[i]=(pre[y+1]-pre[x])/(y-x+1); } void s; void c; void lo; return o; }
+function spectrum(x, fs, f0, f1, df){ const out=[]; const n=x.length; const w=x.map((v,i)=>v*(0.5-0.5*Math.cos(2*Math.PI*i/(n-1))));
+  for (let f=f0; f<=f1+1e-9; f+=df){ let re=0, im=0; for (let i=0;i<n;i++){ const ph=2*Math.PI*f*i/fs; re+=w[i]*Math.cos(ph); im+=w[i]*Math.sin(ph); } out.push([f, re*re+im*im]); } return out; }
+const rms = (a) => Math.sqrt(a.reduce((s,v)=>s+v*v,0)/Math.max(1,a.length));
+const linSlope = (y) => { const n=y.length; if (n<2) return 0; let sx=0,sy=0,sxy=0,sxx=0; y.forEach((v,i)=>{ sx+=i; sy+=v; sxy+=i*v; sxx+=i*i; }); return (n*sxy-sx*sy)/Math.max(1e-9,n*sxx-sx*sx); };
+const spark = (vals, w, h, col) => { const v=vals.filter(x=>isFinite(x)); if (v.length<2) return ""; const mn=Math.min(...v), mx=Math.max(...v), r=mx-mn||1;
+  return `<svg class="spk" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><polyline fill="none" stroke="${col||"#4ef0c4"}" stroke-width="1.6" points="${vals.map((x,i)=>`${(i/(vals.length-1)*(w-4)+2).toFixed(1)},${(h-2-(x-mn)/r*(h-4)).toFixed(1)}`).join(" ")}"/></svg>`; };
+
+/* ---------- raw sample taps ---------- */
+function labHands(found, ts){
+  if (!LAB.on) return; const st=LAB.p.steps[LAB.i]; if (!st || st.need!=="hands" || ts<LAB.t0) return;
+  const [vw,vh]=vwh(); let best=null, bs=0;
+  for (const lm of found){ const s=Math.hypot((lm[0].x-lm[9].x)*vw,(lm[0].y-lm[9].y)*vh); if (s>bs){ bs=s; best=lm; } }
+  if (!best) return; const w=best.__w;
+  LAB.buf.push({ ts:(ts-LAB.t0)/1000, px:best.map(p=>({ x:p.x*vw, y:p.y*vh })), w:w?w.map(p=>({ x:p.x, y:p.y, z:p.z })):null, n:found.length });
+}
+function labPose(lm, wl, ts){
+  if (!LAB.on) return; const st=LAB.p.steps[LAB.i]; if (!st || st.need!=="pose" || ts<LAB.t0 || !lm) return; const [vw,vh]=vwh();
+  LAB.buf.push({ ts:(ts-LAB.t0)/1000, px:lm.map(p=>({ x:p.x*vw, y:p.y*vh, v:p.visibility??1 })), w:wl?wl.map(p=>({ x:p.x, y:p.y, z:p.z })):null });
+}
+function labFace(g, bs, ts){ if (!LAB.on || !g) return; const st=LAB.p.steps[LAB.i]; if (!st || st.need!=="face" || ts<LAB.t0) return; LAB.buf.push({ ts:(ts-LAB.t0)/1000, g, bs }); }
+
+/* ---------- analysis kernels ---------- */
+function tapAnalysis(B){
+  /* thumb–index aperture in mm (3D hand model), normalised and in absolute units */
+  const T=[], A=[]; for (const s of B){ if (!s.w) continue; T.push(s.ts); A.push(dW(s.w[4],s.w[8])*1000); }
+  if (T.length<30) return null; const fs=30, a=movAvg(resample(T,A,fs),1); const dur=a.length/fs;
+  const mx=Math.max(...a), mn=Math.min(...a), thr=mn+(mx-mn)*0.35, thrH=mn+(mx-mn)*0.55;
+  /* each tap = one closing; hysteresis on the aperture */
+  const taps=[]; let open=a[0]>thrH, pk=a[0], pkI=0;
+  for (let i=1;i<a.length;i++){ if (open){ if (a[i]>pk){ pk=a[i]; pkI=i; } if (a[i]<thr){ open=false; taps.push({ i, amp:pk }); pk=-1; } } else if (a[i]>thrH){ open=true; pk=a[i]; pkI=i; } }
+  void pkI;
+  if (taps.length<3) return { n:taps.length, freq:0, amp:0, dec:0, cv:0, hes:0, dur, curve:a.filter((_,i)=>i%2===0) };
+  const iv=[]; for (let k=1;k<taps.length;k++) iv.push((taps[k].i-taps[k-1].i)/fs);
+  const span=(taps[taps.length-1].i-taps[0].i)/fs, freq=(taps.length-1)/Math.max(0.5,span);
+  const amps=taps.map(t=>t.amp-mn), mAmp=amps.reduce((s,v)=>s+v,0)/amps.length, sl=linSlope(amps), dec=-sl*(amps.length-1)/Math.max(1,mAmp)*100;
+  const mi=med(iv), cv=Math.sqrt(iv.reduce((s,v)=>s+(v-iv.reduce((q,x)=>q+x,0)/iv.length)**2,0)/iv.length)/Math.max(1e-6,iv.reduce((q,x)=>q+x,0)/iv.length)*100;
+  const hes=iv.filter(v=>v>2*mi).length;
+  return { n:taps.length, freq, amp:mAmp, dec, cv, hes, dur, curve:a.filter((_,i)=>i%2===0), amps };
+}
+function tapScore(r){ if (!r || r.n<3) return 4;
+  const slow=r.freq>=2.8?0:r.freq>=2.2?1:r.freq>=1.6?2:r.freq>=1?3:4, hs=r.hes===0?0:r.hes<=2?1:r.hes<=5?2:3, dc=r.dec<15?0:r.dec<30?1:r.dec<50?2:3, am=r.amp>=40?0:r.amp>=25?1:r.amp>=12?2:3;
+  return Math.max(slow,hs,dc,am); }
+function tremorAnalysis(B){
+  /* whole-hand oscillation in the image, converted to mm with the hand's own size */
+  const T=[], X=[], Y=[]; let k=0, kn=0;
+  for (const s of B){ const c={ x:(s.px[0].x+s.px[5].x+s.px[9].x+s.px[13].x+s.px[17].x)/5, y:(s.px[0].y+s.px[5].y+s.px[9].y+s.px[13].y+s.px[17].y)/5 };
+    T.push(s.ts); X.push(c.x); Y.push(c.y); if (s.w){ const L2=Math.hypot(s.px[0].x-s.px[9].x,s.px[0].y-s.px[9].y); if (L2>10){ k+=dW(s.w[0],s.w[9])*1000/L2; kn++; } } }
+  if (T.length<40) return null; const mmpp=kn?k/kn:0.6;
+  const fsRaw=(T.length-1)/(T[T.length-1]-T[0]); const fs=Math.min(30, Math.max(10, Math.round(fsRaw)));
+  const hp=(v)=>{ const r=resample(T,v,fs), m=movAvg(r,Math.round(fs*0.25)); return r.map((x,i)=>(x-m[i])*mmpp); };
+  const x=hp(X), y=hp(Y); if (x.length<fs*4) return null;
+  const fMax=Math.min(13, fs/2-0.5), sx=spectrum(x,fs,2.5,fMax,0.1), sy=spectrum(y,fs,2.5,fMax,0.1), sp=sx.map((p,i)=>[p[0],p[1]+sy[i][1]]);
+  let pk=sp[0]; for (const p of sp) if (p[1]>pk[1]) pk=p; const tot=sp.reduce((s,p)=>s+p[1],0)||1;
+  let band=0; for (const p of sp) if (Math.abs(p[0]-pk[0])<=0.6) band+=p[1];
+  const amp=2*Math.SQRT2*Math.hypot(rms(x),rms(y));   /* peak-to-peak estimate, mm */
+  return { f:pk[0], tonal:band/tot, amp, fs, fsRaw, mmpp, present: amp>1.6 && band/tot>0.28, spec:sp.map(p=>p[1]) };
+}
+function swayAnalysis(B){
+  /* upper-body sway in the image; mm from the real shoulder width */
+  const pts=[]; let k=0, kn=0;
+  for (const s of B){ const P=s.px; if (P[11].v<0.5||P[12].v<0.5) continue; pts.push({ t:s.ts, x:(P[11].x+P[12].x)/2, y:(P[11].y+P[12].y)/2 });
+    if (s.w){ const L2=Math.hypot(P[11].x-P[12].x,P[11].y-P[12].y); if (L2>20){ k+=dW(s.w[11],s.w[12])*1000/L2; kn++; } } }
+  if (pts.length<20) return null; const mmpp=kn?k/kn:1;
+  const mx=pts.reduce((s,p)=>s+p.x,0)/pts.length, my=pts.reduce((s,p)=>s+p.y,0)/pts.length;
+  const d=pts.map(p=>({ x:(p.x-mx)*mmpp, y:(p.y-my)*mmpp }));
+  let path=0; const sm=movAvg(d.map(p=>p.x),1), smy=movAvg(d.map(p=>p.y),1); for (let i=1;i<d.length;i++) path+=Math.hypot(sm[i]-sm[i-1],smy[i]-smy[i-1]);
+  const sxx=d.reduce((s,p)=>s+p.x*p.x,0)/d.length, syy=d.reduce((s,p)=>s+p.y*p.y,0)/d.length, sxy=d.reduce((s,p)=>s+p.x*p.y,0)/d.length;
+  const area=Math.PI*5.991*Math.sqrt(Math.max(0,sxx*syy-sxy*sxy))/100;   /* 95% confidence ellipse, cm² */
+  const maxd=Math.max(...d.map(p=>Math.hypot(p.x,p.y)));
+  return { area, vel:path/Math.max(1,pts[pts.length-1].t-pts[0].t), ml:Math.sqrt(sxx), ap:Math.sqrt(syy), maxd, n:pts.length, trace:d.filter((_,i)=>i%2===0) };
+}
+function driftAnalysis(B){
+  /* wrist height relative to its own shoulder, start (first 2 s) vs end (last 2 s), in mm */
+  const S_=B.filter(s=>s.w && [11,12,15,16].every(i=>s.px[i].v>0.4)); if (S_.length<15) return null;
+  const mm=(s)=>{ const L2=Math.hypot(s.px[11].x-s.px[12].x,s.px[11].y-s.px[12].y)||1; return dW(s.w[11],s.w[12])*1000/L2; };
+  const rel=(s,w,sh)=>(s.px[w].y-s.px[sh].y)*mm(s);
+  const t1=S_[S_.length-1].ts, a=S_.filter(s=>s.ts<S_[0].ts+2), b=S_.filter(s=>s.ts>t1-2);
+  const dL=med(b.map(s=>rel(s,15,11)))-med(a.map(s=>rel(s,15,11))), dR=med(b.map(s=>rel(s,16,12)))-med(a.map(s=>rel(s,16,12)));
+  const armL=med(a.map(s=>dW(s.w[11],s.w[15])*1000)), armR=med(a.map(s=>dW(s.w[12],s.w[16])*1000));
+  return { L:dL, R:dR, armL, armR, curveL:S_.map(s=>rel(s,15,11)), curveR:S_.map(s=>rel(s,16,12)) };
+}
+const KAP = [ ["1",(w)=>V3s.mid(w[5],w[6])], ["2",(w)=>V3s.mid(w[6],w[7])], ["3",(w)=>w[8]], ["4",(w)=>w[12]], ["5",(w)=>w[16]], ["6",(w)=>w[20]], ["7",(w)=>w[19]], ["8",(w)=>w[18]], ["9",(w)=>w[17]],
+  ["10",(w)=>({ x:w[17].x+(w[0].x-w[17].x)*0.3+(w[13].x-w[17].x)*0.3, y:w[17].y+(w[0].y-w[17].y)*0.3+(w[13].y-w[17].y)*0.3, z:w[17].z+(w[0].z-w[17].z)*0.3+(w[13].z-w[17].z)*0.3 })] ];
+function kapandji(B){ const best=new Array(10).fill(1e9); let n=0;
+  for (const s of B){ if (!s.w) continue; n++; KAP.forEach(([,f],i)=>{ const d=dW(s.w[4],f(s.w))*1000; if (d<best[i]) best[i]=d; }); }
+  if (!n) return null; let score=0; best.forEach((d,i)=>{ if (d<(i<6?17:20)) score=i+1; }); return { score, dist:best }; }
+function standAnalysis(B){
+  const T=[], K=[]; for (const s of B){ if (!s.w) continue; const P=s.px, kn=[]; for (const [h,k,a] of [[23,25,27],[24,26,28]]) if (P[h].v>0.4&&P[k].v>0.4&&P[a].v>0.4) kn.push(180-angDeg(V3s.sub(s.w[h],s.w[k]),V3s.sub(s.w[a],s.w[k])));
+    if (kn.length){ T.push(s.ts); K.push(kn.reduce((x,y)=>x+y,0)/kn.length); } }
+  if (T.length<20) return null; const k=movAvg(K,2); let standing=k[0]<25, n=0, last=T[0]; const reps=[], half=[];
+  for (let i=1;i<k.length;i++){ if (!standing && k[i]<25){ standing=true; n++; reps.push(T[i]-last); last=T[i]; } else if (standing && k[i]>60){ standing=false; } }
+  if (!standing && k[k.length-1]<45) half.push(1);
+  const fat = reps.length>=4 ? (reps.slice(-2).reduce((a,b)=>a+b,0)/2)/(reps.slice(0,2).reduce((a,b)=>a+b,0)/2) : 1;
+  return { n:n+(half.length?1:0), reps, fat, curve:k.filter((_,i)=>i%2===0) };
+}
+function postureFront(B){
+  const S_=B.filter(s=>[11,12,23,24].every(i=>s.px[i].v>0.5)); if (S_.length<8) return null;
+  const ang=(a,b)=>{ let g=Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI; if (g>90) g-=180; if (g<-90) g+=180; return g; };
+  const sh=med(S_.map(s=>ang(s.px[12],s.px[11]))), pv=med(S_.map(s=>ang(s.px[24],s.px[23]))), hd=med(S_.map(s=>ang(s.px[5],s.px[2])));
+  const mm=(s)=>s.w?dW(s.w[11],s.w[12])*1000/Math.max(1,Math.hypot(s.px[11].x-s.px[12].x,s.px[11].y-s.px[12].y)):1;
+  const shift=med(S_.map(s=>((s.px[11].x+s.px[12].x)/2-(s.px[23].x+s.px[24].x)/2)*mm(s)));
+  return { sh, pv, hd, shift };
+}
+function postureSide(B){
+  const S_=B.filter(s=>(s.px[7].v>0.5&&s.px[11].v>0.5)||(s.px[8].v>0.5&&s.px[12].v>0.5)); if (S_.length<8) return null;
+  const cva=med(S_.map(s=>{ const L=s.px[7].v+s.px[11].v>=s.px[8].v+s.px[12].v; const e=L?s.px[7]:s.px[8], sh=L?s.px[11]:s.px[12]; return Math.atan2(sh.y-e.y,Math.abs(e.x-sh.x))*180/Math.PI; }));
+  const lean=med(S_.map(s=>{ const L=s.px[11].v>=s.px[12].v; const sh=L?s.px[11]:s.px[12], hp=L?s.px[23]:s.px[24]; return Math.atan2(Math.abs(sh.x-hp.x),hp.y-sh.y)*180/Math.PI; }));
+  return { cva, lean };
+}
+
+/* ---------- protocols ---------- */
+const PROTOS = () => [
+  { id:"befast", ic:"⚡", t:Lx("Screening ictus BE-FAST","BE-FAST stroke screen"), d:Lx("Equilibrio, occhi, viso, braccio, parola, tempo. Un minuto.","Balance, eyes, face, arm, speech, time. One minute."), dur:"1 min",
+    steps:[ { id:"qB", ask:Lx("Ha perso l'equilibrio o la coordinazione all'improvviso?","Sudden loss of balance or coordination?") },
+            { id:"qE", ask:Lx("Ha perso la vista o vede doppio all'improvviso?","Sudden loss of vision or double vision?") },
+            { id:"faceR", need:"face", d:2.5, t:Lx("Viso rilassato, guarda la fotocamera","Relaxed face, look at the camera") },
+            { id:"faceS", need:"face", d:3, t:Lx("Sorridi mostrando i denti","Smile showing the teeth") },
+            { id:"arm", need:"pose", d:10, beep:true, t:Lx("Braccia tese in avanti, palmi in su, occhi chiusi","Both arms straight out in front, palms up, eyes closed") },
+            { id:"qS", ask:Lx("Ripeti: «Oggi il cielo è sereno». Parla impastato, sbaglia parole o non capisce?","Repeat: “The sky is blue today”. Slurred, wrong words or not understanding?") },
+            { id:"qT", ask:Lx("Questi sintomi sono comparsi all'improvviso (minuti/ore)?","Did these symptoms start suddenly (minutes/hours)?") } ] },
+  { id:"tap", ic:"✌️", t:Lx("Finger tapping (bradicinesia)","Finger tapping (bradykinesia)"), d:Lx("Velocità, ampiezza, decremento e ritmo, per mano. Riferimento MDS-UPDRS 3.4.","Speed, amplitude, decrement and rhythm per hand. MDS-UPDRS 3.4 reference."), dur:"30 s",
+    steps:[ { id:"R", need:"hands", d:10, t:Lx("Mano DESTRA: tocca pollice e indice, più ampio e veloce che puoi","RIGHT hand: tap thumb and index, as wide and fast as you can") },
+            { id:"L", need:"hands", d:10, t:Lx("Mano SINISTRA: tocca pollice e indice, più ampio e veloce che puoi","LEFT hand: tap thumb and index, as wide and fast as you can") } ] },
+  { id:"tremor", ic:"〰️", t:Lx("Analisi del tremore (FFT)","Tremor analysis (FFT)"), d:Lx("Frequenza e ampiezza a riposo e in postura: distingue i pattern 4–6 Hz e 8–12 Hz.","Frequency and amplitude at rest and in posture: separates 4–6 Hz and 8–12 Hz patterns."), dur:"30 s",
+    steps:[ { id:"rest", need:"hands", d:12, t:Lx("Mani appoggiate sulle cosce, rilassate, inquadra le mani","Hands resting on the thighs, relaxed; frame the hands") },
+            { id:"post", need:"hands", d:12, t:Lx("Braccia tese in avanti, dita aperte, fermo","Arms straight out, fingers spread, hold still") } ] },
+  { id:"drift", ic:"🫴", t:Lx("Deriva dei pronatori","Pronator drift"), d:Lx("Segno precoce di deficit motorio centrale: deriva del braccio a occhi chiusi.","Early sign of central motor weakness: arm drift with eyes closed."), dur:"25 s",
+    steps:[ { id:"arm", need:"pose", d:20, beep:true, t:Lx("Braccia tese in avanti, palmi in su, occhi chiusi. Resta così fino al bip","Arms straight out, palms up, eyes closed. Hold until the beep") } ] },
+  { id:"kap", ic:"👍", t:Lx("Opposizione del pollice (Kapandji)","Thumb opposition (Kapandji)"), d:Lx("Punteggio 0–10 del pollice che raggiunge dita e palmo. Chirurgia della mano.","0–10 score of the thumb reaching fingers and palm. Hand surgery standard."), dur:"30 s",
+    steps:[ { id:"R", need:"hands", d:14, t:Lx("Mano DESTRA: pollice su indice, medio, anulare, mignolo, poi scendi lungo il mignolo fino al palmo","RIGHT hand: thumb to index, middle, ring, little finger, then down the little finger to the palm") },
+            { id:"L", need:"hands", d:14, t:Lx("Mano SINISTRA: stessa sequenza","LEFT hand: same sequence") } ] },
+  { id:"romberg", ic:"🧍", t:Lx("Test di Romberg strumentato","Instrumented Romberg test"), d:Lx("Oscillazione a occhi aperti e chiusi, quoziente di Romberg. Telefono su un appoggio fisso.","Sway with eyes open and closed, Romberg quotient. Phone on a fixed support."), dur:"45 s",
+    steps:[ { id:"open", need:"pose", d:20, t:Lx("In piedi, piedi uniti, braccia incrociate, occhi APERTI","Standing, feet together, arms crossed, eyes OPEN") },
+            { id:"closed", need:"pose", d:20, beep:true, t:Lx("Ora chiudi gli occhi, resta fermo fino al bip","Now close your eyes, stay still until the beep") } ] },
+  { id:"chair", ic:"🪑", t:Lx("Alzate dalla sedia in 30 s (CDC)","30-second chair stand (CDC)"), d:Lx("Forza degli arti inferiori e rischio di caduta, con norme per età e sesso.","Leg strength and fall risk, with age/sex norms."), dur:"30 s",
+    steps:[ { id:"go", need:"pose", d:30, beep:true, t:Lx("Braccia incrociate sul petto: alzati e siediti più volte che puoi","Arms crossed on the chest: stand up and sit down as many times as you can") } ] },
+  { id:"posture", ic:"📐", t:Lx("Analisi posturale","Posture analysis"), d:Lx("Spalle, bacino, testa, spostamento del tronco; di lato angolo cranio-vertebrale.","Shoulders, pelvis, head, trunk shift; side view craniovertebral angle."), dur:"15 s",
+    steps:[ { id:"front", need:"pose", d:5, t:Lx("In piedi, di fronte, braccia lungo i fianchi","Standing, facing the camera, arms by your sides") },
+            { id:"side", need:"pose", d:5, t:Lx("Girati di lato, sguardo dritto","Turn sideways, look straight ahead") } ] }
+];
+function labOpen(){ const list=PROTOS(); const facial={ id:"face", ic:"🩺", t:Lx("Esame del viso (VII, ATM, oculomotori)","Facial exam (VII, TMJ, eye movements)"), d:Lx("15 esercizi guidati, Sunnybrook, mandibola, 9 posizioni di sguardo.","15 guided exercises, Sunnybrook, jaw, 9 gaze positions."), dur:"2 min" };
+  $("#labGrid").innerHTML=[facial,...list].map(p=>`<button class="lcard" data-proto="${p.id}"><span class="lic">${p.ic}</span><b>${esc(p.t)}</b><small>${esc(p.d)}</small><em>${esc(p.dur)}</em></button>`).join("");
+  $("#lab").hidden=false; }
+$("#labGrid").addEventListener("click",e=>{ const b=e.target.closest("[data-proto]"); if (!b) return; $("#lab").hidden=true; if (S.view==="3d") setView("ar");
+  if (b.dataset.proto==="face") examStart(); else labStart(b.dataset.proto); });
+function labStart(id){ const p=PROTOS().find(x=>x.id===id); if (!p) return;
+  Object.assign(LAB,{ on:true, p, i:0, buf:[], data:{}, answers:{}, wait:false, t0:performance.now()+2000 }); $("#examHud").hidden=false; labStep(); }
+function labStop(){ LAB.on=false; $("#examHud").hidden=true; $("#exAsk").hidden=true; }
+function labStep(){ const st=LAB.p.steps[LAB.i]; if (!st) return;
+  if (st.ask){ LAB.wait=true; $("#exAsk").hidden=false; $("#exText").textContent=st.ask; $("#exMus").textContent=LAB.p.t; $("#exBar").style.width="0%"; $("#exStep").textContent=`${LAB.i+1}/${LAB.p.steps.length}`; return; }
+  LAB.wait=false; $("#exAsk").hidden=true; LAB.buf=[]; if (st.beep) setTimeout(()=>beep(660,220), Math.max(0,LAB.t0-performance.now())); }
+function labAnswer(v){ const st=LAB.p.steps[LAB.i]; LAB.answers[st.id]=v; LAB.i++; LAB.t0=performance.now()+1500; if (LAB.i>=LAB.p.steps.length){ labStop(); labReport(); return; } labStep(); }
+$("#exYes").addEventListener("click",()=>labAnswer(true)); $("#exNo").addEventListener("click",()=>labAnswer(false));
+function labTick(now){
+  if (!LAB.on || LAB.wait) return; const st=LAB.p.steps[LAB.i]; const el=(now-LAB.t0)/1000;
+  $("#exStep").textContent=`${LAB.i+1}/${LAB.p.steps.length}`; $("#exText").textContent=(el<0?Lx("Preparati: ","Get ready: "):"")+st.t; $("#exMus").textContent=LAB.p.t;
+  $("#exBar").style.width=Math.round(Math.max(0,Math.min(1,el/st.d))*100)+"%";
+  const ok = st.need==="hands" ? TR.hands.some(h=>h.tracked) : st.need==="face" ? TR.face.tracked : TR.pose.tracked;
+  $("#exWarn").textContent = ok ? "" : st.need==="hands" ? Lx("Mano non visibile: inquadra la mano","Hand not visible: frame the hand") : st.need==="face" ? Lx("Viso non visibile","Face not visible") : Lx("Corpo non visibile: inquadra la persona","Body not visible: frame the person");
+  if (el>=st.d){ LAB.data[st.id]=LAB.buf; LAB.buf=[]; if (st.beep) beep(880,300); LAB.i++; LAB.t0=now+1500; if (LAB.i>=LAB.p.steps.length){ labStop(); labReport(); return; } labStep(); }
+}
+const LABNEED = () => LAB.on && !LAB.wait && LAB.p.steps[LAB.i] ? LAB.p.steps[LAB.i].need : null;
+
+/* ---------- reports ---------- */
+function labAnalyse(p, D, Q){
+  const R={ title:p.t, proto:p.id, flags:[], rows:[], charts:"", key:{}, main:null, mainLab:"", refs:"" }, F=R.flags, f1=(v,u,d)=>v==null||!isFinite(v)?"–":v.toFixed(d??(Math.abs(v)<10?1:0))+(u?" "+u:"");
+  const row=(a,b,c,cls)=>R.rows.push([a,b,c||"",cls||""]);
+  if (p.id==="tap"){
+    const r=tapAnalysis(D.R||[]), l=tapAnalysis(D.L||[]), sR=tapScore(r), sL=tapScore(l);
+    for (const [nm,x,s] of [[Lx("Destra","Right"),r,sR],[Lx("Sinistra","Left"),l,sL]]){ if (!x){ row(nm,Lx("mano non rilevata","hand not detected")); continue; }
+      row(`${nm} · ${Lx("frequenza","frequency")}`, f1(x.freq,"Hz",2), Lx("sani ≈ 3,2 Hz","healthy ≈ 3.2 Hz"), x.freq<2.5?"mid":"");
+      row(`${nm} · ${Lx("ampiezza media","mean amplitude")}`, f1(x.amp,"mm"), "", x.amp<25?"mid":"");
+      row(`${nm} · ${Lx("decremento","decrement")}`, f1(x.dec,"%"), "< 15 %", x.dec>=30?"bad":x.dec>=15?"mid":"");
+      row(`${nm} · ${Lx("irregolarità ritmo (CV) / esitazioni","rhythm irregularity (CV) / hesitations")}`, `${f1(x.cv,"%")} / ${x.hes}`, "", x.hes>2?"mid":"");
+      row(`${nm} · ${Lx("stima UPDRS 3.4","UPDRS 3.4 estimate")}`, `${s}/4`, "", s>=2?"bad":s===1?"mid":""); }
+    R.main=Math.max(sR,sL); R.mainLab=Lx("UPDRS 3.4 stimato (peggiore)","UPDRS 3.4 estimate (worst)"); R.mainMax="/4";
+    R.key={ freqR:r&&r.freq, freqL:l&&l.freq, decR:r&&r.dec, decL:l&&l.dec };
+    R.charts = (r?`<div class="chart"><small>${Lx("Apertura pollice-indice, destra","Thumb–index aperture, right")}</small>${spark(r.curve,300,46,"#7ff3ff")}</div>`:"")+(l?`<div class="chart"><small>${Lx("Apertura pollice-indice, sinistra","Thumb–index aperture, left")}</small>${spark(l.curve,300,46,"#ffb63c")}</div>`:"");
+    if (r&&l&&Math.max(r.freq,l.freq)>0){ const a=Math.abs(r.freq-l.freq)/Math.max(r.freq,l.freq), b=Math.abs(r.amp-l.amp)/Math.max(r.amp,l.amp);
+      if ((a>0.25||b>0.3) && Math.max(sR,sL)>=1) F.push({ lv:2, t:Lx(`Bradicinesia asimmetrica, peggiore a ${sR>sL?"destra":"sinistra"}: l'asimmetria è tipica dei parkinsonismi; valutazione neurologica consigliata.`,`Asymmetric bradykinesia, worse on the ${sR>sL?"right":"left"}: asymmetry is typical of parkinsonism; neurological assessment advised.`) }); }
+    for (const [nm,x] of [[Lx("destra","right"),r],[Lx("sinistra","left"),l]]) if (x && x.dec>=30) F.push({ lv:2, t:Lx(`Decremento progressivo dell'ampiezza a ${nm} (${Math.round(x.dec)}%): il "sequence effect" è il segno più specifico di bradicinesia parkinsoniana.`,`Progressive amplitude decrement on the ${nm} (${Math.round(x.dec)}%): the sequence effect is the most specific sign of parkinsonian bradykinesia.`) });
+    R.refs=Lx("Riferimenti: MDS-UPDRS parte III item 3.4; Simonet et al. 2021 (sani 3,18 battute/s, PD iniziale 2,63).","References: MDS-UPDRS part III item 3.4; Simonet et al. 2021 (healthy 3.18 taps/s, early PD 2.63).");
+  }
+  if (p.id==="tremor"){
+    const a=tremorAnalysis(D.rest||[]), b=tremorAnalysis(D.post||[]);
+    for (const [nm,x] of [[Lx("A riposo","At rest"),a],[Lx("Posturale","Postural"),b]]){ if (!x){ row(nm,Lx("mano non rilevata","hand not detected")); continue; }
+      row(`${nm} · ${Lx("frequenza dominante","dominant frequency")}`, x.present?f1(x.f,"Hz"):Lx("nessun picco","no peak"), `${Lx("campionamento","sampling")} ${Math.round(x.fsRaw)} Hz`);
+      row(`${nm} · ${Lx("ampiezza picco-picco","peak-to-peak amplitude")}`, f1(x.amp,"mm"), x.amp<10?"< 1 cm":x.amp<30?"1–3 cm":"> 3 cm", x.present&&x.amp>10?"bad":x.present?"mid":"");
+      row(`${nm} · ${Lx("regolarità (potenza nel picco)","regularity (power in peak)")}`, f1(x.tonal*100,"%"), ""); }
+    R.charts=(a?`<div class="chart"><small>${Lx("Spettro a riposo 2,5–13 Hz","Rest spectrum 2.5–13 Hz")}</small>${spark(a.spec,300,46,"#7ff3ff")}</div>`:"")+(b?`<div class="chart"><small>${Lx("Spettro posturale","Postural spectrum")}</small>${spark(b.spec,300,46,"#ffb63c")}</div>`:"");
+    if (a && a.present && a.f>=3.5 && a.f<=6.5) F.push({ lv:2, t:Lx(`Tremore a riposo a ${a.f.toFixed(1)} Hz: frequenza tipica del tremore parkinsoniano (4–6 Hz). Valutazione neurologica consigliata.`,`Rest tremor at ${a.f.toFixed(1)} Hz: frequency typical of parkinsonian tremor (4–6 Hz). Neurological assessment advised.`) });
+    if (b && b.present && (!a || !a.present)){ if (b.f>=8) F.push({ lv:1, t:Lx(`Tremore solo posturale a ${b.f.toFixed(1)} Hz, ampiezza piccola: compatibile con tremore fisiologico accentuato (caffeina, ansia, farmaci, tiroide).`,`Postural-only tremor at ${b.f.toFixed(1)} Hz, small amplitude: compatible with enhanced physiological tremor (caffeine, anxiety, drugs, thyroid).`) });
+      else F.push({ lv:2, t:Lx(`Tremore posturale a ${b.f.toFixed(1)} Hz senza tremore a riposo: pattern compatibile con tremore essenziale.`,`Postural tremor at ${b.f.toFixed(1)} Hz without rest tremor: pattern compatible with essential tremor.`) }); }
+    if (a && a.present && b && b.present && b.amp<a.amp*0.5) F.push({ lv:1, t:Lx("Il tremore si riduce in postura rispetto al riposo: caratteristica dei tremori parkinsoniani.","Tremor decreases in posture versus rest: a feature of parkinsonian tremor.") });
+    R.main=a&&a.present?Math.round(a.f*10)/10:(b&&b.present?Math.round(b.f*10)/10:0); R.mainLab=Lx("Frequenza dominante (Hz)","Dominant frequency (Hz)"); R.mainMax=" Hz";
+    R.key={ restAmp:a&&a.amp, postAmp:b&&b.amp, restF:a&&a.present?a.f:null, postF:b&&b.present?b.f:null };
+    R.refs=Lx("Bande: parkinsoniano 4–6 Hz a riposo; essenziale 4–12 Hz posturale; cerebellare < 5 Hz intenzionale (Am Fam Physician 2003). Il limite superiore misurabile è metà della frequenza di campionamento.","Bands: parkinsonian 4–6 Hz at rest; essential 4–12 Hz postural; cerebellar < 5 Hz intention (Am Fam Physician 2003). The highest measurable frequency is half the sampling rate.");
+  }
+  if (p.id==="drift" || p.id==="befast"){
+    const d=driftAnalysis(D.arm||[]);
+    if (d){ row(Lx("Abbassamento polso sinistro","Left wrist drop"), f1(d.L,"mm"), "< 30 mm", d.L>60?"bad":d.L>30?"mid":""); row(Lx("Abbassamento polso destro","Right wrist drop"), f1(d.R,"mm"), "< 30 mm", d.R>60?"bad":d.R>30?"mid":"");
+      R.charts+=`<div class="chart"><small>${Lx("Altezza dei polsi nel tempo (giù = deriva)","Wrist height over time (down = drift)")}</small>${spark(d.curveR.map(v=>-v),300,40,"#7ff3ff")}${spark(d.curveL.map(v=>-v),300,40,"#ffb63c")}</div>`;
+      const side = d.L-d.R>30 ? "L" : d.R-d.L>30 ? "R" : null;
+      if (side) F.push({ lv:p.id==="befast"?4:3, t:Lx(`Deriva del braccio ${side==="L"?"sinistro":"destro"} (${Math.round(Math.max(d.L,d.R))} mm): segno di possibile deficit motorio centrale (via piramidale).`,`${side==="L"?"Left":"Right"} arm drift (${Math.round(Math.max(d.L,d.R))} mm): sign of possible central motor weakness (pyramidal tract).`) });
+      else if (Math.min(d.L,d.R)>60) F.push({ lv:1, t:Lx("Entrambe le braccia scendono in modo simile: più probabile affaticamento che deficit unilaterale.","Both arms drop similarly: fatigue is more likely than a one-sided deficit.") });
+      R.key.drift=Math.max(d.L,d.R); R.driftSide=side; }
+    else row(Lx("Braccia","Arms"), Lx("non rilevate","not detected"));
+    if (p.id==="drift"){ R.main=d?Math.round(Math.abs(d.L-d.R)):0; R.mainLab=Lx("Differenza sinistra-destra (mm)","Left-right difference (mm)"); R.mainMax=" mm"; R.refs=Lx("Braccia a 90°, palmi in su, occhi chiusi per 20 s; positivo se un braccio scende e prona (NIHSS item 5: deriva entro 10 s).","Arms at 90°, palms up, eyes closed for 20 s; positive if one arm drops and pronates (NIHSS item 5: drift within 10 s)."); }
+  }
+  if (p.id==="befast"){
+    const r=D.faceR||[], s=D.faceS||[]; let fa=null;
+    if (r.length>3 && s.length>3){ const b0={ cR:{}, cL:{} }; for (const ax of ["x","y","z"]){ b0.cR[ax]=med(r.map(x=>x.g.cR[ax])); b0.cL[ax]=med(r.map(x=>x.g.cL[ax])); }
+      const mR=pct(s.map(x=>dW(x.g.cR,b0.cR)),0.9), mL=pct(s.map(x=>dW(x.g.cL,b0.cL)),0.9); fa={ R:mR, L:mL, ratio:Math.max(mR,mL)>1?Math.min(mR,mL)/Math.max(mR,mL):1 };
+      row(Lx("Sorriso: escursione angolo bocca dx / sx","Smile: mouth corner excursion R / L"), `${f1(mR,"mm")} / ${f1(mL,"mm")}`, Lx("simmetria ","symmetry ")+Math.round(fa.ratio*100)+"%", fa.ratio<0.6?"bad":fa.ratio<0.75?"mid":""); }
+    const pos={ B:!!Q.qB, E:!!Q.qE, F:!!(fa&&fa.ratio<0.65), A:!!R.driftSide, S:!!Q.qS };
+    for (const [k,lab] of [["B",Lx("Equilibrio","Balance")],["E",Lx("Occhi","Eyes")],["F",Lx("Viso","Face")],["A",Lx("Braccio","Arm")],["S",Lx("Parola","Speech")]]) row(`${k} · ${lab}`, pos[k]?Lx("POSITIVO","POSITIVE"):Lx("negativo","negative"), "", pos[k]?"bad":"");
+    const any=Object.values(pos).some(Boolean); R.main=Object.values(pos).filter(Boolean).length; R.mainLab=Lx("Segni positivi","Positive signs"); R.mainMax="/5";
+    if (any) F.unshift({ lv:4, t:Lx(`POSSIBILE ICTUS: ${Object.keys(pos).filter(k=>pos[k]).join(", ")} positivo. ${Q.qT?"Insorgenza improvvisa. ":""}CHIAMA SUBITO IL 112 e annota l'ora in cui la persona è stata vista bene l'ultima volta (${new Date().toLocaleTimeString(S.lang==="it"?"it-IT":"en-GB",{hour:"2-digit",minute:"2-digit"})} ora del test).`,`POSSIBLE STROKE: ${Object.keys(pos).filter(k=>pos[k]).join(", ")} positive. ${Q.qT?"Sudden onset. ":""}CALL EMERGENCY SERVICES NOW and note when the person was last seen well (test time ${new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}).`), call:true });
+    R.key={ pos:R.main }; R.refs=Lx("BE-FAST (Aroor et al., Stroke 2017): aggiungere Equilibrio e Occhi a FAST riduce gli ictus non riconosciuti. Un test negativo non esclude un ictus.","BE-FAST (Aroor et al., Stroke 2017): adding Balance and Eyes to FAST reduces missed strokes. A negative test does not rule out stroke.");
+  }
+  if (p.id==="kap"){
+    const r=kapandji(D.R||[]), l=kapandji(D.L||[]);
+    for (const [nm,x] of [[Lx("Destra","Right"),r],[Lx("Sinistra","Left"),l]]) row(nm, x?`${x.score}/10`:Lx("mano non rilevata","hand not detected"), Lx("normale 10","normal 10"), x&&x.score<8?"bad":x&&x.score<10?"mid":"");
+    const lv=["",Lx("lato dell'indice, falange prossimale","index proximal phalanx"),Lx("lato dell'indice, falange media","index middle phalanx"),Lx("punta dell'indice","index tip"),Lx("punta del medio","middle tip"),Lx("punta dell'anulare","ring tip"),Lx("punta del mignolo","little tip"),Lx("piega DIP del mignolo","little DIP crease"),Lx("piega PIP del mignolo","little PIP crease"),Lx("base del mignolo (MCP)","little MCP"),Lx("piega palmare distale","distal palmar crease")];
+    for (const [nm,x] of [[Lx("destra","right"),r],[Lx("sinistra","left"),l]]) if (x && x.score<10) F.push({ lv:x.score<7?2:1, t:Lx(`Opposizione del pollice ${nm}: arriva fino a «${lv[x.score]||"–"}» (${x.score}/10). Sotto 8 la presa fine è limitata (artrosi trapezio-metacarpale, tendini, nervo mediano).`,`${nm[0].toUpperCase()+nm.slice(1)} thumb opposition reaches “${lv[x.score]||"–"}” (${x.score}/10). Below 8, fine grip is limited (CMC arthritis, tendons, median nerve).`) });
+    R.main=Math.min(r?r.score:0,l?l.score:0); R.mainLab=Lx("Kapandji (peggiore)","Kapandji (worst)"); R.mainMax="/10"; R.key={ R:r&&r.score, L:l&&l.score };
+    R.refs=Lx("Kapandji 1986: 10 punti dalla falange prossimale dell'indice alla piega palmare distale.","Kapandji 1986: 10 points from the index proximal phalanx to the distal palmar crease.");
+  }
+  if (p.id==="romberg"){
+    const o=swayAnalysis(D.open||[]), c=swayAnalysis(D.closed||[]);
+    for (const [nm,x] of [[Lx("Occhi aperti","Eyes open"),o],[Lx("Occhi chiusi","Eyes closed"),c]]){ if (!x){ row(nm,Lx("corpo non rilevato","body not detected")); continue; }
+      row(`${nm} · ${Lx("area di oscillazione 95%","95% sway area")}`, f1(x.area,"cm²",1)); row(`${nm} · ${Lx("velocità media","mean velocity")}`, f1(x.vel,"mm/s")); row(`${nm} · ${Lx("oscillazione laterale / antero-post. (RMS)","lateral / AP sway (RMS)")}`, `${f1(x.ml,"mm")} / ${f1(x.ap,"mm")}`); }
+    const rq = o&&c&&o.area>0.05 ? c.area/o.area : null; row(Lx("Quoziente di Romberg (area chiusi / aperti)","Romberg quotient (area closed / open)"), f1(rq,""), Lx("tipico 1–2","typical 1–2"), rq>2.5?"bad":rq>2?"mid":"");
+    if (o&&c) R.charts=`<div class="chart"><small>${Lx("Traccia dell'oscillazione: azzurro aperti, arancio chiusi","Sway trace: blue open, orange closed")}</small><svg class="spk" viewBox="-60 -60 120 120" width="160" height="160"><circle r="50" fill="none" stroke="rgba(127,243,255,.2)"/><polyline fill="none" stroke="#7ff3ff" stroke-width="1" points="${o.trace.map(p=>`${Math.max(-58,Math.min(58,p.x)).toFixed(1)},${Math.max(-58,Math.min(58,p.y)).toFixed(1)}`).join(" ")}"/><polyline fill="none" stroke="#ffb63c" stroke-width="1" points="${c.trace.map(p=>`${Math.max(-58,Math.min(58,p.x)).toFixed(1)},${Math.max(-58,Math.min(58,p.y)).toFixed(1)}`).join(" ")}"/></svg></div>`;
+    if (c && c.maxd>120) F.push({ lv:3, t:Lx("Grande spostamento a occhi chiusi, possibile perdita di equilibrio: Romberg positivo, rischio di caduta.","Large displacement with eyes closed, possible loss of balance: positive Romberg, fall risk.") });
+    else if (rq!=null && rq>2.5) F.push({ lv:2, t:Lx(`L'oscillazione aumenta di ${rq.toFixed(1)} volte chiudendo gli occhi: l'equilibrio dipende molto dalla vista, possibile deficit propriocettivo o vestibolare.`,`Sway increases ${rq.toFixed(1)}× with eyes closed: balance relies heavily on vision, possible proprioceptive or vestibular deficit.`) });
+    if (o && o.area>12) F.push({ lv:2, t:Lx("Oscillazione elevata già a occhi aperti: valutare cause cerebellari o muscolari.","High sway already with eyes open: consider cerebellar or muscular causes.") });
+    R.main=rq!=null?Math.round(rq*10)/10:0; R.mainLab=Lx("Quoziente di Romberg","Romberg quotient"); R.mainMax=""; R.key={ rq, areaO:o&&o.area, areaC:c&&c.area };
+    R.refs=Lx("Telefono fermo su un appoggio: il movimento della fotocamera falsa la misura. Romberg classico: piedi uniti, braccia incrociate, 20–30 s per condizione.","Phone fixed on a support: camera motion corrupts the measure. Classic Romberg: feet together, arms crossed, 20–30 s per condition.");
+  }
+  if (p.id==="chair"){
+    const s=standAnalysis(D.go||[]); const pts=R.pt||{};
+    if (s){ row(Lx("Alzate complete in 30 s","Full stands in 30 s"), String(s.n), "", ""); if (s.reps.length>=4) row(Lx("Rallentamento finale (ultime/prime)","Final slowing (last/first)"), f1(s.fat,"×"), "", s.fat>1.5?"mid":"");
+      R.charts=`<div class="chart"><small>${Lx("Flessione del ginocchio nel tempo","Knee flexion over time")}</small>${spark(s.curve,300,46,"#4ef0c4")}</div>`; }
+    else row(Lx("Gambe","Legs"),Lx("non rilevate: inquadra tutto il corpo","not detected: frame the whole body"));
+    R.main=s?s.n:0; R.mainLab=Lx("Alzate in 30 s","Stands in 30 s"); R.mainMax=""; R.key={ n:s&&s.n };
+    R.chairCheck=true;
+    R.refs=Lx("CDC STEADI: punteggi sotto la media (uomini/donne) 60–64: <14/<12 · 65–69: <12/<11 · 70–74: <12/<10 · 75–79: <11/<10 · 80–84: <10/<9 · 85–89: <8/<8 · 90–94: <7/<4. Sotto la media = aumentato rischio di caduta.","CDC STEADI below-average scores (men/women) 60–64: <14/<12 · 65–69: <12/<11 · 70–74: <12/<10 · 75–79: <11/<10 · 80–84: <10/<9 · 85–89: <8/<8 · 90–94: <7/<4. Below average = higher fall risk.");
+  }
+  if (p.id==="posture"){
+    const a=postureFront(D.front||[]), b=postureSide(D.side||[]);
+    if (a){ row(Lx("Inclinazione delle spalle","Shoulder tilt"), f1(Math.abs(a.sh),"°"), "< 2°", Math.abs(a.sh)>3?"mid":""); row(Lx("Inclinazione del bacino","Pelvic tilt"), f1(Math.abs(a.pv),"°"), "< 2°", Math.abs(a.pv)>3?"mid":"");
+      row(Lx("Inclinazione della testa","Head tilt"), f1(Math.abs(a.hd),"°"), "< 3°", Math.abs(a.hd)>4?"mid":""); row(Lx("Spostamento laterale del tronco","Lateral trunk shift"), f1(Math.abs(a.shift),"mm"), "< 15 mm", Math.abs(a.shift)>20?"mid":"");
+      if (Math.abs(a.sh)>3 && Math.abs(a.pv)>3 && Math.sign(a.sh)!==Math.sign(a.pv)) F.push({ lv:2, t:Lx("Spalle e bacino inclinati in direzioni opposte: pattern che giustifica uno screening per scoliosi (test di Adams).","Shoulders and pelvis tilted in opposite directions: pattern that warrants a scoliosis screen (Adams test).") });
+      else if (Math.abs(a.pv)>3) F.push({ lv:1, t:Lx("Bacino inclinato: valutare dismetria degli arti inferiori.","Pelvis tilted: consider a leg-length difference.") }); }
+    if (b){ row(Lx("Angolo cranio-vertebrale (approssimato)","Craniovertebral angle (approx.)"), f1(b.cva,"°"), "> 50°", b.cva<45?"bad":b.cva<50?"mid":""); row(Lx("Inclinazione del tronco","Trunk lean"), f1(b.lean,"°"), "< 5°", b.lean>8?"mid":"");
+      if (b.cva<48) F.push({ lv:1, t:Lx(`Testa proiettata in avanti (angolo ${Math.round(b.cva)}°): aumenta il carico sulla colonna cervicale; esercizi di retrazione del mento.`,`Forward head posture (angle ${Math.round(b.cva)}°): increases cervical spine load; chin-tuck exercises.`) }); }
+    R.main=b?Math.round(b.cva):0; R.mainLab=Lx("Angolo cranio-vertebrale","Craniovertebral angle"); R.mainMax="°"; R.key={ cva:b&&b.cva, sh:a&&a.sh, pv:a&&a.pv };
+    R.refs=Lx("Angolo cranio-vertebrale tra orizzontale e linea spalla-orecchio (la spalla sostituisce C7): sotto circa 48–50° indica testa in avanti. Tieni il telefono verticale.","Craniovertebral angle between horizontal and shoulder-ear line (shoulder replaces C7): below about 48–50° suggests forward head posture. Keep the phone upright.");
+  }
+  if (!F.length) F.push({ lv:0, t:Lx("Nessuna anomalia evidente nelle misure della fotocamera.","No obvious anomaly in the camera measurements.") });
+  F.sort((a,b)=>b.lv-a.lv); return R;
+}
+async function labReport(saved){
+  let R;
+  if (saved) R=saved.r; else { R=labAnalyse(LAB.p, LAB.data, LAB.answers); }
+  let pat=null; try { pat=(await DB.all("patients")).find(p=>p.id===S.pid)||null; } catch(e){}
+  if (R.chairCheck && pat && pat.age && pat.sex && !R.flags.some(f=>f.chair)){ const T_={ M:[[60,14],[65,12],[70,12],[75,11],[80,10],[85,8],[90,7]], F:[[60,12],[65,11],[70,10],[75,10],[80,9],[85,8],[90,4]] }[pat.sex];
+    let lim=null; for (const [a,v] of T_) if (pat.age>=a) lim=v; if (lim!=null && R.main<lim){ R.flags.unshift({ lv:2, chair:true, t:Lx(`${R.main} alzate: sotto la media per età e sesso (< ${lim}). Indica debolezza degli arti inferiori e rischio di caduta aumentato (CDC STEADI).`,`${R.main} stands: below average for age and sex (< ${lim}). Indicates leg weakness and higher fall risk (CDC STEADI).`) }); R.flags=R.flags.filter(f=>f.lv>0||R.flags.length===1); } }
+  const lvc=["ok","info","warn","high","crit"], t=saved?saved.t:Date.now();
+  $("#repBody").innerHTML=`<div class="rhead"><div><b>${esc(R.title)}</b><br>${esc(fmtDate(t))}${pat?" · "+esc(pat.name):""}</div><div class="rscore"><span>${esc(R.mainLab)}</span><b>${R.main??"–"}</b><small>${esc(R.mainMax||"")}</small></div></div>
+    <div class="flags">${R.flags.map(f=>`<p class="${lvc[f.lv]}">${esc(f.t)}${f.call?` <a class="call" href="tel:112">📞 112</a>`:""}</p>`).join("")}</div>
+    <table>${R.rows.map(r=>`<tr><td>${esc(r[0])}</td><td class="${r[3]}">${esc(r[1])}</td><td class="nm">${esc(r[2])}</td></tr>`).join("")}</table>
+    ${R.charts?`<div class="charts">${R.charts}</div>`:""}${await trendHtml(R.proto)}
+    <p class="note">${esc(R.refs||"")}</p>
+    <p class="disc">${esc(Lx("Strumento di supporto basato sulla fotocamera: non è una diagnosi. Le misure dipendono da luce, distanza, inquadratura e frequenza dei fotogrammi. Ripeti il test nelle stesse condizioni per confrontarlo nel tempo.","Camera-based support tool: not a diagnosis. Measurements depend on light, distance, framing and frame rate. Repeat the test under the same conditions to compare over time."))}</p>`;
+  $("#repSave").hidden=!!saved; $("#report").hidden=false;
+  REPSAVE = saved ? null : async ()=>{ let pts=[]; try { pts=await DB.all("patients"); } catch(e){} const p=pts.find(q=>q.id===S.pid); if (!p){ toast(T[S.lang].mNoPat); $("#pat").hidden=false; renderPatients(); return; }
+    try { await DB.put("scans",{ pid:p.id, t, type:"lab", proto:R.proto, r:R, moles:[], face:"" }); toast(Lx("Referto salvato · ","Report saved · ")+p.name); $("#repSave").hidden=true; } catch(e){ toast(String(e&&e.message||e)); } };
+}
+async function trendHtml(proto){
+  if (!S.pid) return ""; let all=[]; try { all=(await DB.scans(S.pid)).filter(s=>s.type==="lab"&&s.proto===proto).sort((a,b)=>a.t-b.t); } catch(e){ return ""; }
+  if (all.length<2) return ""; const keys=Object.keys(all[all.length-1].r.key||{}).filter(k=>all.some(s=>s.r.key&&isFinite(s.r.key[k])));
+  return `<h4>${esc(Lx("Andamento nel tempo","Trend over time"))} · ${all.length} ${esc(Lx("test","tests"))}</h4><div class="trend">${keys.map(k=>{ const v=all.map(s=>s.r.key?+s.r.key[k]:NaN); const last=v[v.length-1], first=v.find(x=>isFinite(x));
+    return `<div><small>${esc(k)}</small>${spark(v,140,30)}<b>${isFinite(last)?(+last).toFixed(1):"–"}</b><em>${isFinite(first)&&isFinite(last)&&first!==0?((last-first)/Math.abs(first)*100>0?"+":"")+Math.round((last-first)/Math.abs(first)*100)+"%":""}</em></div>`; }).join("")}</div>`;
+}
+$("#labBtn").addEventListener("click", labOpen);
 
 /* ---------- labels that stay put ---------- */
 const LST = new Map();
@@ -3775,7 +4088,9 @@ function loop(){
     const wantHands = models.hands && (L.hands || (S.reveal==="lens" && S.follow==="finger"));
     const wantFace = !!models.face; // always on: it also confirms that a detected body is a real person
     let task = "pose";
-    if (EX.on && models.face) task="face";
+    const ln=LABNEED();
+    if (ln && models[ln]) task=ln;
+    else if (EX.on && models.face) task="face";
     else if (frameN%2===1 || !models.pose){
       if (wantHands && wantFace) task = (otherN++%2===0) ? "face" : "hands";
       else if (wantFace) task="face"; else if (wantHands) task="hands";
@@ -3791,7 +4106,7 @@ function loop(){
     if (FSK && now-SK.lastFace>2500 && SK.lastFace) { FSK.reset(); SK.lastFace=0; }
   }
   if (now-fpsT>1000){ fps=Math.round(detN*1000/(now-fpsT)); detN=0; fpsT=now; updateStatus(); }
-  updateDock(now); examTick(now);
+  updateDock(now); examTick(now); labTick(now);
   if (S.view==="3d") render3d(now); else render(now);
 }
 
@@ -3941,6 +4256,7 @@ $("#reset3d").addEventListener("click",()=>{ if (E3) E3.resetView(); });
 const GUIDE = {
   it:[["Si parte dal viso","L’app si apre in modalità Pelle. Inquadra il viso con luce frontale e resta fermo 2–3 secondi: compaiono nei (verde), brufoli (rosso), macchie (marrone), rigonfiamenti (lilla) e rughe (ambra)."],
     ["Tocca un’etichetta","Un tocco su un’etichetta della pelle apre i consigli alimentari per quel rilevamento."],
+    ["Laboratorio clinico 🩺","Il pulsante 🩺 apre 9 test standardizzati: esame del viso, screening ictus BE-FAST, finger tapping (bradicinesia, MDS-UPDRS 3.4), analisi del tremore in frequenza, deriva dei pronatori, opposizione del pollice di Kapandji, Romberg strumentato, alzate dalla sedia in 30 s con norme CDC, analisi posturale. Ogni referto si salva nel paziente e mostra l'andamento nel tempo. Per i test con occhi chiusi un bip segna inizio e fine."],
     ["Esame del viso 🩺","Una sequenza guidata di 15 esercizi (sopracciglia, occhi, sorriso, labbra, guance, mandibola, movimenti oculari, ammiccamento) produce una scheda referto con simmetria per lato, punteggio tipo Sunnybrook, apertura e lateralità della mandibola e segnalazioni. Si salva nello storico del paziente e si stampa in PDF."],
     ["Dati meccanici","Con il corpo inquadrato il pannello mostra angoli di spalla, gomito, anca e ginocchio, velocità, escursione massima rispetto ai valori AAOS e asimmetrie destra/sinistra; con le mani, gli angoli MCP/PIP/DIP di ogni dito. Il pannello si sposta da solo dove non copre il corpo; la freccia nel titolo lo riduce."],
     ["Analisi pelle","Il pannello a sinistra stima tono, rossore, uniformità, lucidità, pori, occhiaie, ammiccamenti e battito. Resta fermo 10–15 secondi con luce frontale; toccalo per ridurlo. Le misure vengono salvate con ogni scansione NEI."],
@@ -3951,6 +4267,7 @@ const GUIDE = {
     ["Limiti","È una rappresentazione illustrativa, non una radiografia e non una diagnosi. Per ogni dubbio vale il parere del medico."]],
   en:[["It starts on the face","The app opens in Skin mode. Frame the face in frontal light and hold still 2–3 seconds: moles (green), pimples (red), dark spots (brown), lumps (lilac) and wrinkles (amber) appear."],
     ["Tap a label","Tap any skin label to open food tips for that finding."],
+    ["Clinical lab 🩺","The 🩺 button opens 9 standardised tests: facial exam, BE-FAST stroke screen, finger tapping (bradykinesia, MDS-UPDRS 3.4), frequency tremor analysis, pronator drift, Kapandji thumb opposition, instrumented Romberg, 30-second chair stand with CDC norms, posture analysis. Each report is saved to the patient and shows the trend over time. Eyes-closed tests use a beep for start and end."],
     ["Facial exam 🩺","A guided sequence of 15 exercises (brows, eyes, smile, lips, cheeks, jaw, eye movements, blinking) produces a report sheet with per-side symmetry, a Sunnybrook-style score, jaw opening and excursion, and flags. It is saved in the patient history and prints to PDF."],
     ["Joint mechanics","With the body in view the panel shows shoulder, elbow, hip and knee angles, speed, maximum range against AAOS values and left/right asymmetry; with hands, the MCP/PIP/DIP angles of each finger. The panel moves itself to where it does not cover the body; the arrow in its title collapses it."],
     ["Skin analysis","The panel on the left estimates tone, redness, evenness, shine, pores, dark circles, blinks and pulse. Hold still 10–15 seconds in frontal light; tap it to collapse. The readings are saved with every MOLES scan."],
@@ -3960,7 +4277,7 @@ const GUIDE = {
     ["Settings ⚙︎","Look: Hologram, Colour holo, X-ray, Solid. “Max” tracking is more precise but slower. In 3D you also get Section and MRI."],
     ["Limits","This is an illustration, not an X-ray and not a diagnosis. For any doubt, a doctor’s opinion is what counts."]]
 };
-const APP_VER="v12 · 18/11";
+const APP_VER="v13 · 18/11";
 function renderGuide(){ $("#guide h2").textContent=T[S.lang].gTitle+" · "+APP_VER; $("#guideL").innerHTML = GUIDE[S.lang].map(g=>`<li><b>${esc(g[0])}</b>${esc(g[1])}</li>`).join("")
   + `<li><b>Diagnostica 3D</b><button class="btn" id="diagBtn" type="button">Esegui test</button><pre id="diagOut" style="white-space:pre-wrap;font-size:11px;line-height:1.35;margin:8px 0 0"></pre></li>`;
   $("#diagBtn").addEventListener("click", async ()=>{ const o=$("#diagOut"); o.textContent="…"; try { const E=await ensure3D(); if (!E.diag){ o.textContent="motore semplificato (pack non caricato)"; return; }
@@ -3994,6 +4311,8 @@ async function renderPatients(){
   scans.sort((a,b)=>a.t-b.t);
   const html=[];
   for (let i=scans.length-1;i>=0;i--){ const sc=scans[i], older=scans.slice(0,i).filter(s=>s.type!=="exam");
+    if (sc.type==="lab"){ const r=sc.r||{}, top=(r.flags||[])[0];
+      html.push(`<div class="scan exam"><h3><span>🧪 ${esc(fmtDate(sc.t))} · ${esc(r.title||"")} · ${esc(r.mainLab||"")} ${r.main??"–"}${esc(r.mainMax||"")}</span><span class="rowb"><button class="btn" data-openlab="${sc.id}">${esc(Lx("Apri referto","Open report"))}</button><button class="btn warn" data-delscan="${sc.id}">${esc(tx.pScanDel)}</button></span></h3>${top?`<p class="note">${esc(top.t)}</p>`:""}</div>`); continue; }
     if (sc.type==="exam"){ const a=sc.a||{}, top=(a.flags||[])[0];
       html.push(`<div class="scan exam"><h3><span>🩺 ${esc(fmtDate(sc.t))} · ${esc(Lx("Esame del viso","Facial exam"))} · Sunnybrook* ${a.composite??"–"}</span><span class="rowb"><button class="btn" data-openrep="${sc.id}">${esc(Lx("Apri referto","Open report"))}</button><button class="btn warn" data-delscan="${sc.id}">${esc(tx.pScanDel)}</button></span></h3>${top?`<p class="note">${esc(top.t)}</p>`:""}</div>`); continue; }
     const cells=sc.moles.slice().sort((a,b)=>(+a.id.slice(1))-(+b.id.slice(1))).map(mo=>{ let prev=null; for (let j=older.length-1;j>=0 && !prev;j--) prev=older[j].moles.find(q=>q.id===mo.id) || null;
@@ -4007,10 +4326,11 @@ async function renderPatients(){
 $("#patBtn").addEventListener("click",()=>{ $("#pat").hidden=false; renderPatients(); });
 $("#patSel").addEventListener("change",e=>{ S.pid=+e.target.value||0; renderPatients(); });
 $("#patAdd").addEventListener("click", async ()=>{ const nm=$("#patName").value.trim(); if (!nm) { $("#patName").focus(); return; }
-  try { S.pid = await DB.put("patients",{ name:nm, created:Date.now(), nextN:1 }); $("#patName").value=""; } catch(e){ console.warn(e); } renderPatients(); });
+  try { S.pid = await DB.put("patients",{ name:nm, created:Date.now(), nextN:1, age:+$("#patAge").value||null, sex:$("#patSex").value||null }); $("#patName").value=""; $("#patAge").value=""; } catch(e){ console.warn(e); } renderPatients(); });
 $("#patDel").addEventListener("click", async ()=>{ if (!S.pid || !window.confirm(T[S.lang].pConfirmP)) return;
   try { for (const sc of await DB.scans(S.pid)) await DB.del("scans",sc.id); await DB.del("patients",S.pid); } catch(e){ console.warn(e); } S.pid=0; renderPatients(); });
-$("#patScans").addEventListener("click", async e=>{ const ob=e.target.closest("[data-openrep]"); if (ob){ try { const all=await DB.scans(S.pid), sc=all.find(s=>s.id===+ob.dataset.openrep); const pts=await DB.all("patients"), p=pts.find(q=>q.id===S.pid); if (sc) examReport({ t:sc.t, a:sc.a, pname:p&&p.name }); } catch(err){ console.warn(err); } return; } const b=e.target.closest("[data-delscan]"); if (!b || !window.confirm(T[S.lang].pConfirmS)) return;
+$("#patScans").addEventListener("click", async e=>{ const ol=e.target.closest("[data-openlab]"); if (ol){ try { const sc=(await DB.scans(S.pid)).find(s=>s.id===+ol.dataset.openlab); if (sc) labReport({ t:sc.t, r:sc.r }); } catch(err){ console.warn(err); } return; }
+  const ob=e.target.closest("[data-openrep]"); if (ob){ try { const all=await DB.scans(S.pid), sc=all.find(s=>s.id===+ob.dataset.openrep); const pts=await DB.all("patients"), p=pts.find(q=>q.id===S.pid); if (sc) examReport({ t:sc.t, a:sc.a, pname:p&&p.name }); } catch(err){ console.warn(err); } return; } const b=e.target.closest("[data-delscan]"); if (!b || !window.confirm(T[S.lang].pConfirmS)) return;
   try { await DB.del("scans",+b.dataset.delscan); } catch(err){ console.warn(err); } renderPatients(); });
 
 /* size of one mole from the full-resolution frame: Otsu threshold, then the dark blob at the centre */
