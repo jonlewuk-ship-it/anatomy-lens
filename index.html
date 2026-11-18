@@ -56,6 +56,30 @@ body.v3d.real3d .credit{ display:block; }
 .cardx{ position:absolute; top:10px; right:10px; width:34px; height:34px; border-radius:17px; border:1px solid var(--line); background:var(--chip); color:var(--text); cursor:pointer; }
 .actp{ position:fixed; left:12px; top:calc(env(safe-area-inset-top,0px) + 150px); z-index:4; width:min(240px,62vw); background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:10px 12px; pointer-events:none; }
 .actp[hidden]{ display:none; }
+.dock{ position:fixed; z-index:5; width:min(270px,70vw); max-height:52vh; overflow:auto; background:rgba(4,14,26,.72); border:1px solid rgba(0,229,255,.35); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); transition:left .35s ease, top .35s ease, opacity .3s; font-size:11.5px; color:#d9fbff; }
+.dock[hidden]{ display:none; } .dock.tight{ opacity:.78; }
+.dsec+.dsec{ border-top:1px solid rgba(0,229,255,.2); }
+.dsec header{ display:flex; align-items:center; justify-content:space-between; gap:6px; padding:5px 6px 5px 10px; font-family:'Share Tech Mono',ui-monospace,monospace; letter-spacing:.08em; text-transform:uppercase; font-size:11px; color:#7ff3ff; }
+.dtog{ width:28px; height:24px; border:1px solid rgba(0,229,255,.4); background:rgba(0,229,255,.08); color:#7ff3ff; font-size:13px; line-height:1; cursor:pointer; }
+.dsec.col .dbody{ display:none; } .dbody{ padding:0 10px 8px; } .dbody p{ margin:6px 0 0; font-size:10px; color:var(--muted); }
+.drow{ display:grid; grid-template-columns:1fr 38px; column-gap:6px; margin:5px 0; } .drow span{ grid-column:1; } .drow i{ grid-column:1 / 3; font-style:normal; font-size:10.5px; color:#bfe9f2; } .drow small{ grid-column:1 / 3; font-size:9.5px; color:var(--muted); }
+.drow b{ grid-column:2; grid-row:1; align-self:center; height:5px; border-radius:3px; background:linear-gradient(90deg,#4ef0c4 var(--w),rgba(255,255,255,.12) var(--w)); }
+.drow.warn span{ color:#ffc454; } .drow.warn b{ background:linear-gradient(90deg,#ffc454 var(--w),rgba(255,255,255,.12) var(--w)); }
+.examhud{ position:fixed; left:50%; transform:translateX(-50%); top:calc(env(safe-area-inset-top,0px) + 8px); z-index:11; width:min(560px,94vw); padding:10px 12px; background:rgba(3,12,22,.86); border:1px solid rgba(0,229,255,.45); }
+.examhud[hidden]{ display:none; } .exrow{ display:flex; gap:10px; align-items:center; } .exrow b{ font-family:'Share Tech Mono',monospace; color:#7ff3ff; } .exrow span{ flex:1; font-size:17px; font-weight:600; line-height:1.25; }
+.exrow .iconbtn{ width:40px; height:40px; min-width:40px; padding:0; } .examhud small{ display:block; color:var(--muted); margin-top:4px; font-size:12px; } .examhud em{ display:block; color:#ffc454; font-style:normal; font-size:12px; }
+.exbar{ height:5px; background:rgba(255,255,255,.12); margin-top:8px; } .exbar i{ display:block; height:100%; width:0; background:#4ef0c4; transition:width .15s linear; }
+.gazedot{ position:fixed; z-index:11; width:28px; height:28px; border-radius:50%; background:radial-gradient(circle,#fff 0 25%,#ffc454 30% 60%,rgba(255,196,84,.25) 62%); box-shadow:0 0 18px #ffc454; transition:left .35s ease, top .35s ease; pointer-events:none; }
+.gazedot[hidden]{ display:none; }
+.report .rhead{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin:0 44px 10px 0; font-size:14px; }
+.rscore{ text-align:right; } .rscore span{ display:block; font-size:11px; color:var(--muted); } .rscore b{ font-size:30px; color:#7ff3ff; } .rscore small{ color:var(--muted); }
+.report h4{ margin:16px 0 6px; font-size:14px; color:#7ff3ff; } .report table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+.report td,.report th{ border-top:1px solid var(--line); padding:5px 4px; text-align:left; vertical-align:top; } .report td small{ display:block; color:var(--muted); font-size:10.5px; }
+.report td.bad{ color:#ff8a8a; font-weight:700; } .report td.mid{ color:#ffc454; } .report td.nm{ color:var(--muted); }
+.flags p{ margin:6px 0; padding:8px 10px; border-left:3px solid; font-size:13px; line-height:1.4; } .flags .ok{ border-color:#4ef0c4; } .flags .info{ border-color:#7ff3ff; } .flags .warn{ border-color:#ffc454; } .flags .high{ border-color:#ff8a5a; background:rgba(255,120,80,.08); } .flags .crit{ border-color:#ff4d4d; background:rgba(255,60,60,.14); font-weight:600; }
+.gzw{ display:flex; gap:12px; align-items:flex-start; } .gzs{ width:120px; min-width:120px; } .gzs rect{ fill:none; stroke:var(--line); } .gzs line{ stroke:rgba(127,243,255,.25); } .gzs .gR{ fill:#7ff3ff; } .gzs .gL{ fill:#ffb63c; }
+.report .disc{ font-size:11.5px; color:var(--muted); margin-top:14px; } .scan.exam .rowb{ display:flex; gap:6px; }
+@media print{ body.printing > *:not(#report){ display:none !important; } body.printing #report{ position:static; background:#fff; color:#000; padding:0; } body.printing #report *{ color:#000 !important; border-color:#999 !important; background:none !important; } body.printing .noprint, body.printing #report .x{ display:none !important; } body.printing .gzs .gR{ fill:#1a73e8 !important; } body.printing .gzs .gL{ fill:#e8710a !important; } }
 .skinp{ pointer-events:auto; width:min(250px,64vw); padding:8px 10px; cursor:pointer; }
 .skinp.min #skinL, .skinp.min p{ display:none; }
 .srow{ display:grid; grid-template-columns:1fr 34px; grid-template-rows:auto auto; column-gap:6px; font-size:11.5px; margin:4px 0; }
@@ -212,12 +236,16 @@ body.hud .secondary{ border-radius:2px; font-family:'Rajdhani',var(--font); font
 </header>
 
 <div class="credit" id="credit3d" data-i="credit3d"></div>
-<div class="actp skinp" id="skinP" hidden><h5 data-i="skTitle">Skin analysis</h5><div id="skinL"></div><p data-i="skNote"></p></div>
+<div class="dock" id="dock" hidden></div>
+<div class="examhud" id="examHud" hidden><div class="exrow"><b id="exStep"></b><span id="exText"></span><button class="iconbtn" id="exStop" aria-label="Stop">✕</button></div><small id="exMus"></small><div class="exbar"><i id="exBar"></i></div><em id="exWarn"></em></div>
+<div class="gazedot" id="gazeDot" hidden></div>
+<section class="over report" id="report" hidden><button class="iconbtn x" data-close="report" aria-label="Close">✕</button><div class="in"><div id="repBody"></div><div class="rowf noprint"><button class="btn" id="repSave">Salva / Save</button><button class="btn" id="repPrint">PDF</button></div></div></section>
 <div class="actp" id="actP" hidden><h5 data-i="actTitle">Active muscles</h5><div id="actL"></div><p data-i="actNote"></p></div>
 <section class="card3d" id="card3d" hidden aria-live="polite"><button class="cardx" id="cardX" aria-label="Close">✕</button><div class="cardsys" id="cardSys"></div><h3 id="cardT"></h3><div class="cardpart" id="cardP"></div><dl id="cardD"></dl></section>
 <div class="fabs">
   <button class="iconbtn only3d" id="reset3d" aria-label="Reset view">⟲</button>
   <button class="iconbtn txt onlyAR" id="moleBtn" data-i="moleBtn">MOLES</button>
+  <button class="iconbtn" id="examBtn" aria-label="Facial exam">🩺</button>
   <button class="iconbtn" id="patBtn" aria-label="Patients">👤</button>
   <button class="iconbtn txt" id="guideBtn" aria-label="Guide">?</button>
 </div>
@@ -281,6 +309,7 @@ body.hud .secondary{ border-radius:2px; font-family:'Rajdhani',var(--font); font
         <label class="tog"><input type="checkbox" data-layer="brain"><span data-i="brain">Brain</span></label>
         <label class="tog only3d"><input type="checkbox" data-layer="shell"><span data-i="shell">Skin silhouette</span></label>
         <label class="tog"><input type="checkbox" data-layer="skin"><span data-i="skin">Face skin check</span></label>
+        <label class="tog"><input type="checkbox" data-layer="faceMus"><span data-i="faceMusL">Facial muscles and jaw</span></label>
         <label class="tog"><input type="checkbox" data-layer="labels"><span data-i="labels">Labels</span></label>
       </div>
     </div>
@@ -2513,7 +2542,7 @@ const THREE_SPEC = "three", ROOM_SPEC = "three/addons/environments/RoomEnvironme
 const T = {
   en:{ title:"Anatomy Lens", subtitle:"Live anatomy overlay", all:"Everything", bones:"Bones", muscles:"Muscles", organs:"Organs", skinChip:"Skin",
     reveal:"Reveal", lens:"Lens", whole:"Whole body", follow:"Lens follows", finger:"Fingertip", touch:"Touch",
-    layers:"Layers", skeleton:"Skeleton", skull:"Skull", hands:"Hand bones", muscleL:"Muscles", organL:"Organs", brain:"Brain", labels:"Labels", skin:"Face skin check",
+    layers:"Layers", skeleton:"Skeleton", skull:"Skull", hands:"Hand bones", muscleL:"Muscles", faceMusL:"Facial muscles and jaw", organL:"Organs", brain:"Brain", labels:"Labels", skin:"Face skin check",
     look:"Look", xray:"X-ray", solid:"Solid", real:"Real person showing through", brightness:"Brightness", lensSize:"Lens size", zoom:"Zoom",
     quality:"Tracking", high:"Stable", fast:"Fast", maxq:"Max", holoc:"Colour holo", arMode:"Body in AR", arHolo:"3D hologram", arDraw:"Drawing", moleBtn:"MOLES",
     gTitle:"Quick guide", pTitle:"Patients and mole history", pAdd:"Add", pDel:"Delete", pName:"New patient name", pNone:"No patient yet",
@@ -2540,7 +2569,7 @@ const T = {
     explore3d:"Explore in 3D (no camera)", load3d:"Loading 3D…", s3dLive:"3D · live pose", s3dFrozen:"3D · pose frozen", s3dDemo:"3D · sample pose", err3d:"3D view didn’t load. Check your connection." },
   it:{ title:"Lente Anatomica", subtitle:"Anatomia dal vivo", all:"Tutto", bones:"Ossa", muscles:"Muscoli", organs:"Organi", skinChip:"Pelle",
     reveal:"Mostra", lens:"Lente", whole:"Corpo intero", follow:"La lente segue", finger:"Dito", touch:"Tocco",
-    layers:"Livelli", skeleton:"Scheletro", skull:"Cranio", hands:"Ossa della mano", muscleL:"Muscoli", organL:"Organi", brain:"Cervello", labels:"Etichette", skin:"Controllo pelle del viso",
+    layers:"Livelli", skeleton:"Scheletro", skull:"Cranio", hands:"Ossa della mano", muscleL:"Muscoli", faceMusL:"Muscoli mimici e mandibola", organL:"Organi", brain:"Cervello", labels:"Etichette", skin:"Controllo pelle del viso",
     look:"Aspetto", xray:"Raggi X", solid:"Solido", real:"Quanto si vede la persona", brightness:"Luminosità", lensSize:"Dimensione lente", zoom:"Zoom",
     quality:"Tracciamento", high:"Stabile", fast:"Veloce", maxq:"Massima", holoc:"Olo a colori", arMode:"Corpo in AR", arHolo:"Ologramma 3D", arDraw:"Disegno", moleBtn:"NEI",
     gTitle:"Mini guida", pTitle:"Pazienti e storico nei", pAdd:"Aggiungi", pDel:"Elimina", pName:"Nome nuovo paziente", pNone:"Nessun paziente",
@@ -2589,10 +2618,12 @@ const N = {
   adrenal:["Adrenal gland","Ghiandola surrenale"], thymus:["Thymus","Timo"], thyroid:["Thyroid cartilage","Cartilagine tiroidea"], diaphragm:["Diaphragm","Diaframma"], linea:["Linea alba","Linea alba"], galea:["Galea aponeurotica","Galea aponeurotica"],
   achilles:["Achilles tendon","Tendine d’Achille"], patellarT:["Patellar tendon","Tendine rotuleo"], itband:["Iliotibial band","Bandelletta ileotibiale"], wristT:["Flexor tendons","Tendini flessori"],
   femA:["Femoral artery","Arteria femorale"], femV:["Femoral vein","Vena femorale"], brachA:["Brachial artery","Arteria brachiale"], sciatic:["Sciatic nerve","Nervo sciatico"], iliac:["Iliac vessels","Vasi iliaci"],
-  skinRed:["Redness / irritation","Zona arrossata / irritazione"], skinBump:["Raised spot","Rilievo / protuberanza"], skinSpot:["Dark spot","Macchia scura"], skinMole:["Mole","Neo"], skinAbr:["Possible abrasion","Possibile abrasione"],
+  skinRed:["Redness / irritation","Zona arrossata / irritazione"], skinBump:["Raised spot","Rilievo / protuberanza"], skinSpot:["Dark spot","Macchia scura"], skinMole:["Mole","Neo"],
+  hDistal:["Distal phalanx","Falange distale"], hMiddle:["Middle phalanx","Falange intermedia"], hProximal:["Proximal phalanx","Falange prossimale"], hMeta:["Metacarpal","Metacarpo"], hCarpal:["Carpal bones (wrist)","Ossa del carpo (polso)"], hThumbMC:["Thumb metacarpal","Metacarpo del pollice"], hThumbPh:["Thumb phalanges","Falangi del pollice"],
+  mFrontalis:["Frontalis","Frontale"], mCorrugator:["Corrugator","Corrugatore"], mOrbOculi:["Orbicularis oculi","Orbicolare dell'occhio"], mLevLab:["Levator labii","Elevatore del labbro"], mZygMaj:["Zygomaticus major","Grande zigomatico"], mDAO:["Depressor anguli oris","Depressore dell'angolo della bocca"], mBuccinator:["Buccinator","Buccinatore"], mOrbOris:["Orbicularis oris","Orbicolare della bocca"], mMentalis:["Mentalis","Mentale"], mMasseter:["Masseter","Massetere"], mTemporalis:["Temporalis","Temporale"], skinAbr:["Possible abrasion","Possibile abrasione"],
   skinPimple:["Pimple","Brufolo"], skinLump:["Swelling (possible lipoma)","Rigonfiamento (possibile lipoma)"], wrForehead:["Forehead lines","Rughe della fronte"], wrGlabella:["Frown lines","Rughe glabellari"], wrCrow:["Crow’s feet","Zampe di gallina"], wrUnder:["Under-eye lines","Rughe sotto gli occhi"], wrNaso:["Nasolabial folds","Solchi naso-labiali"]
 };
-const ESSENTIAL = new Set(["cranium","mandible","teeth","frontal","eye","cervical","clavicle","sternum","ribs","spine","pelvis","humerus","radius","femur","tibia","phalanges",
+const ESSENTIAL = new Set(["hDistal","hMiddle","hProximal","hMeta","hCarpal","hThumbMC","hThumbPh","mFrontalis","mCorrugator","mOrbOculi","mLevLab","mZygMaj","mDAO","mBuccinator","mOrbOris","mMentalis","mMasseter","mTemporalis","cranium","mandible","teeth","frontal","eye","cervical","clavicle","sternum","ribs","spine","pelvis","humerus","radius","femur","tibia","phalanges",
   "heart","lungR","diaphragm","achilles","femA","cerebellum","gluteus","latissimus","hamstrings","lungL","liver","stomach","colon","smallint","kidneys","bladder","pecs","deltoid","biceps","abs","quads","masseter","skinRed","skinBump","skinSpot","skinMole","skinAbr","skinPimple","skinLump","wrForehead","wrGlabella","wrCrow","wrUnder","wrNaso"]);
 
 /* ---------- state ---------- */
@@ -2600,19 +2631,19 @@ const S = {
   layers:{ skeleton:true, skull:true, hands:true, muscles:true, organs:true, brain:true, skin:true, shell:false, labels:true },
   look:"xray", brightness:1, real:0.55, reveal:"all", follow:"touch", lensSize:0.3, zoom:1.5,
   quality:"high", density:"key", theme:"hud", hudInit:false, view:"ar", section:"full", plane:"sagittal", slices:{ axial:0.94, coronal:0.45, sagittal:0.5 }, seen3d:false, pose3d:"live", focus:"body", spin:"off", inset:"on",
-  arMode:"holo", faceInit:false, skinPanel:true, guideSeen:false, pid:0,
+  arMode:"holo", faceInit:false, skinPanel:true, dock:{}, guideSeen:false, pid:0,
   facing:"environment", lang:(navigator.language||"en").toLowerCase().startsWith("it") ? "it" : "en", touch:null
 };
 const PRESETS = {
-  all:{ skeleton:1, skull:1, hands:1, muscles:1, organs:1, brain:1, skin:1, shell:0 },
-  bones:{ skeleton:1, skull:1, hands:1, muscles:0, organs:0, brain:0, skin:0, shell:0 },
-  muscles:{ skeleton:0, skull:0, hands:0, muscles:1, organs:0, brain:0, skin:0, shell:0 },
-  organs:{ skeleton:0, skull:0, hands:0, muscles:0, organs:1, brain:1, skin:0, shell:0 },
-  skin:{ skeleton:0, skull:0, hands:0, muscles:0, organs:0, brain:0, skin:1, shell:0 }
+  all:{ skeleton:1, skull:1, hands:1, muscles:1, organs:1, brain:1, skin:1, shell:0, faceMus:0 },
+  bones:{ skeleton:1, skull:1, hands:1, muscles:0, organs:0, brain:0, skin:0, shell:0, faceMus:0 },
+  muscles:{ skeleton:0, skull:0, hands:0, muscles:1, organs:0, brain:0, skin:0, shell:0, faceMus:1 },
+  organs:{ skeleton:0, skull:0, hands:0, muscles:0, organs:1, brain:1, skin:0, shell:0, faceMus:0 },
+  skin:{ skeleton:0, skull:0, hands:0, muscles:0, organs:0, brain:0, skin:1, shell:0, faceMus:0 }
 };
 
 const $ = (s) => document.querySelector(s);
-const SAVE_KEYS = ["theme","hudInit","plane","slices","layers","look","brightness","real","reveal","follow","lensSize","zoom","quality","density","section","pose3d","focus","spin","inset","lang","seen3d","arMode","faceInit","guideSeen","pid","skinPanel"];
+const SAVE_KEYS = ["theme","hudInit","plane","slices","layers","look","brightness","real","reveal","follow","lensSize","zoom","quality","density","section","pose3d","focus","spin","inset","lang","seen3d","arMode","faceInit","guideSeen","pid","skinPanel","dock"];
 try { const sv = JSON.parse(localStorage.getItem("anatomyLens.v1") || "null"); if (sv) for (const k of SAVE_KEYS) if (sv[k]!==undefined) S[k] = k==="layers" ? Object.assign(S.layers, sv.layers) : k==="slices" ? Object.assign(S.slices, sv.slices) : sv[k]; } catch(e){}
 if (!S.hudInit){ S.hudInit=true; S.theme="hud"; S.look="holo"; }
 /* the app opens on the face: skin map first */
@@ -2767,6 +2798,7 @@ function onFace(r,t){
   hit(TR.face, ok, t, lm);
   if (ok) TR.face.lastOk=t;
   if (ok && S.layers.skin && S.view!=="3d") { try { sampleVitals(lm); } catch(e){ console.warn(e); } }
+  if (ok && (S.layers.faceMus || EX.on)) { try { const g=faceGeom(lm), bs=bsMap(r); updateFaceMus(g,bs); examSample(g,bs,performance.now()); } catch(e){ console.warn(e); } }
 }
 function onHands(r,t){
   const found=[];
@@ -2835,6 +2867,19 @@ function blinkRate(){ const ts=performance.now()/1000, el=ts-VS.since; if (el<20
 
 /* ---------- skin report panel ---------- */
 let skinPT=0;
+function skinRowsRaw(){
+  const tx=T[S.lang], m=(FSK._res().metrics)||{}, rows=[], cl=(v)=>Math.max(0,Math.min(1,v)), lvl=(v,a,b)=>v<a?tx.skLow:v<b?tx.skMid:tx.skHigh, add=(lab,w,txt)=>rows.push({ lab, w, txt });
+  if (m.ita!=null){ const t=m.ita, k=t>55?0:t>41?1:t>28?2:t>10?3:t>-30?4:5; add(tx.skPhoto, cl((t+30)/100), `${tx.skTones[k]} · ITA ${Math.round(t)}°`); }
+  if (m.aCheeks!=null) add(tx.skRedC, cl((m.aCheeks-5)/15), `a* ${m.aCheeks.toFixed(1)} · ${lvl(m.aCheeks,10,15)}`);
+  if (m.aNose!=null) add(tx.skRedN, cl((m.aNose-5)/15), `a* ${m.aNose.toFixed(1)} · ${lvl(m.aNose,10,15)}`);
+  if (m.uneven!=null){ const sc=Math.round(Math.max(0,Math.min(100,100-m.uneven*9))); add(tx.skEven, sc/100, `${sc}/100`); }
+  if (m.shine!=null) add(tx.skShine, cl(m.shine/12), `${m.shine.toFixed(1)}% · ${lvl(m.shine,3,8)}`);
+  if (m.texture!=null) add(tx.skTex, cl(m.texture/25), `${Math.round(m.texture)} · ${lvl(m.texture,8,15)}`);
+  if (m.dark!=null) add(tx.skDark, cl(m.dark/25), `${Math.max(0,m.dark).toFixed(0)}% · ${lvl(m.dark,6,14)}`);
+  const br=blinkRate(); add(tx.skBlink, br==null?0:cl(br/30), br==null?tx.skWait:`${Math.round(br)}${tx.skPerMin} · ${Lx("tipico","typical")} 10–20`);
+  add(tx.skPulse, VS.bpm==null?0:cl((VS.bpm-40)/120), VS.bpm==null?tx.skWait:`${Math.round(VS.bpm)} bpm`);
+  return rows;
+}
 function renderSkinPanel(now){
   const box=$("#skinP"); const show = S.view!=="3d" && S.layers.skin && TR.face.tracked && FSK && S.skinPanel!==false;
   if (!show){ box.hidden=true; return; } box.hidden=false; if (now-skinPT<500) return; skinPT=now;
@@ -2852,6 +2897,442 @@ function renderSkinPanel(now){
 }
 function skinSnapshot(){ const m=(FSK && FSK._res().metrics)||{}; const o={}; for (const k of ["ita","aCheeks","aNose","aForehead","aChin","uneven","shine","texture","dark"]) if (m[k]!=null) o[k]=Math.round(m[k]*10)/10;
   if (VS.bpm!=null) o.bpm=Math.round(VS.bpm); const br=blinkRate(); if (br!=null) o.blink=Math.round(br); return o; }
+
+
+/* =====================================================================
+   CLINICAL LAYER: detailed hand, joint mechanics, facial muscles,
+   mandible, guided facial exam with report sheet.
+   All values are camera estimates for education and tracking.
+   ===================================================================== */
+const Lx = (it,en) => S.lang==="it" ? it : en;
+const V3s = { sub:(a,b)=>({x:a.x-b.x,y:a.y-b.y,z:(a.z||0)-(b.z||0)}), dot:(a,b)=>a.x*b.x+a.y*b.y+(a.z||0)*(b.z||0),
+  len:(a)=>Math.hypot(a.x,a.y,a.z||0), cross:(a,b)=>({x:a.y*b.z-a.z*b.y,y:a.z*b.x-a.x*b.z,z:a.x*b.y-a.y*b.x}),
+  norm:(a)=>{ const l=Math.hypot(a.x,a.y,a.z||0)||1; return {x:a.x/l,y:a.y/l,z:(a.z||0)/l}; }, mid:(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2,z:((a.z||0)+(b.z||0))/2}) };
+const angDeg = (a,b) => { const d=V3s.dot(a,b)/((V3s.len(a)*V3s.len(b))||1); return Math.acos(Math.max(-1,Math.min(1,d)))*180/Math.PI; };
+const pct = (arr,q) => { if (!arr.length) return NaN; const s=arr.slice().sort((a,b)=>a-b); return s[Math.min(s.length-1,Math.max(0,Math.round(q*(s.length-1))))]; };
+const med = (arr) => pct(arr,0.5);
+
+/* ---------- 1. detailed hand: bone labels, joint dots, finger angles ---------- */
+const FINGERS = [["thumb",[1,2,3,4]],["index",[5,6,7,8]],["middle",[9,10,11,12]],["ring",[13,14,15,16]],["little",[17,18,19,20]]];
+function fingerAngles(w){
+  if (!w || w.length<21) return null; const out={};
+  for (const [nm,ch] of FINGERS){
+    const p=(i)=>w[i];
+    if (nm==="thumb"){ out[nm]={ mcp:angDeg(V3s.sub(p(2),p(1)),V3s.sub(p(3),p(2))), ip:angDeg(V3s.sub(p(3),p(2)),V3s.sub(p(4),p(3))) }; }
+    else out[nm]={ mcp:angDeg(V3s.sub(p(ch[0]),p(0)),V3s.sub(p(ch[1]),p(ch[0]))), pip:angDeg(V3s.sub(p(ch[1]),p(ch[0])),V3s.sub(p(ch[2]),p(ch[1]))), dip:angDeg(V3s.sub(p(ch[2]),p(ch[1])),V3s.sub(p(ch[3]),p(ch[2]))) };
+  }
+  out.grip = V3s.len(V3s.sub(w[4],w[8]))*1000;   /* thumb tip to index tip, mm (world landmarks are metres) */
+  out.span = V3s.len(V3s.sub(w[4],w[20]))*1000;
+  return out;
+}
+function drawHandDetail(c, hands, now){
+  if (!S.layers.hands || !hands.length) return;
+  const hud=S.theme==="hud";
+  hands.forEach((h,hi)=>{
+    const p=h.pts; if (!p || p.length<21) return; const hs=Math.hypot(p[9].x-p[0].x,p[9].y-p[0].y); if (hs<25) return;
+    c.save(); c.globalAlpha=Math.min(1,h.fade*1.1);
+    /* thin bone axis lines and joint dots, as on an X-ray tracing */
+    c.lineWidth=Math.max(1.2,hs*0.018); c.strokeStyle=hud?"rgba(255,196,84,.85)":"rgba(255,190,70,.9)";
+    const seg=(a,b)=>{ c.beginPath(); c.moveTo(p[a].x,p[a].y); c.lineTo(p[b].x,p[b].y); c.stroke(); };
+    for (const [,ch] of FINGERS){ seg(0,ch[0]); for (let j=0;j<3;j++) seg(ch[j],ch[j+1]); }
+    seg(5,9); seg(9,13); seg(13,17); seg(1,5);
+    c.fillStyle=hud?"#ffc454":"#ffb63c"; for (let i=0;i<21;i++){ c.beginPath(); c.arc(p[i].x,p[i].y,Math.max(2,hs*(i%4===0&&i?0.03:0.026)),0,TAU); c.fill(); }
+    /* carpal block */
+    c.strokeStyle=hud?"rgba(127,243,255,.7)":"rgba(255,255,255,.7)"; c.lineWidth=1.4;
+    const cx=(p[0].x*2+p[5].x+p[17].x)/4, cy=(p[0].y*2+p[5].y+p[17].y)/4; c.beginPath(); c.ellipse(cx,cy,hs*0.22,hs*0.14,Math.atan2(p[17].y-p[5].y,p[17].x-p[5].x),0,TAU); c.stroke();
+    c.restore();
+    if (hi===0 && S.layers.labels){
+      const L=(k,a,b,t)=>labelsOut.push({ key:k, x:p[a].x+(p[b].x-p[a].x)*t, y:p[a].y+(p[b].y-p[a].y)*t, grp:"bone" });
+      L("hDistal",11,12,0.5); L("hMiddle",10,11,0.5); L("hProximal",9,10,0.5); L("hMeta",0,9,0.62); labelsOut.push({ key:"hCarpal", x:cx, y:cy, grp:"bone" });
+      L("hThumbMC",1,2,0.5); L("hThumbPh",3,4,0.4);
+    }
+  });
+}
+
+/* ---------- 2. joint mechanics from the 3D pose ---------- */
+const MECH = { rom:{}, prev:null, prevT:0, vel:{}, val:{} };
+const NORM = { shFlex:180, shAbd:180, elbow:150, hipFlex:120, hipAbd:45, knee:135, mcp:90, pip:100, dip:90 };
+function poseAngles(){
+  const Wd=TR.pose.world, on=TR.pose.on; if (!Wd || !TR.pose.tracked) return null;
+  const P=(i)=>Wd[i], ok=(...ids)=>ids.every(i=>on[i]);
+  const shM=V3s.mid(P(11),P(12)), hpM=V3s.mid(P(23),P(24));
+  const down=V3s.norm(V3s.sub(hpM,shM)); let lat=V3s.sub(P(11),P(12)); lat=V3s.norm(V3s.sub(lat,{x:down.x*V3s.dot(lat,down),y:down.y*V3s.dot(lat,down),z:down.z*V3s.dot(lat,down)}));
+  let fwd=V3s.cross(lat,down); const face=V3s.sub(P(0),V3s.mid(P(7),P(8))); if (V3s.dot(fwd,face)<0) fwd={x:-fwd.x,y:-fwd.y,z:-fwd.z};
+  const A={};
+  for (const [sd,s,e,w,h,k,a] of [["L",11,13,15,23,25,27],["R",12,14,16,24,26,28]]){
+    if (ok(s,e)){ const u=V3s.sub(P(e),P(s)), ud=V3s.dot(u,down);
+      A["shFlex"+sd]=Math.max(0,Math.atan2(V3s.dot(u,fwd),ud)*180/Math.PI); A["shAbd"+sd]=Math.atan2(Math.abs(V3s.dot(u,lat)),ud)*180/Math.PI; }
+    if (ok(s,e,w)) A["elbow"+sd]=180-angDeg(V3s.sub(P(s),P(e)),V3s.sub(P(w),P(e)));
+    if (ok(h,k)){ const t=V3s.sub(P(k),P(h)), td=V3s.dot(t,down); A["hipFlex"+sd]=Math.max(0,Math.atan2(V3s.dot(t,fwd),td)*180/Math.PI); A["hipAbd"+sd]=Math.atan2(Math.abs(V3s.dot(t,lat)),td)*180/Math.PI; }
+    if (ok(h,k,a)) A["knee"+sd]=180-angDeg(V3s.sub(P(h),P(k)),V3s.sub(P(a),P(k)));
+  }
+  if (ok(11,12)){ const l=TR.pose.lm; A.trunkTilt=Math.atan2((l[11].y-l[12].y),(l[11].x-l[12].x))*180/Math.PI; if (Math.abs(A.trunkTilt)>90) A.trunkTilt-=Math.sign(A.trunkTilt)*180; }
+  return A;
+}
+function updateMech(now){
+  const A=poseAngles(); if (!A){ MECH.val={}; return; }
+  const dt=MECH.prevT ? (now-MECH.prevT)/1000 : 0;
+  for (const k in A){ const v=A[k]; if (!isFinite(v)) continue;
+    if (MECH.val[k]!=null && dt>0){ const vel=(v-MECH.val[k])/dt; MECH.vel[k]=MECH.vel[k]==null?vel:MECH.vel[k]*0.6+vel*0.4; }
+    MECH.val[k]=v; const r=MECH.rom[k]||(MECH.rom[k]={min:v,max:v}); r.min=Math.min(r.min,v); r.max=Math.max(r.max,v); }
+  MECH.prevT=now;
+}
+function mechRows(){
+  const rows=[], V=MECH.val, R=MECH.rom, VL=MECH.vel;
+  const J=[["shFlex",Lx("Spalla · flessione","Shoulder · flexion")],["shAbd",Lx("Spalla · abduzione","Shoulder · abduction")],["elbow",Lx("Gomito · flessione","Elbow · flexion")],
+    ["hipFlex",Lx("Anca · flessione","Hip · flexion")],["hipAbd",Lx("Anca · abduzione","Hip · abduction")],["knee",Lx("Ginocchio · flessione","Knee · flexion")]];
+  for (const [k,lab] of J){ const l=V[k+"L"], r=V[k+"R"]; if (l==null && r==null) continue;
+    const rl=R[k+"L"]?R[k+"L"].max:null, rr=R[k+"R"]?R[k+"R"].max:null, n=NORM[k];
+    const asym = rl!=null&&rr!=null&&Math.max(rl,rr)>25 ? Math.abs(rl-rr)/Math.max(rl,rr) : 0;
+    const f=(v)=>v==null?"–":Math.round(v)+"°", vel=(x)=>x==null||Math.abs(x)<5?"":` · ${Math.round(Math.abs(x))}°/s`;
+    rows.push({ lab, txt:`${Lx("Sx","L")} ${f(l)}${vel(VL[k+"L"])}  ·  ${Lx("Dx","R")} ${f(r)}${vel(VL[k+"R"])}`,
+      sub:`ROM max ${f(rl)} / ${f(rr)} · ${Lx("norma","norm")} ${n}° (AAOS)${asym>0.15?` · ⚠ ${Lx("asimmetria","asymmetry")} ${Math.round(asym*100)}%`:""}`, w:Math.min(1,Math.max(rl||0,rr||0)/n), warn:asym>0.15 });
+  }
+  if (V.trunkTilt!=null) rows.push({ lab:Lx("Inclinazione spalle","Shoulder line tilt"), txt:`${V.trunkTilt>0?"":""}${Math.abs(V.trunkTilt).toFixed(0)}°`, sub:Lx("rispetto all'orizzontale dell'immagine","vs image horizontal"), w:Math.min(1,Math.abs(V.trunkTilt)/20), warn:Math.abs(V.trunkTilt)>8 });
+  /* fingers, from the 3D hand model */
+  TR.hands.forEach((h,i)=>{ if (!h.tracked || !h.world) return; const fa=fingerAngles(h.world); if (!fa) return;
+    const nm={ thumb:Lx("Pollice","Thumb"), index:Lx("Indice","Index"), middle:Lx("Medio","Middle"), ring:Lx("Anulare","Ring"), little:Lx("Mignolo","Little") };
+    const parts=FINGERS.map(([f])=>{ const a=fa[f]; return f==="thumb" ? `${nm[f]} ${Math.round(a.mcp)}/${Math.round(a.ip)}` : `${nm[f]} ${Math.round(a.mcp)}/${Math.round(a.pip)}/${Math.round(a.dip)}`; });
+    rows.push({ lab:`${Lx("Mano","Hand")} ${i+1} · MCP/PIP/DIP`, txt:parts.join(" · "), sub:`${Lx("Pinza pollice-indice","Thumb–index pinch")} ${Math.round(fa.grip)} mm · ${Lx("apertura","span")} ${Math.round(fa.span)} mm · ${Lx("norma","norm")} MCP 90° PIP 100° DIP 90°`, w:Math.min(1,fa.index.pip/100) });
+  });
+  return rows;
+}
+
+/* ---------- 3. face geometry in a head-fixed frame (mm) ---------- */
+function faceGeom(lm){
+  if (!lm || lm.length<468) return null; const vw=video.videoWidth||1, vh=video.videoHeight||1;
+  const Q=(i)=>({ x:lm[i].x*vw, y:lm[i].y*vh, z:lm[i].z*vw });
+  const o=V3s.mid(Q(33),Q(263)); const ex=V3s.norm(V3s.sub(Q(263),Q(33)));
+  let up=V3s.sub(o,Q(1)); up=V3s.norm(V3s.sub(up,{x:ex.x*V3s.dot(up,ex),y:ex.y*V3s.dot(up,ex),z:ex.z*V3s.dot(up,ex)}));
+  let ez=V3s.cross(ex,up); if (V3s.dot(V3s.sub(Q(1),o),ez)<0) ez={x:-ez.x,y:-ez.y,z:-ez.z};
+  let mmpp=0; if (lm.length>=478){ const d2=(a,b)=>Math.hypot(Q(a).x-Q(b).x,Q(a).y-Q(b).y); const ir=(d2(469,471)+d2(474,476))/2; if (ir>4) mmpp=11.7/ir; }
+  if (!mmpp) mmpp=90/V3s.len(V3s.sub(Q(263),Q(33)));
+  const L=(i)=>{ const d=V3s.sub(Q(i),o); return { x:V3s.dot(d,ex)*mmpp, y:V3s.dot(d,up)*mmpp, z:V3s.dot(d,ez)*mmpp }; };
+  const avg=(ids)=>{ const s={x:0,y:0,z:0}; for (const i of ids){ const p=L(i); s.x+=p.x; s.y+=p.y; s.z+=p.z; } return {x:s.x/ids.length,y:s.y/ids.length,z:s.z/ids.length}; };
+  const eyeR=avg([33,133]), eyeL=avg([263,362]), bR=avg([63,105,66]), bL=avg([293,334,296]);
+  const op=(a,b)=>Math.abs(L(a).y-L(b).y);
+  const g={ mmpp,
+    browR:bR.y-eyeR.y, browL:bL.y-eyeL.y,
+    eyeR:(op(159,145)+op(158,153))/2, eyeL:(op(386,374)+op(385,380))/2,
+    cR:L(61), cL:L(291), ulR:avg([37,64]), ulL:avg([267,294]), llR:L(84), llL:L(314), chR:L(50), chL:L(280),
+    chin:L(152), lipGap:Math.hypot(L(13).x-L(14).x,L(13).y-L(14).y), nlR:Math.hypot(L(64).x-L(61).x,L(64).y-L(61).y), nlL:Math.hypot(L(294).x-L(291).x,L(294).y-L(291).y),
+    lipZ:(L(0).z+L(17).z)/2 };
+  /* gaze: iris centre between the eye corners, degrees (12 mm eyeball radius); + = towards the subject's left / up */
+  if (lm.length>=478){
+    const gz=(iris,outer,inner,sign)=>{ const a=L(outer), b=L(inner), c=L(iris), ux=b.x-a.x, uy=b.y-a.y, w=Math.hypot(ux,uy)||1, t=((c.x-a.x)*ux+(c.y-a.y)*uy)/(w*w);
+      const vy=c.y-(a.y+b.y)/2; return { h:sign*Math.asin(Math.max(-1,Math.min(1,(t-0.5)*w/12)))*180/Math.PI, v:Math.asin(Math.max(-1,Math.min(1,vy/12)))*180/Math.PI }; };
+    g.gR=gz(468,33,133,1); g.gL=gz(473,263,362,-1);
+  }
+  return g;
+}
+
+/* ---------- 4. facial muscles: live activation per side ---------- */
+const FM = { base:null, baseN:0, act:{}, bs:{} };
+function bsMap(r){ const c=r && r.faceBlendshapes && r.faceBlendshapes[0] && r.faceBlendshapes[0].categories; const m={}; if (c) for (const x of c) m[x.categoryName]=x.score; return m; }
+function updateFaceMus(g, bs){
+  if (!g) return; FM.bs=bs||{};
+  /* slow neutral baseline: learns the resting face while it is relaxed */
+  const relaxed = (bs.jawOpen||0)<0.15 && (bs.mouthSmileLeft||0)<0.25 && (bs.mouthSmileRight||0)<0.25 && (bs.browInnerUp||0)<0.3;
+  if (!FM.base){ FM.base=JSON.parse(JSON.stringify(g)); FM.baseN=1; }
+  else if (relaxed){ const k=FM.baseN<30?0.15:0.02; FM.baseN++; const B=FM.base;
+    for (const key of ["browR","browL","eyeR","eyeL","lipGap","nlR","nlL","lipZ"]) B[key]+=(g[key]-B[key])*k;
+    for (const key of ["cR","cL","ulR","ulL","llR","llL","chR","chL","chin"]) for (const ax of ["x","y","z"]) B[key][ax]+=(g[key][ax]-B[key][ax])*k; }
+  const B=FM.base, cl=(v)=>Math.max(0,Math.min(1,v));
+  const dv=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
+  FM.act={
+    frontalisR:cl((g.browR-B.browR)/5), frontalisL:cl((g.browL-B.browL)/5),
+    corrugatorR:cl(Math.max(bs.browDownRight||0,(B.browR-g.browR)/3)), corrugatorL:cl(Math.max(bs.browDownLeft||0,(B.browL-g.browL)/3)),
+    orbOculiR:cl(1-g.eyeR/Math.max(1,B.eyeR)), orbOculiL:cl(1-g.eyeL/Math.max(1,B.eyeL)),
+    zygMajR:cl(((g.cR.y-B.cR.y)+(B.cR.x-g.cR.x)*0.6)/7), zygMajL:cl(((g.cL.y-B.cL.y)+(g.cL.x-B.cL.x)*0.6)/7),
+    levLabR:cl((g.ulR.y-B.ulR.y)/3), levLabL:cl((g.ulL.y-B.ulL.y)/3),
+    orbOris:cl(Math.max(bs.mouthPucker||0,bs.mouthFunnel||0,bs.mouthPressLeft||0)),
+    daoR:cl((B.cR.y-g.cR.y)/4 - (g.lipGap-B.lipGap)/20), daoL:cl((B.cL.y-g.cL.y)/4 - (g.lipGap-B.lipGap)/20),
+    dliR:cl((B.llR.y-g.llR.y)/4 - (B.chin.y-g.chin.y)/8), dliL:cl((B.llL.y-g.llL.y)/4 - (B.chin.y-g.chin.y)/8),
+    mentalis:cl(bs.mouthShrugLower||0), buccinator:cl(Math.max(bs.cheekPuff||0,(g.chR.z-B.chR.z+g.chL.z-B.chL.z)/6)),
+    jawOpeners:cl((B.chin.y-g.chin.y)/35), jawLat:cl(Math.abs(g.chin.x-B.chin.x)/8), jawFwd:cl((g.chin.z-B.chin.z)/6)
+  };
+  FM.jaw={ open:Math.max(0,B.chin.y-g.chin.y), gap:g.lipGap, lat:g.chin.x-B.chin.x, fwd:g.chin.z-B.chin.z };
+}
+/* muscle shapes drawn on the face, coloured by activation */
+const FMUS = [
+  ["frontalisR",[70,63,105,66,107,9,151,108,69,104],"mFrontalis"],["frontalisL",[300,293,334,296,336,9,151,337,299,333],null],
+  ["corrugatorR",[107,66,65,55,8],"mCorrugator"],["corrugatorL",[336,296,295,285,8],null],
+  ["orbOculiR",[226,247,30,29,27,28,56,190,243,112,26,22,23,24,110,25,130],"mOrbOculi"],["orbOculiL",[446,467,260,259,257,258,286,414,463,341,256,252,253,254,339,255,359],null],
+  ["levLabR",[47,100,126,142,36,205,206,165,92,186,40,39,37,98],"mLevLab"],["levLabL",[277,329,355,371,266,425,426,391,322,410,270,269,267,327],null],
+  ["zygMajR",[116,123,147,187,207,216,61,212,214,192],"mZygMaj"],["zygMajL",[345,352,376,411,427,436,291,432,434,416],null],
+  ["daoR",[61,146,91,181,84,17,200,199,175,152,148,176,149,150,136,172,58,132,215],"mDAO"],["daoL",[291,375,321,405,314,17,200,199,175,152,377,400,378,379,365,397,288,361,435],null],
+  ["buccinator",[205,50,117,118,101,36,203,165,92,186,57,43,106,182,83,18],"mBuccinator"],
+  ["orbOris",[61,185,40,39,37,0,267,269,270,409,291,375,321,405,314,17,84,181,91,146],"mOrbOris"],
+  ["mentalis",[18,83,182,106,43,202,210,169,150,149,176,148,152,377,400,378,379,394,430,422,273,335,406,313],"mMentalis"],
+  ["masseterR",[127,234,93,132,58,172,136,150,169,210,214,192,213,147,123,116,34],"mMasseter"],["masseterL",[356,454,323,361,288,397,365,379,394,430,434,416,433,376,352,345,264],null],
+  ["temporalisR",[54,103,67,109,10,151,9,107,66,105,63,70,156,139,71,21],"mTemporalis"],["temporalisL",[284,332,297,338,10,151,9,336,296,334,293,300,383,368,301,251],null]
+];
+const FMACT = { masseterR:"jawOpeners", masseterL:"jawOpeners", temporalisR:"jawOpeners", temporalisL:"jawOpeners" };
+function drawFaceMuscles(c, F, now){
+  if (!(S.layers.faceMus || EX.on) || !F || !TR.face.tracked) return;
+  c.save(); c.globalAlpha=Math.min(1,TR.face.fade);
+  const lab=[];
+  for (const [k,ids,key] of FMUS){
+    let a = FMACT[k] ? (k.startsWith("temporalis") ? 0 : (FM.act.jawOpeners||0)*0.4 + (FM.act.jawLat||0)*0.6) : (FM.act[k]||0);
+    if (k==="buccinator") a=FM.act.buccinator||0;
+    /* hull of the region's points */
+    const pts=ids.map(i=>F[i]).filter(Boolean); if (pts.length<3) continue;
+    const hull=hull2(pts);
+    const base=k.startsWith("masseter")||k.startsWith("temporalis") ? [255,170,90] : [255,90,110];
+    c.beginPath(); hull.forEach((p,i)=> i?c.lineTo(p.x,p.y):c.moveTo(p.x,p.y)); c.closePath();
+    c.fillStyle=`rgba(${base[0]},${base[1]},${base[2]},${0.05+a*0.42})`; c.fill();
+    c.strokeStyle=`rgba(${base[0]},${base[1]},${base[2]},${0.25+a*0.6})`; c.lineWidth=1; c.stroke();
+    if (key) lab.push([key, k.endsWith("R")||k.endsWith("L") ? Math.max(a, FM.act[k.slice(0,-1)+(k.endsWith("R")?"L":"R")]||0) : a, hull]);
+  }
+  c.restore();
+  if (S.layers.labels){ lab.sort((a,b)=>b[1]-a[1]); for (const [key,a,hull] of lab.slice(0,EX.on?2:4)){ if (a<0.12) continue; let x=0,y=0; for (const p of hull){ x+=p.x; y+=p.y; } labelsOut.push({ key, x:x/hull.length, y:y/hull.length, grp:"muscle" }); } }
+}
+function hull2(P){ const s=P.slice().sort((a,b)=>a.x-b.x||a.y-b.y), cr=(o,a,b)=>(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x), lo=[], up=[];
+  for (const p of s){ while (lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0) lo.pop(); lo.push(p); }
+  for (let i=s.length-1;i>=0;i--){ const p=s[i]; while (up.length>=2&&cr(up[up.length-2],up[up.length-1],p)<=0) up.pop(); up.push(p); }
+  return lo.slice(0,-1).concat(up.slice(0,-1)); }
+function faceRows(){
+  const A=FM.act, rows=[]; if (!FM.base || !TR.face.tracked) return rows;
+  const pair=(lab,r,l,mus)=>{ const asym=Math.max(r,l)>0.25 ? Math.abs(r-l)/Math.max(r,l) : 0; rows.push({ lab, txt:`${Lx("Dx","R")} ${Math.round(r*100)}% · ${Lx("Sx","L")} ${Math.round(l*100)}%`, sub:mus+(asym>0.35?` · ⚠ ${Lx("asimmetria","asymmetry")} ${Math.round(asym*100)}%`:""), w:Math.max(r,l), warn:asym>0.35 }); };
+  pair(Lx("Fronte","Forehead"),A.frontalisR,A.frontalisL,Lx("m. frontale · VII temporale","frontalis · VII temporal"));
+  pair(Lx("Chiusura occhi","Eye closure"),A.orbOculiR,A.orbOculiL,Lx("m. orbicolare dell'occhio · VII zigomatico","orbicularis oculi · VII zygomatic"));
+  pair(Lx("Sorriso","Smile"),A.zygMajR,A.zygMajL,Lx("m. grande zigomatico · VII buccale","zygomaticus major · VII buccal"));
+  pair(Lx("Labbro superiore","Upper lip"),A.levLabR,A.levLabL,Lx("m. elevatore del labbro · VII buccale","levator labii · VII buccal"));
+  pair(Lx("Labbro inferiore","Lower lip"),A.dliR,A.dliL,Lx("m. depressore del labbro inf. · VII marginale","depressor labii inf. · VII marginal mandibular"));
+  rows.push({ lab:Lx("Labbra / guance","Lips / cheeks"), txt:`${Lx("bacio","pucker")} ${Math.round(A.orbOris*100)}% · ${Lx("guance","cheeks")} ${Math.round(A.buccinator*100)}%`, sub:Lx("m. orbicolare della bocca, buccinatore","orbicularis oris, buccinator"), w:Math.max(A.orbOris,A.buccinator) });
+  const J=FM.jaw||{};
+  rows.push({ lab:Lx("Mandibola","Mandible"), txt:`${Lx("apertura","opening")} ${Math.round(J.open||0)} mm · ${Lx("labbra","lips")} ${Math.round(J.gap||0)} mm · ${Lx("lat.","lat.")} ${(J.lat||0)>0?Lx("sx","L"):Lx("dx","R")} ${Math.abs(J.lat||0).toFixed(1)} mm · ${Lx("avanti","fwd")} ${Math.max(0,J.fwd||0).toFixed(1)} mm`,
+    sub:jawMuscles(J), w:Math.min(1,(J.open||0)/45) });
+  return rows;
+}
+function jawMuscles(J){ const o=J.open||0, lat=J.lat||0, f=J.fwd||0;
+  if (o>6) return Lx("apertura: digastrico, miloioideo, pterigoideo laterale · norma 40–50 mm","opening: digastric, mylohyoid, lateral pterygoid · norm 40–50 mm");
+  if (Math.abs(lat)>2) return lat>0 ? Lx("verso sx: pterigoideo laterale e mediale dx, temporale sx","to the left: right lateral and medial pterygoid, left temporalis") : Lx("verso dx: pterigoideo laterale e mediale sx, temporale dx","to the right: left lateral and medial pterygoid, right temporalis");
+  if (f>2) return Lx("protrusione: pterigoidei laterali e mediali","protrusion: lateral and medial pterygoids");
+  return Lx("chiusura/serramento: massetere, temporale, pterigoideo mediale","closing/clenching: masseter, temporalis, medial pterygoid"); }
+
+/* ---------- 5. data dock: one panel, sections with collapse icons, kept away from the body ---------- */
+const DOCK = { t:0, pos:null, sec:{} };
+function dockSection(id, title, rows, note){
+  const col = !!(S.dock && S.dock[id]);
+  return `<section class="dsec${col?" col":""}" data-sec="${id}"><header><span>${esc(title)}</span><button class="dtog" data-tog="${id}" aria-label="toggle">${col?"▸":"▾"}</button></header>
+    <div class="dbody">${rows.map(r=>`<div class="drow${r.warn?" warn":""}"><span>${esc(r.lab)}</span><b style="--w:${Math.round(Math.max(0,Math.min(1,r.w||0))*100)}%"></b><i>${esc(r.txt)}</i>${r.sub?`<small>${esc(r.sub)}</small>`:""}</div>`).join("")}${note?`<p>${esc(note)}</p>`:""}</div></section>`;
+}
+function updateDock(now){
+  const dock=$("#dock"); if (S.view==="3d" || EX.on){ dock.hidden=true; return; }
+  if (now-DOCK.t<350) return; DOCK.t=now;
+  updateMech(now);
+  const secs=[];
+  if (S.layers.skin && TR.face.tracked && FSK){ const sk=skinRowsRaw(); if (sk.length) secs.push(dockSection("skin", T[S.lang].skTitle, sk, T[S.lang].skNote)); }
+  if ((S.layers.faceMus) && TR.face.tracked){ const fr=faceRows(); if (fr.length) secs.push(dockSection("face", Lx("Muscoli mimici e mandibola","Facial muscles and jaw"), fr)); }
+  if (TR.pose.tracked && (S.layers.skeleton||S.layers.muscles||S.layers.hands)){ const mr=mechRows(); if (mr.length) secs.push(dockSection("mech", Lx("Dati meccanici","Joint mechanics"), mr, Lx("Angoli stimati dal modello 3D della posa. Gira la persona di lato per la flessione, di fronte per l'abduzione.","Angles estimated from the 3D pose. Side view for flexion, front view for abduction."))); }
+  else if (S.layers.hands && TR.hands.some(h=>h.tracked&&h.world)){ const mr=mechRows(); if (mr.length) secs.push(dockSection("mech", Lx("Dati meccanici","Joint mechanics"), mr)); }
+  if (!secs.length){ dock.hidden=true; return; }
+  dock.hidden=false; dock.innerHTML=secs.join("");
+  placeDock(dock);
+}
+function bodyBoxes(){
+  const B=[], add=(pts,m)=>{ let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9,n=0; for (const p of pts){ if (!p) continue; n++; x0=Math.min(x0,p.x); y0=Math.min(y0,p.y); x1=Math.max(x1,p.x); y1=Math.max(y1,p.y); } if (n) B.push({ x0:x0-m, y0:y0-m, x1:x1+m, y1:y1+m }); };
+  if (TR.pose.tracked && TR.pose.lm){ const P=TR.pose.lm.map((p,i)=>TR.pose.on[i]?mp(p):null); add(P,30);
+    /* arms and legs as their own boxes so free space between them can be used */ }
+  if (TR.face.tracked && TR.face.lm) add(TR.face.lm.map(mp),28);
+  for (const h of TR.hands) if (h.tracked && h.lm) add(h.lm.map(mp),24);
+  return B;
+}
+function placeDock(dock){
+  const w=dock.offsetWidth, h=dock.offsetHeight, st=$("#status"), sh=$("#sheet"), fb=document.querySelector(".fabs");
+  const top=(st && !st.hidden ? st.getBoundingClientRect().bottom : 110)+8, bot=(sh ? sh.getBoundingClientRect().top : window.innerHeight)-8;
+  const right=(fb ? fb.getBoundingClientRect().left : window.innerWidth)-8;
+  const cand=[[10,top],[window.innerWidth-w-10,top],[10,bot-h],[right-w,bot-h],[10,(top+bot-h)/2],[window.innerWidth-w-10,(top+bot-h)/2]].map(([x,y])=>({ x:Math.max(6,Math.min(window.innerWidth-w-6,x)), y:Math.max(top,Math.min(bot-h,y)) }));
+  const boxes=bodyBoxes(); const cost=(c)=>{ let s=0; for (const b of boxes){ const ox=Math.max(0,Math.min(c.x+w,b.x1)-Math.max(c.x,b.x0)), oy=Math.max(0,Math.min(c.y+h,b.y1)-Math.max(c.y,b.y0)); s+=ox*oy; } return s; };
+  let best=cand[0], bc=Infinity; for (const c of cand){ const v=cost(c); if (v<bc-1){ bc=v; best=c; } }
+  if (DOCK.pos){ const cur=cost(DOCK.pos); if (cur<=bc*1.15+400) best=DOCK.pos; }
+  DOCK.pos=best; dock.style.left=best.x+"px"; dock.style.top=best.y+"px";
+  dock.classList.toggle("tight", bc>w*h*0.25);   /* nowhere free: become more transparent */
+}
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-tog]"); if (!b) return; S.dock=S.dock||{}; S.dock[b.dataset.tog]=!S.dock[b.dataset.tog]; saveSettings(); DOCK.t=0; updateDock(performance.now()); });
+
+/* ---------- 6. guided facial exam ---------- */
+const EX = { on:false, i:0, t0:0, samples:[], base:null, res:{}, gaze:[], blinks:null, report:null };
+const ST = () => [
+  { id:"rest", d:4, t:Lx("Viso rilassato, sguardo dritto","Relax your face, look straight ahead"), m:Lx("simmetria a riposo","resting symmetry") },
+  { id:"brow", d:3.5, t:Lx("Alza le sopracciglia","Raise your eyebrows"), m:Lx("m. frontale · VII ramo temporale","frontalis · VII temporal branch") },
+  { id:"eyeG", d:3.5, t:Lx("Chiudi gli occhi delicatamente","Close your eyes gently"), m:Lx("m. orbicolare dell'occhio · VII zigomatico","orbicularis oculi · VII zygomatic") },
+  { id:"eyeT", d:3.5, t:Lx("Chiudi gli occhi forte","Squeeze your eyes shut"), m:Lx("m. orbicolare dell'occhio (forza)","orbicularis oculi (strength)") },
+  { id:"snarl", d:3.5, t:Lx("Arriccia il naso","Wrinkle your nose"), m:Lx("m. elevatore del labbro e dell'ala del naso · VII buccale","levator labii alaeque nasi · VII buccal") },
+  { id:"smile", d:3.5, t:Lx("Sorriso ampio, mostra i denti","Big smile showing your teeth"), m:Lx("m. grande zigomatico, risorio · VII buccale","zygomaticus major, risorius · VII buccal") },
+  { id:"pucker", d:3.5, t:Lx("Labbra a bacio","Pucker your lips"), m:Lx("m. orbicolare della bocca · VII buccale","orbicularis oris · VII buccal") },
+  { id:"lower", d:3.5, t:Lx("Mostra i denti inferiori","Show your lower teeth"), m:Lx("m. depressore del labbro inferiore · VII marginale mandibolare","depressor labii inferioris · VII marginal mandibular") },
+  { id:"puff", d:3.5, t:Lx("Gonfia le guance","Puff out your cheeks"), m:Lx("m. buccinatore, orbicolare della bocca","buccinator, orbicularis oris") },
+  { id:"open", d:4, t:Lx("Apri la bocca al massimo, lentamente","Open your mouth as wide as you can, slowly"), m:Lx("apertura mandibolare · ATM","mandibular opening · TMJ") },
+  { id:"jawR", d:3, t:Lx("Sposta la mandibola verso la tua destra","Move your jaw to your right"), m:Lx("lateralità · pterigoideo laterale sx","lateral excursion · left lateral pterygoid") },
+  { id:"jawL", d:3, t:Lx("Sposta la mandibola verso la tua sinistra","Move your jaw to your left"), m:Lx("lateralità · pterigoideo laterale dx","lateral excursion · right lateral pterygoid") },
+  { id:"fwd", d:3, t:Lx("Porta la mandibola in avanti","Push your jaw forward"), m:Lx("protrusione · pterigoidei laterali","protrusion · lateral pterygoids") },
+  { id:"gaze", d:9*1.7, t:Lx("Segui il punto solo con gli occhi, testa ferma","Follow the dot with your eyes only, keep your head still"), m:Lx("motilità oculare · III, IV, VI","eye movements · III, IV, VI") },
+  { id:"blink", d:15, t:Lx("Guarda lo schermo e sbatti le palpebre normalmente","Look at the screen and blink normally"), m:Lx("ammiccamento spontaneo","spontaneous blinking") }
+];
+const GAZE9 = [[0,0],[-1,0],[-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1]];   /* x: -1 = subject's left on screen, y: -1 = up */
+function examStart(){
+  if (!TR.face.tracked){ toast(Lx("Inquadra il viso di fronte, a 30–40 cm, con luce frontale.","Frame the face straight on, 30–40 cm away, in frontal light.")); return; }
+  Object.assign(EX,{ on:true, i:0, t0:performance.now()+1500, samples:[], base:null, res:{}, gaze:[], report:null, steps:ST() });
+  $("#examHud").hidden=false; examUI(performance.now());
+}
+function examStop(){ EX.on=false; $("#examHud").hidden=true; $("#gazeDot").hidden=true; }
+function examSample(g, bs, ts){
+  if (!EX.on || !g) return; const st=EX.steps[EX.i]; if (!st) return; const el=(ts-EX.t0)/1000; if (el<0) return;
+  const s={ g, bs, el, ts };
+  if (st.id==="gaze"){ const k=Math.floor(el/1.7), ph=el-k*1.7; if (k<9 && ph>0.75){ (EX.gaze[k]=EX.gaze[k]||[]).push(s); } }
+  else EX.samples.push(s);
+}
+function examTick(now){
+  if (!EX.on) return; const st=EX.steps[EX.i]; const el=(now-EX.t0)/1000;
+  if (st && st.id==="gaze"){ const k=Math.min(8,Math.floor(Math.max(0,el)/1.7)), d=GAZE9[k], dot=$("#gazeDot"); dot.hidden=el<0;
+    dot.style.left=`calc(50% + ${d[0]*38}vw - 14px)`; dot.style.top=`calc(50% + ${d[1]*30}vh - 14px)`; }
+  else $("#gazeDot").hidden=true;
+  if (st && el>=st.d){ examFinishStep(st); EX.i++; EX.samples=[]; EX.t0=now+1300; if (EX.i>=EX.steps.length){ examStop(); examReport(); return; } }
+  examUI(now);
+}
+function examUI(now){
+  const st=EX.steps[EX.i]; if (!st) return; const el=(now-EX.t0)/1000;
+  $("#exStep").textContent=`${EX.i+1}/${EX.steps.length}`; $("#exText").textContent= el<0 ? Lx("Preparati: ","Get ready: ")+st.t : st.t; $("#exMus").textContent=st.m;
+  $("#exBar").style.width=Math.round(Math.max(0,Math.min(1,el/st.d))*100)+"%";
+  $("#exWarn").textContent = TR.face.tracked ? "" : Lx("Viso non visibile: rimetti il viso nell'inquadratura","Face not visible: bring the face back into view");
+}
+const series=(S_,f)=>S_.map(s=>f(s.g,s.bs)).filter(v=>v!=null&&isFinite(v));
+function examFinishStep(st){
+  const X=EX.samples, B=EX.base, R=EX.res;
+  if (st.id==="rest"){ if (!X.length) return; const g0=X[0].g, base={};
+    for (const k of ["browR","browL","eyeR","eyeL","lipGap","nlR","nlL","lipZ"]) base[k]=med(series(X,g=>g[k]));
+    for (const k of ["cR","cL","ulR","ulL","llR","llL","chR","chL","chin"]){ base[k]={}; for (const ax of ["x","y","z"]) base[k][ax]=med(series(X,g=>g[k][ax])); }
+    EX.base=base; R.rest={ eyeRatio:base.eyeR/Math.max(0.5,base.eyeL), browDiff:base.browR-base.browL, cornerDiff:base.cR.y-base.cL.y, nlRatio:base.nlR/Math.max(1,base.nlL), n:X.length };
+    void g0; return; }
+  if (st.id==="gaze"){ R.gaze={ gaze:gazeStats() }; return; }
+  if (!B || !X.length){ R[st.id]={ n:0 }; return; }
+  const dv=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
+  const eyeClose=(g,side)=>1-(side==="R"?g.eyeR/B.eyeR:g.eyeL/B.eyeL);
+  const cornerMove=(g,side)=>side==="R"?dv(g.cR,B.cR):dv(g.cL,B.cL);
+  const out={ n:X.length };
+  switch (st.id){
+    case "brow": out.R=pct(series(X,g=>g.browR-B.browR),0.9); out.L=pct(series(X,g=>g.browL-B.browL),0.9); out.synR=pct(series(X,g=>cornerMove(g,"R")),0.9); out.synL=pct(series(X,g=>cornerMove(g,"L")),0.9); out.unit="mm"; break;
+    case "eyeG": case "eyeT": out.R=pct(series(X,g=>eyeClose(g,"R")),0.9)*100; out.L=pct(series(X,g=>eyeClose(g,"L")),0.9)*100; out.gapR=pct(series(X,g=>g.eyeR),0.1); out.gapL=pct(series(X,g=>g.eyeL),0.1);
+      out.synR=pct(series(X,g=>cornerMove(g,"R")),0.9); out.synL=pct(series(X,g=>cornerMove(g,"L")),0.9); out.unit="%"; break;
+    case "snarl": out.R=pct(series(X,g=>g.ulR.y-B.ulR.y),0.9); out.L=pct(series(X,g=>g.ulL.y-B.ulL.y),0.9); out.unit="mm"; break;
+    case "smile": out.R=pct(series(X,g=>cornerMove(g,"R")),0.9); out.L=pct(series(X,g=>cornerMove(g,"L")),0.9); out.synR=pct(series(X,g=>eyeClose(g,"R")),0.9)*100; out.synL=pct(series(X,g=>eyeClose(g,"L")),0.9)*100; out.unit="mm"; break;
+    case "pucker": out.R=pct(series(X,g=>g.cR.x-B.cR.x),0.9); out.L=pct(series(X,g=>B.cL.x-g.cL.x),0.9); out.synR=pct(series(X,g=>eyeClose(g,"R")),0.9)*100; out.synL=pct(series(X,g=>eyeClose(g,"L")),0.9)*100; out.unit="mm"; break;
+    case "lower": out.R=pct(series(X,g=>B.llR.y-g.llR.y-(B.chin.y-g.chin.y)*0.5),0.9); out.L=pct(series(X,g=>B.llL.y-g.llL.y-(B.chin.y-g.chin.y)*0.5),0.9); out.unit="mm"; break;
+    case "puff": out.R=pct(series(X,g=>g.chR.z-B.chR.z),0.9); out.L=pct(series(X,g=>g.chL.z-B.chL.z),0.9); out.bs=pct(series(X,(g,bs)=>bs.cheekPuff),0.9); out.leak=pct(series(X,g=>g.lipGap-B.lipGap),0.8); out.unit="mm"; break;
+    case "open": { const op=series(X,g=>B.chin.y-g.chin.y), gp=series(X,g=>g.lipGap); out.open=pct(op,0.95); out.gap=pct(gp,0.95);
+      let im=0; X.forEach((s,i)=>{ if ((B.chin.y-s.g.chin.y)>(B.chin.y-X[im].g.chin.y)) im=i; }); out.latAtMax=X[im].g.chin.x-B.chin.x;
+      out.latMax=Math.max(...X.map(s=>Math.abs(s.g.chin.x-B.chin.x))); out.unit="mm"; break; }
+    case "jawR": out.exc=pct(series(X,g=>B.chin.x-g.chin.x),0.95); out.unit="mm"; break;
+    case "jawL": out.exc=pct(series(X,g=>g.chin.x-B.chin.x),0.95); out.unit="mm"; break;
+    case "fwd": out.exc=pct(series(X,g=>g.chin.z-B.chin.z),0.95); out.unit="mm"; break;
+    case "blink": out.blink=blinkStats(X); break;
+  }
+  R[st.id]=out;
+}
+function blinkStats(X){
+  if (X.length<20) return null; const bR=EX.base.eyeR, bL=EX.base.eyeL; let n=0, inc=0, asym=0, closed=false, minR=1, minL=1, t0=X[0].ts, t1=X[X.length-1].ts;
+  for (const s of X){ const r=s.g.eyeR/bR, l=s.g.eyeL/bL, m=Math.min(r,l);
+    if (!closed && m<0.55){ closed=true; minR=r; minL=l; }
+    else if (closed){ minR=Math.min(minR,r); minL=Math.min(minL,l); if (m>0.75){ closed=false; n++; if (Math.max(minR,minL)>0.25) inc++; if (Math.abs(minR-minL)>0.35) asym++; } } }
+  const min=(t1-t0)/60000; return { n, rate:min>0?n/min:0, incomplete:n?inc/n:0, asym:n?asym/n:0, rateHz:X.length/((t1-t0)/1000) };
+}
+function gazeStats(){
+  const pos=GAZE9.map((d,k)=>{ const X=EX.gaze[k]||[]; if (X.length<3) return null;
+    const hR=series(X,g=>g.gR&&g.gR.h), hL=series(X,g=>g.gL&&g.gL.h), vR=series(X,(g,bs)=>g.gR?g.gR.v+((bs.eyeLookUpRight||0)-(bs.eyeLookDownRight||0))*20:null), vL=series(X,(g,bs)=>g.gL?g.gL.v+((bs.eyeLookUpLeft||0)-(bs.eyeLookDownLeft||0))*20:null);
+    /* end-gaze oscillation: residual jitter of the horizontal position */
+    const jit=(a)=>{ if (a.length<6) return 0; const m=med(a); let zc=0; for (let i=1;i<a.length;i++) if ((a[i]-m)*(a[i-1]-m)<0) zc++; const sd=Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/a.length); return zc>=4 && sd>1.5 ? sd : 0; };
+    return { d, hR:med(hR), hL:med(hL), vR:med(vR), vL:med(vL), jit:Math.max(jit(hR),jit(hL)), n:X.length }; });
+  return pos;
+}
+function sbScore(r){ return r>=0.9?5:r>=0.7?4:r>=0.45?3:r>=0.2?2:1; }
+function examAnalyse(){
+  const R=EX.res, F=[], tab=[]; const side=(r,l)=>r<l?"R":"L"; const sdName=(s)=>s==="R"?Lx("destro","right"):Lx("sinistro","left"), sdW=(s)=>s==="R"?Lx("destra","right"):Lx("sinistra","left");
+  const ratio=(r,l)=>{ const a=Math.max(0,r||0), b=Math.max(0,l||0); return Math.max(a,b)<0.3?1:Math.min(a,b)/Math.max(a,b); };
+  const vol=[["brow",Lx("Fronte","Forehead")],["eyeG",Lx("Chiusura occhi delicata","Gentle eye closure")],["smile",Lx("Sorriso","Smile")],["snarl",Lx("Arricciare il naso","Snarl")],["pucker",Lx("Labbra a bacio","Lip pucker")]];
+  let volSum=0, synSum=0, weak={R:0,L:0}; const movRatio={};
+  for (const [id,lab] of vol){ const x=R[id]||{}; const r=ratio(x.R,x.L); movRatio[id]=r; const sc=sbScore(r); volSum+=sc; if (r<0.8) weak[side(x.R,x.L)]++;
+    let syn=0; if (x.synR!=null){ const d=Math.abs((x.synR||0)-(x.synL||0)); syn = id==="smile"||id==="pucker" ? (d<10?0:d<20?1:d<35?2:3) : (d<1.5?0:d<3?1:d<5?2:3); } synSum+=syn;
+    tab.push({ lab, m:(EX.steps.find(s=>s.id===id)||{}).m, R:x.R, L:x.L, unit:x.unit, sym:Math.round(r*100), sb:sc, syn }); }
+  for (const [id,lab] of [["eyeT",Lx("Chiusura occhi forte","Tight eye closure")],["lower",Lx("Denti inferiori","Lower teeth")],["puff",Lx("Gonfiare le guance","Cheek puff")]]){ const x=R[id]||{}; const r=ratio(x.R,x.L); movRatio[id]=r; tab.push({ lab, m:(EX.steps.find(s=>s.id===id)||{}).m, R:x.R, L:x.L, unit:x.unit, sym:Math.round(r*100) }); }
+  const rs=R.rest||{}; let rest=0; const restItems=[];
+  if (rs.eyeRatio!=null && (rs.eyeRatio<0.85||rs.eyeRatio>1.18)){ rest+=1; restItems.push(Lx("rima palpebrale asimmetrica","asymmetric palpebral fissure")); }
+  if (rs.nlRatio!=null){ const d=Math.abs(1-rs.nlRatio); if (d>0.3){ rest+=2; restItems.push(Lx("solco naso-labiale molto asimmetrico","markedly asymmetric nasolabial fold")); } else if (d>0.12){ rest+=1; restItems.push(Lx("solco naso-labiale asimmetrico","asymmetric nasolabial fold")); } }
+  if (rs.cornerDiff!=null && Math.abs(rs.cornerDiff)>2){ rest+=1; restItems.push(Lx("angolo della bocca abbassato a ","mouth corner lower on the ")+sdW(rs.cornerDiff<0?"R":"L")); }
+  const composite=Math.max(0,Math.min(100,volSum*4-rest*5-synSum));
+  /* flags */
+  const wSide=weak.R>weak.L?"R":weak.L>weak.R?"L":null, lower=Math.min(movRatio.smile,movRatio.pucker,movRatio.snarl);
+  if (lower<0.7 && wSide){
+    if (movRatio.brow<0.7) F.push({ lv:3, t:Lx(`Debolezza di fronte, occhio e bocca a ${sdW(wSide)}: pattern compatibile con deficit periferico del nervo facciale (VII). Se è comparso da poco serve una visita medica a breve.`,`Forehead, eye and mouth weaker on the ${sdName(wSide)}: pattern compatible with a peripheral facial nerve (VII) deficit. If recent, see a doctor soon.`) });
+    else if (movRatio.brow>=0.85) F.push({ lv:4, t:Lx(`Bocca più debole a ${sdW(wSide)} con fronte risparmiata: pattern di tipo centrale. Se l'asimmetria è comparsa all'improvviso, chiama subito il 112 (possibile ictus: viso, braccio, parola).`,`Mouth weaker on the ${sdName(wSide)} with the forehead spared: central-type pattern. If it appeared suddenly, call emergency services now (possible stroke: face, arm, speech).`) });
+  }
+  for (const sd of ["R","L"]){ const g=R.eyeG||{}; const c=sd==="R"?g.R:g.L; if (c!=null && c<85) F.push({ lv:3, t:Lx(`Chiusura palpebrale incompleta a ${sdW(sd)} (${Math.round(c)}%): rischio di secchezza e lesioni della cornea, proteggere l'occhio e farlo valutare.`,`Incomplete eye closure on the ${sdName(sd)} (${Math.round(c)}%): risk of dry eye and corneal damage; protect the eye and have it checked.`) }); }
+  if (rs.eyeRatio!=null && (rs.eyeRatio<0.8||rs.eyeRatio>1.25)) F.push({ lv:2, t:Lx(`Rima palpebrale più stretta a ${sdW(rs.eyeRatio<1?"R":"L")} a riposo: possibile ptosi palpebrale, da valutare.`,`Narrower palpebral fissure on the ${sdName(rs.eyeRatio<1?"R":"L")} at rest: possible eyelid ptosis, worth checking.`) });
+  const pf=R.puff||{}; if (pf.leak!=null && pf.leak>4) F.push({ lv:2, t:Lx("Le labbra non tengono l'aria gonfiando le guance: possibile debolezza dell'orbicolare della bocca.","Lips leak air when puffing the cheeks: possible orbicularis oris weakness.") });
+  const op=R.open||{}, jr=(R.jawR||{}).exc, jl=(R.jawL||{}).exc, fw=(R.fwd||{}).exc;
+  if (op.open!=null){ if (op.open<35) F.push({ lv:3, t:Lx(`Apertura della bocca ridotta (circa ${Math.round(op.open)} mm, normale 40–50): limitazione di tipo articolare (ATM) da valutare.`,`Reduced mouth opening (about ${Math.round(op.open)} mm, normal 40–50): joint-type (TMJ) restriction worth assessing.`) });
+    else if (op.open<40) F.push({ lv:2, t:Lx(`Apertura della bocca ai limiti bassi (circa ${Math.round(op.open)} mm): possibile limitazione muscolare.`,`Mouth opening at the low limit (about ${Math.round(op.open)} mm): possible muscular restriction.`) });
+    if (Math.abs(op.latAtMax)>2.5) F.push({ lv:2, t:Lx(`In massima apertura il mento devia di ${Math.abs(op.latAtMax).toFixed(1)} mm verso ${op.latAtMax>0?"sinistra":"destra"} (deflessione): possibile limitazione dell'articolazione dallo stesso lato.`,`At maximum opening the chin deviates ${Math.abs(op.latAtMax).toFixed(1)} mm to the ${op.latAtMax>0?"left":"right"} (deflection): possible restriction of the joint on that side.`) });
+    else if (op.latMax>3) F.push({ lv:1, t:Lx(`Durante l'apertura il mento devia (${op.latMax.toFixed(1)} mm) e poi torna al centro: tipico di uno spostamento del disco articolare con riduzione.`,`During opening the chin deviates (${op.latMax.toFixed(1)} mm) and returns to the midline: typical of disc displacement with reduction.`) }); }
+  if (jr!=null && jl!=null){ const a=Math.max(jr,jl)>2?Math.abs(jr-jl)/Math.max(jr,jl):0; if (a>0.35) F.push({ lv:2, t:Lx(`Lateralità asimmetrica (dx ${jr.toFixed(1)} mm, sx ${jl.toFixed(1)} mm): possibile limitazione dell'articolazione controlaterale al lato più corto.`,`Asymmetric lateral excursion (R ${jr.toFixed(1)} mm, L ${jl.toFixed(1)} mm): possible restriction of the joint opposite the shorter side.`) }); }
+  /* eye movements */
+  const gz=(R.gaze||{}).gaze||[];
+  const dirs=[[1,Lx("verso sinistra","to the left")],[5,Lx("verso destra","to the right")],[3,Lx("in alto","upwards")],[7,Lx("in basso","downwards")]];
+  const eyeTab=[];
+  for (const [k,lab] of dirs){ const p=gz[k], c=gz[0]; if (!p||!c) continue;
+    const horiz=k===1||k===5, dR=horiz?p.hR-c.hR:p.vR-c.vR, dL=horiz?p.hL-c.hL:p.vL-c.vL; eyeTab.push({ lab, R:dR, L:dL, jit:p.jit });
+    const a=Math.abs(dR), b=Math.abs(dL);
+    if (Math.max(a,b)>6 && Math.min(a,b)<0.6*Math.max(a,b)){ const slow=a<b?"R":"L";
+      let mus=""; if (horiz){ const toLeft=k===1; const abd=(slow==="R"&&!toLeft)||(slow==="L"&&toLeft); mus=abd?Lx("retto laterale (VI nervo)","lateral rectus (nerve VI)"):Lx("retto mediale (III nervo)","medial rectus (nerve III)"); }
+      else mus = k===3 ? Lx("retto superiore / obliquo inferiore (III)","superior rectus / inferior oblique (III)") : Lx("retto inferiore (III) / obliquo superiore (IV)","inferior rectus (III) / superior oblique (IV)");
+      F.push({ lv:3, t:Lx(`Occhio ${sdName(slow)} meno mobile ${lab} (${Math.round(Math.min(a,b))}° contro ${Math.round(Math.max(a,b))}°): possibile limitazione del ${mus}. Se c'è visione doppia o è comparso all'improvviso, visita urgente.`,`${slow==="R"?"Right":"Left"} eye moves less ${lab} (${Math.round(Math.min(a,b))}° vs ${Math.round(Math.max(a,b))}°): possible limitation of the ${mus}. With double vision or sudden onset, seek urgent care.`) }); }
+    if (p.jit) F.push({ lv:2, t:Lx(`Oscillazione degli occhi nello sguardo ${lab}: possibile nistagmo di sguardo, da confermare con esame clinico.`,`Eye oscillation when looking ${lab}: possible gaze-evoked nystagmus, to be confirmed clinically.`) });
+  }
+  const bl=(R.blink||{}).blink;
+  if (bl){ if (bl.rate<8) F.push({ lv:1, t:Lx(`Ammiccamenti rari (${Math.round(bl.rate)}/min, tipico 10–20): favorisce l'occhio secco.`,`Infrequent blinking (${Math.round(bl.rate)}/min, typical 10–20): predisposes to dry eye.`) });
+    if (bl.rate>32) F.push({ lv:1, t:Lx(`Ammiccamenti frequenti (${Math.round(bl.rate)}/min): può indicare irritazione o secchezza oculare.`,`Frequent blinking (${Math.round(bl.rate)}/min): may indicate eye irritation or dryness.`) });
+    if (bl.n>=3 && bl.incomplete>0.3) F.push({ lv:2, t:Lx(`${Math.round(bl.incomplete*100)}% di ammiccamenti incompleti.`,`${Math.round(bl.incomplete*100)}% incomplete blinks.`) });
+    if (bl.n>=3 && bl.asym>0.3) F.push({ lv:2, t:Lx("Ammiccamento asimmetrico tra i due occhi.","Asymmetric blinking between the two eyes.") }); }
+  if (!F.length) F.push({ lv:0, t:Lx("Nessuna anomalia evidente nelle misure della fotocamera.","No obvious anomaly in the camera measurements.") });
+  F.sort((a,b)=>b.lv-a.lv);
+  return { composite, volSum, rest, synSum, restItems, tab, op, jr, jl, fw, eyeTab, gz, bl, flags:F };
+}
+function examReport(saved){
+  const A = saved ? saved.a : examAnalyse(); const tx=T[S.lang];
+  EX.report = saved || { t:Date.now(), a:A };
+  const f1=(v,u)=>v==null||!isFinite(v)?"–":(Math.abs(v)<10?v.toFixed(1):Math.round(v))+(u?" "+u:"");
+  const lvc=["ok","info","warn","high","crit"];
+  const gzSvg=(()=>{ if (!A.gz || !A.gz.length) return ""; const pts=(k)=>A.gz.map((p,i)=>p?`<circle cx="${60+(p["h"+k]||0)*1.6}" cy="${60-(p["v"+k]||0)*1.6}" r="3" class="g${k}"/>`:"").join("");
+    return `<svg viewBox="0 0 120 120" class="gzs"><rect x="1" y="1" width="118" height="118" rx="6"/><line x1="60" y1="4" x2="60" y2="116"/><line x1="4" y1="60" x2="116" y2="60"/>${pts("R")}${pts("L")}</svg>`; })();
+  $("#repBody").innerHTML = `
+    <div class="rhead"><div><b>${esc(Lx("Esame del viso","Facial exam"))}</b><br>${esc(fmtDate(EX.report.t))}${saved&&saved.pname?" · "+esc(saved.pname):""}</div><div class="rscore"><span>Sunnybrook*</span><b>${A.composite}</b><small>/100</small></div></div>
+    <div class="flags">${A.flags.map(f=>`<p class="${lvc[f.lv]}">${esc(f.t)}</p>`).join("")}</div>
+    <h4>${esc(Lx("Movimenti volontari (destra / sinistra)","Voluntary movements (right / left)"))}</h4>
+    <table><tr><th></th><th>${Lx("Dx","R")}</th><th>${Lx("Sx","L")}</th><th>${Lx("Simm.","Sym.")}</th><th>SB</th></tr>${A.tab.map(r=>`<tr><td>${esc(r.lab)}<small>${esc(r.m||"")}</small></td><td>${f1(r.R,r.unit)}</td><td>${f1(r.L,r.unit)}</td><td class="${r.sym<70?"bad":r.sym<85?"mid":""}">${r.sym}%</td><td>${r.sb||""}</td></tr>`).join("")}</table>
+    <p class="note">${esc(Lx(`Riposo: ${A.restItems.length?A.restItems.join(", "):"simmetrico"} · punteggio riposo ${A.rest} · volontario ${A.volSum}/25 · sincinesie ${A.synSum}. *Composito = volontario×4 − riposo×5 − sincinesie (Ross et al., 1996), stimato dalla fotocamera.`,`Rest: ${A.restItems.length?A.restItems.join(", "):"symmetric"} · resting score ${A.rest} · voluntary ${A.volSum}/25 · synkinesis ${A.synSum}. *Composite = voluntary×4 − resting×5 − synkinesis (Ross et al., 1996), camera estimate.`))}</p>
+    <h4>${esc(Lx("Mandibola e ATM","Mandible and TMJ"))}</h4>
+    <table><tr><td>${esc(Lx("Apertura massima (discesa del mento)","Maximum opening (chin descent)"))}</td><td>${f1(A.op&&A.op.open,"mm")}</td><td class="nm">40–50 mm</td></tr>
+      <tr><td>${esc(Lx("Apertura delle labbra","Lip opening"))}</td><td>${f1(A.op&&A.op.gap,"mm")}</td><td></td></tr>
+      <tr><td>${esc(Lx("Deviazione del mento in massima apertura","Chin deviation at max opening"))}</td><td>${f1(A.op&&A.op.latAtMax,"mm")}</td><td class="nm">&lt; 2 mm</td></tr>
+      <tr><td>${esc(Lx("Lateralità destra / sinistra","Lateral excursion right / left"))}</td><td>${f1(A.jr,"mm")} / ${f1(A.jl,"mm")}</td><td class="nm">${esc(Lx("simmetrica","symmetric"))}</td></tr>
+      <tr><td>${esc(Lx("Protrusione","Protrusion"))}</td><td>${f1(A.fw,"mm")}</td><td></td></tr></table>
+    <h4>${esc(Lx("Motilità oculare","Eye movements"))}</h4>
+    <div class="gzw">${gzSvg}<table><tr><th></th><th>${Lx("Occhio dx","R eye")}</th><th>${Lx("Occhio sx","L eye")}</th></tr>${A.eyeTab.map(r=>`<tr><td>${esc(r.lab)}</td><td>${f1(r.R,"°")}</td><td>${f1(r.L,"°")}</td></tr>`).join("")}</table></div>
+    <p class="note">${esc(Lx("Punti azzurri: occhio destro, arancio: occhio sinistro, nelle 9 posizioni di sguardo. Angoli stimati dalla posizione dell'iride.","Blue dots: right eye, orange: left eye, in the 9 gaze positions. Angles estimated from the iris position."))}</p>
+    ${A.bl?`<h4>${esc(Lx("Ammiccamento","Blinking"))}</h4><table><tr><td>${esc(Lx("Frequenza","Rate"))}</td><td>${Math.round(A.bl.rate)}/min</td><td class="nm">10–20/min</td></tr><tr><td>${esc(Lx("Incompleti","Incomplete"))}</td><td>${Math.round(A.bl.incomplete*100)}%</td><td></td></tr><tr><td>${esc(Lx("Asimmetrici","Asymmetric"))}</td><td>${Math.round(A.bl.asym*100)}%</td><td></td></tr></table>`:""}
+    <p class="disc">${esc(Lx("Strumento di supporto basato sulla fotocamera: non è una diagnosi e non sostituisce la visita. Le misure dipendono da luce, distanza e posizione della testa. In caso di asimmetria facciale improvvisa, debolezza di un braccio o difficoltà di parola chiama subito il 112.","Camera-based support tool: not a diagnosis and no substitute for a clinical exam. Measurements depend on light, distance and head position. With sudden facial asymmetry, arm weakness or speech difficulty call emergency services immediately."))}</p>`;
+  $("#repSave").hidden=!!saved; $("#report").hidden=false;
+}
+async function examSave(){
+  if (!EX.report) return; let pts=[]; try { pts=await DB.all("patients"); } catch(e){}
+  const pat=pts.find(p=>p.id===S.pid); if (!pat){ toast(T[S.lang].mNoPat); $("#pat").hidden=false; renderPatients(); return; }
+  try { await DB.put("scans",{ pid:pat.id, t:EX.report.t, type:"exam", a:EX.report.a, moles:[], face:"" }); toast(Lx("Referto salvato · ","Report saved · ")+pat.name); $("#repSave").hidden=true; } catch(e){ toast(String(e&&e.message||e)); }
+}
+$("#examBtn").addEventListener("click",()=>{ if (S.view==="3d") setView("ar"); examStart(); });
+$("#exStop").addEventListener("click",examStop);
+$("#repSave").addEventListener("click",()=>{ examSave(); });
+$("#repPrint").addEventListener("click",()=>{ document.body.classList.add("printing"); setTimeout(()=>{ window.print(); setTimeout(()=>document.body.classList.remove("printing"),400); },50); });
 
 /* ---------- labels that stay put ---------- */
 const LST = new Map();
@@ -3046,6 +3527,7 @@ function render(now){
   LIB.draw(sctx, { dpr:sdpr, look:(S.look==="holo"||S.look==="holoc")?"xray":S.look, hud:S.look==="holo", brightness:S.brightness, layers:L2, pose:use3?null:P, poseFade:TR.pose.fade,
     face:F, faceFade:TR.face.fade, hands:use3?[]:hands, t:now, labels:labelsOut, skinDraw:(FSK && S.layers.skin) ? (c,d,f,M)=>FSK.draw(c,d,f,M) : null });
   if (use3 && S.layers.labels){ E3.labels(lab3, S.layers); for (const q of lab3) labelsOut.push(q); }
+  base(sctx,sdpr); drawFaceMuscles(sctx, F, now); drawHandDetail(sctx, hands, now);
   adapt(performance.now()-d0, now);
   base(ctx); ctx.clearRect(0,0,W,H);
   let lens=null;
@@ -3293,7 +3775,8 @@ function loop(){
     const wantHands = models.hands && (L.hands || (S.reveal==="lens" && S.follow==="finger"));
     const wantFace = !!models.face; // always on: it also confirms that a detected body is a real person
     let task = "pose";
-    if (frameN%2===1 || !models.pose){
+    if (EX.on && models.face) task="face";
+    else if (frameN%2===1 || !models.pose){
       if (wantHands && wantFace) task = (otherN++%2===0) ? "face" : "hands";
       else if (wantFace) task="face"; else if (wantHands) task="hands";
     }
@@ -3308,7 +3791,7 @@ function loop(){
     if (FSK && now-SK.lastFace>2500 && SK.lastFace) { FSK.reset(); SK.lastFace=0; }
   }
   if (now-fpsT>1000){ fps=Math.round(detN*1000/(now-fpsT)); detN=0; fpsT=now; updateStatus(); }
-  renderSkinPanel(now);
+  updateDock(now); examTick(now);
   if (S.view==="3d") render3d(now); else render(now);
 }
 
@@ -3333,7 +3816,7 @@ async function loadModels(){
   await loadPose(); updateStatus();
   const [h,f] = await Promise.allSettled([
     make(HandLandmarker, HAND_URL, { numHands:2, minHandDetectionConfidence:0.7, minHandPresenceConfidence:0.7, minTrackingConfidence:0.6 }),
-    make(FaceLandmarker, FACE_URL, { numFaces:1, minFaceDetectionConfidence:0.6, minFacePresenceConfidence:0.6, minTrackingConfidence:0.6, outputFaceBlendshapes:false })
+    make(FaceLandmarker, FACE_URL, { numFaces:1, minFaceDetectionConfidence:0.6, minFacePresenceConfidence:0.6, minTrackingConfidence:0.6, outputFaceBlendshapes:true })
   ]);
   if (h.status==="fulfilled") models.hands=h.value; else console.warn(h.reason);
   if (f.status==="fulfilled") models.face=f.value; else console.warn(f.reason);
@@ -3453,11 +3936,13 @@ window.addEventListener("pointercancel",e=>{ dragging=false; if (E3) E3.pointerU
 canvas.addEventListener("wheel",e=>{ if (S.view==="3d" && E3){ e.preventDefault(); E3.wheel(e); } },{ passive:false });
 
 $("#reset3d").addEventListener("click",()=>{ if (E3) E3.resetView(); });
-$("#skinP").addEventListener("click",()=>{ $("#skinP").classList.toggle("min"); });
+
 /* ---------- mini guide ---------- */
 const GUIDE = {
   it:[["Si parte dal viso","L’app si apre in modalità Pelle. Inquadra il viso con luce frontale e resta fermo 2–3 secondi: compaiono nei (verde), brufoli (rosso), macchie (marrone), rigonfiamenti (lilla) e rughe (ambra)."],
     ["Tocca un’etichetta","Un tocco su un’etichetta della pelle apre i consigli alimentari per quel rilevamento."],
+    ["Esame del viso 🩺","Una sequenza guidata di 15 esercizi (sopracciglia, occhi, sorriso, labbra, guance, mandibola, movimenti oculari, ammiccamento) produce una scheda referto con simmetria per lato, punteggio tipo Sunnybrook, apertura e lateralità della mandibola e segnalazioni. Si salva nello storico del paziente e si stampa in PDF."],
+    ["Dati meccanici","Con il corpo inquadrato il pannello mostra angoli di spalla, gomito, anca e ginocchio, velocità, escursione massima rispetto ai valori AAOS e asimmetrie destra/sinistra; con le mani, gli angoli MCP/PIP/DIP di ogni dito. Il pannello si sposta da solo dove non copre il corpo; la freccia nel titolo lo riduce."],
     ["Analisi pelle","Il pannello a sinistra stima tono, rossore, uniformità, lucidità, pori, occhiaie, ammiccamenti e battito. Resta fermo 10–15 secondi con luce frontale; toccalo per ridurlo. Le misure vengono salvate con ogni scansione NEI."],
     ["Nei e pazienti","👤 crea o sceglie il paziente. NEI salva foto del viso, dettaglio e misura di ogni neo. Nello storico vedi come cambiano nel tempo."],
     ["Scansione del corpo","Scegli Tutto, Ossa, Muscoli o Organi e inquadra la persona: l’ologramma 3D si aggancia al corpo. Più corpo è inquadrato, più è preciso."],
@@ -3466,6 +3951,8 @@ const GUIDE = {
     ["Limiti","È una rappresentazione illustrativa, non una radiografia e non una diagnosi. Per ogni dubbio vale il parere del medico."]],
   en:[["It starts on the face","The app opens in Skin mode. Frame the face in frontal light and hold still 2–3 seconds: moles (green), pimples (red), dark spots (brown), lumps (lilac) and wrinkles (amber) appear."],
     ["Tap a label","Tap any skin label to open food tips for that finding."],
+    ["Facial exam 🩺","A guided sequence of 15 exercises (brows, eyes, smile, lips, cheeks, jaw, eye movements, blinking) produces a report sheet with per-side symmetry, a Sunnybrook-style score, jaw opening and excursion, and flags. It is saved in the patient history and prints to PDF."],
+    ["Joint mechanics","With the body in view the panel shows shoulder, elbow, hip and knee angles, speed, maximum range against AAOS values and left/right asymmetry; with hands, the MCP/PIP/DIP angles of each finger. The panel moves itself to where it does not cover the body; the arrow in its title collapses it."],
     ["Skin analysis","The panel on the left estimates tone, redness, evenness, shine, pores, dark circles, blinks and pulse. Hold still 10–15 seconds in frontal light; tap it to collapse. The readings are saved with every MOLES scan."],
     ["Moles and patients","👤 creates or picks the patient. MOLES saves a face photo plus a close-up and size of each mole. The history shows how they change over time."],
     ["Body scan","Pick Everything, Bones, Muscles or Organs and frame the person: the 3D hologram locks onto the body. The more of the body in view, the more precise it is."],
@@ -3473,7 +3960,7 @@ const GUIDE = {
     ["Settings ⚙︎","Look: Hologram, Colour holo, X-ray, Solid. “Max” tracking is more precise but slower. In 3D you also get Section and MRI."],
     ["Limits","This is an illustration, not an X-ray and not a diagnosis. For any doubt, a doctor’s opinion is what counts."]]
 };
-const APP_VER="v11 · 17/11";
+const APP_VER="v12 · 18/11";
 function renderGuide(){ $("#guide h2").textContent=T[S.lang].gTitle+" · "+APP_VER; $("#guideL").innerHTML = GUIDE[S.lang].map(g=>`<li><b>${esc(g[0])}</b>${esc(g[1])}</li>`).join("")
   + `<li><b>Diagnostica 3D</b><button class="btn" id="diagBtn" type="button">Esegui test</button><pre id="diagOut" style="white-space:pre-wrap;font-size:11px;line-height:1.35;margin:8px 0 0"></pre></li>`;
   $("#diagBtn").addEventListener("click", async ()=>{ const o=$("#diagOut"); o.textContent="…"; try { const E=await ensure3D(); if (!E.diag){ o.textContent="motore semplificato (pack non caricato)"; return; }
@@ -3506,7 +3993,9 @@ async function renderPatients(){
   let scans=[]; if (S.pid) try { scans=await DB.scans(S.pid); } catch(e){ console.warn(e); }
   scans.sort((a,b)=>a.t-b.t);
   const html=[];
-  for (let i=scans.length-1;i>=0;i--){ const sc=scans[i], older=scans.slice(0,i);
+  for (let i=scans.length-1;i>=0;i--){ const sc=scans[i], older=scans.slice(0,i).filter(s=>s.type!=="exam");
+    if (sc.type==="exam"){ const a=sc.a||{}, top=(a.flags||[])[0];
+      html.push(`<div class="scan exam"><h3><span>🩺 ${esc(fmtDate(sc.t))} · ${esc(Lx("Esame del viso","Facial exam"))} · Sunnybrook* ${a.composite??"–"}</span><span class="rowb"><button class="btn" data-openrep="${sc.id}">${esc(Lx("Apri referto","Open report"))}</button><button class="btn warn" data-delscan="${sc.id}">${esc(tx.pScanDel)}</button></span></h3>${top?`<p class="note">${esc(top.t)}</p>`:""}</div>`); continue; }
     const cells=sc.moles.slice().sort((a,b)=>(+a.id.slice(1))-(+b.id.slice(1))).map(mo=>{ let prev=null; for (let j=older.length-1;j>=0 && !prev;j--) prev=older[j].moles.find(q=>q.id===mo.id) || null;
       let st=""; if (!prev){ if (older.length) st=`<span class="new">${esc(tx.mNew)}</span>`; }
       else if (mo.mm && prev.mm){ const d=mo.mm-prev.mm; st = (Math.abs(d)>=1 && Math.abs(d)/prev.mm>=0.25) ? `<span class="chg">${d>0?"+":""}${d.toFixed(1)} mm · ${esc(tx.mChg)}</span>` : `${d>=0?"+":""}${d.toFixed(1)} mm · ${esc(tx.mSame)}`; }
@@ -3521,7 +4010,7 @@ $("#patAdd").addEventListener("click", async ()=>{ const nm=$("#patName").value.
   try { S.pid = await DB.put("patients",{ name:nm, created:Date.now(), nextN:1 }); $("#patName").value=""; } catch(e){ console.warn(e); } renderPatients(); });
 $("#patDel").addEventListener("click", async ()=>{ if (!S.pid || !window.confirm(T[S.lang].pConfirmP)) return;
   try { for (const sc of await DB.scans(S.pid)) await DB.del("scans",sc.id); await DB.del("patients",S.pid); } catch(e){ console.warn(e); } S.pid=0; renderPatients(); });
-$("#patScans").addEventListener("click", async e=>{ const b=e.target.closest("[data-delscan]"); if (!b || !window.confirm(T[S.lang].pConfirmS)) return;
+$("#patScans").addEventListener("click", async e=>{ const ob=e.target.closest("[data-openrep]"); if (ob){ try { const all=await DB.scans(S.pid), sc=all.find(s=>s.id===+ob.dataset.openrep); const pts=await DB.all("patients"), p=pts.find(q=>q.id===S.pid); if (sc) examReport({ t:sc.t, a:sc.a, pname:p&&p.name }); } catch(err){ console.warn(err); } return; } const b=e.target.closest("[data-delscan]"); if (!b || !window.confirm(T[S.lang].pConfirmS)) return;
   try { await DB.del("scans",+b.dataset.delscan); } catch(err){ console.warn(err); } renderPatients(); });
 
 /* size of one mole from the full-resolution frame: Otsu threshold, then the dark blob at the centre */
